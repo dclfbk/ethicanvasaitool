@@ -53,7 +53,11 @@ const shot=async(target,name)=>{await target.screenshot({path:join(img,name+'.pn
 let browser;
 try{
  browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined,args:['--no-sandbox']});
- const page=await (await browser.newContext({viewport:{width:1280,height:800},deviceScaleFactor:1})).newPage();
+ const context=await browser.newContext({viewport:{width:1280,height:800},deviceScaleFactor:1,acceptDownloads:true});
+ // The native folder dialog cannot be driven: a folder of the Origin Private File System stands in for it.
+ await context.addInitScript(()=>{window.showDirectoryPicker=async()=>(await navigator.storage.getDirectory()).getDirectoryHandle('Google Drive',{create:true});});
+ const page=await context.newPage();
+ page.on('dialog',d=>void d.accept());
  const demo=()=>page.locator('.project-card',{hasText:'Un assistente per la Pubblica Amministrazione'});
  await page.goto('http://127.0.0.1:'+server.address().port);
  // The example is offered only while the archive is empty, so it is opened before importing the other cases.
@@ -86,11 +90,27 @@ try{
  await page.getByLabel('Che cosa deve chiarire?').fill('Per quanto tempo conserviamo i log delle conversazioni e con quale base giuridica?');
  await shot(page.locator('.question-card'),'attesa');
 
+ // Contributions: request prepared for the DPO, then the recipient view of the same request.
+ await page.getByRole('button',{name:'Contributi',exact:true}).click();
+ await page.getByLabel('Il tuo ruolo o nome').fill('Referente del progetto');
+ await page.getByLabel('Cifra la richiesta con una passphrase').uncheck();
+ const requestDownload=page.waitForEvent('download');await page.getByRole('button',{name:'Prepara la richiesta'}).click();
+ const requestFile='/tmp/canvas-qa/guide-request.json';await (await requestDownload).saveAs(requestFile);
+ await page.locator('.contributions section').first().screenshot({path:join(img,'contributi.png')});console.log('saved contributi');
+ await page.getByRole('button',{name:'Archivio progetti'}).click();
+ await page.getByRole('button',{name:'Rispondi a una richiesta'}).click();
+ await page.getByLabel('Carica il file di richiesta').setInputFiles(requestFile);
+ await page.getByLabel('Risposta: Possono entrare dati personali?').fill('I log delle conversazioni sono conservati per 30 giorni e poi cancellati. Base giuridica: esecuzione di un compito di interesse pubblico.');
+ await page.getByLabel('Il tuo ruolo').fill('DPO');
+ await page.locator('.respond-question').first().screenshot({path:join(img,'rispondi.png')});console.log('saved rispondi');
+ page.removeAllListeners('dialog');page.on('dialog',d=>void d.accept());
  await page.getByRole('button',{name:'Metodo e impostazioni'}).click();
  await page.getByLabel('Attiva l’assistente durante la compilazione').check();
  await page.getByLabel('Chiave API Gemini').fill('AIzaGUIDE-placeholder-not-a-key');
  await page.getByRole('button',{name:'Usa per questa sessione'}).click();
  await page.getByRole('heading',{name:'Archivio sul tuo drive'}).scrollIntoViewIfNeeded();
+ await page.getByRole('button',{name:'Scegli la cartella'}).click();
+ await page.getByText('Cartella: Google Drive').waitFor();
  await shot(page.locator('.cloud-sync'),'drive');
  await page.getByRole('button',{name:'Archivio progetti'}).click();
  await demo().getByRole('button',{name:'Riprendi',exact:true}).click();

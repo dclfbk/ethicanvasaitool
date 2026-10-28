@@ -30,11 +30,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod cloud;
+mod folder;
 mod gemini;
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_sql::Builder::default().build())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(gemini::PendingRequests::default())
@@ -49,7 +51,13 @@ fn main() {
             cloud::cloud_status,
             cloud::cloud_connect,
             cloud::cloud_disconnect,
-            cloud::cloud_request
+            cloud::cloud_request,
+            folder::folder_pick,
+            folder::folder_status,
+            folder::folder_forget,
+            folder::folder_info,
+            folder::folder_read,
+            folder::folder_write
         ])
         .run(tauri::generate_context!())
         .expect("Failed to start EthiCanvas AI");

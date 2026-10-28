@@ -27,14 +27,14 @@
  * source code to users who interact with the software over a network.
  */
 
-import { CloudError, type CloudErrorKind, type CloudHttpResponse, type CloudProviderId, type CloudSession } from './provider';
+import { CloudError, type CloudErrorKind, type CloudHttpResponse, type CloudSession, type OAuthProviderId } from './provider';
 
 // Browser sign-in in a popup that returns to a static page of this site. The access token stays in this module only:
 // it is never written to storage and is lost when the page is closed or reloaded. No refresh token is kept.
 interface OAuthConfig { authorize: string; token?: string; clientId?: string; scope: string; revoke?: string; }
 const env = import.meta.env;
 const tenant = /^[a-z0-9.-]{1,64}$/i.test(env.VITE_MS_TENANT ?? '') ? env.VITE_MS_TENANT! : 'organizations';
-const configs: Record<CloudProviderId, OAuthConfig> = {
+const configs: Record<OAuthProviderId, OAuthConfig> = {
  // Google web clients cannot exchange a code without a secret, so the browser uses the token response.
  google: {authorize: 'https://accounts.google.com/o/oauth2/v2/auth', clientId: env.VITE_GOOGLE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', revoke: 'https://oauth2.googleapis.com/revoke'},
  microsoft: {authorize: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize`, token: `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`, clientId: env.VITE_MS_CLIENT_ID, scope: 'User.Read Files.ReadWrite'},
@@ -70,7 +70,7 @@ export function authError(error: string, description = ''): CloudErrorKind {
  return 'permission';
 }
 
-export function webSession(provider: CloudProviderId): CloudSession {
+export function webSession(provider: OAuthProviderId): CloudSession {
  const config = configs[provider];
  let token: {value: string; expiresAt: number} | null = null;
  const valid = () => !!token && token.expiresAt > Date.now() + 30_000;

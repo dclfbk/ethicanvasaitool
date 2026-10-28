@@ -1,6 +1,6 @@
 [package]
 name = "ethicanvasaitool"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local archive and AI Ethics Canvas journey for public administrations"
 authors = ["Maurizio Napolitano <napo@fbk.eu>"]
 license = "AGPL-3.0-or-later"
@@ -12,6 +12,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+tauri-plugin-dialog = "2"
 keyring = { version = "3.6", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }

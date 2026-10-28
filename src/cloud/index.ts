@@ -29,6 +29,7 @@
 
 import { isTauri } from '@tauri-apps/api/core';
 import { googleDrive, microsoftDrive } from './drives';
+import { folderDrive, tauriFolder, webFolder } from './folder';
 import { allowedCloudRequest, CloudError, type CloudDrive, type CloudProviderId, type CloudSession } from './provider';
 import { tauriSession } from './tauriSession';
 import { webSession } from './webSession';
@@ -45,10 +46,10 @@ const drives = new Map<CloudProviderId, CloudDrive>();
 export function cloudDrive(provider: CloudProviderId): CloudDrive {
  let drive = drives.get(provider);
  if (!drive) {
-  const session = guarded(provider, isTauri() ? tauriSession(provider) : webSession(provider));
-  drive = provider === 'google' ? googleDrive(session) : microsoftDrive(session);
+  if (provider === 'folder') drive = folderDrive(isTauri() ? tauriFolder : webFolder);
+  else { const session = guarded(provider, isTauri() ? tauriSession(provider) : webSession(provider)); drive = provider === 'google' ? googleDrive(session) : microsoftDrive(session); }
   drives.set(provider, drive);
  }
  return drive;
 }
-export const cloudLabels: Record<CloudProviderId, string> = {google: 'Google Drive', microsoft: 'OneDrive · Microsoft 365'};
+export const cloudLabels: Record<CloudProviderId, string> = {folder: 'Cartella sincronizzata', google: 'Google Drive', microsoft: 'OneDrive · Microsoft 365'};

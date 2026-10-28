@@ -12,19 +12,26 @@ L’applicazione funziona nel browser o come programma desktop. Progetti, rispos
 2. [Compilare il percorso](02-compilare.md): rispondere, coinvolgere altre figure, collegare le fonti.
 3. [Farsi aiutare dall’assistente](03-assistente.md): Gemini per capire le domande e preparare bozze.
 4. [Risultato ed esportazioni](04-risultato.md): riepilogo, canvas in PDF, rapporto in DOCX o ODT.
-5. [Salvare e spostare i dati](05-dati.md): copie di sicurezza, importazione, Google Drive e OneDrive.
+5. [Salvare e spostare i dati](05-dati.md): copie di sicurezza, cartella sincronizzata, Google Drive e OneDrive.
+
+## Hai ricevuto una richiesta di contributo?
+
+Apri l’app, premi «Rispondi a una richiesta» e segui [Rispondere a una richiesta](08-contributi.md#rispondere-a-una-richiesta). Non serve un account e nulla resta salvato sul tuo dispositivo.
+
+[Rispondi a una richiesta](#app-respond)
 
 ## Per chi coordina la valutazione
 
 6. [Versioni, revisioni e riesame](06-versioni.md): salvare le tappe, registrare chi rivede, confrontare, pianificare il riesame.
 7. [Coordinare una valutazione](07-coordinare.md): organizzare il lavoro con i profili, usare i casi già valutati, rivedere i risultati.
+8. [Contributi delle figure coinvolte](08-contributi.md): chiedere risposte a DPO, fornitori ed esperti e importarle, senza server.
 
 ## Per chi installa e configura
 
-8. [Installare e configurare](08-installare.md): versione web e desktop, assistente, archivio sul drive, aggiornamenti, sicurezza.
+9. [Installare e configurare](09-installare.md): versione web e desktop, assistente, archivio sul drive, aggiornamenti, sicurezza.
 
 ## Quando qualcosa non va
 
-9. [Domande frequenti](09-domande-frequenti.md): messaggi di errore e problemi comuni.
+10. [Domande frequenti](10-domande-frequenti.md): messaggi di errore e problemi comuni.
 
 > **Che cosa non fa l’applicazione.** Non certifica la conformità normativa, non valida i progetti e non classifica i sistemi secondo l’AI Act. Registra un’autovalutazione: le decisioni restano alle persone competenti.

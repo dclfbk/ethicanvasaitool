@@ -31,6 +31,7 @@ import {describe,expect,it,vi} from 'vitest';
 import {decryptArchive,DecryptionError,encryptArchive,isEncryptedArchive} from './archiveCrypto';
 import {loadCloudSettings,saveCloudSettings} from './cloudSettings';
 import {googleDrive,microsoftDrive} from './drives';
+import {folderDrive,type FolderBackend} from './folder';
 import {mergeArchives} from './merge';
 import {allowedCloudRequest,CloudError,classifyCloudError,type CloudHttpRequest,type CloudHttpResponse,type CloudSession} from './provider';
 import {authError} from './webSession';
@@ -157,5 +158,23 @@ describe('Cloud settings',()=>{
   expect(JSON.stringify(stored)).not.toMatch(/segreta|SECRET/);
   expect(loadCloudSettings()).toEqual({provider:'microsoft',encrypt:false,sync:{microsoft:{savedAt:'2026-10-28T10:00:00.000Z',remoteModifiedAt:undefined}}});
   vi.unstubAllGlobals();
+ });
+});
+
+describe('Synchronised folder',()=>{
+ function fake(){let name:string|null=null,file:{text:string;modified:number}|null=null;const b:FolderBackend={scope:'system',supported:async()=>true,name:async()=>name,pick:async()=>(name='Drive'),forget:async()=>{name=null;},modified:async()=>file?.modified??null,read:async()=>file,write:async text=>{file={text,modified:Date.UTC(2026,9,28,10)};return file.modified;}};return b;}
+ it('reads and writes one archive through the backend, without network',async()=>{
+  const d=folderDrive(fake());
+  expect(await d.session.connected()).toBe(false);
+  await d.session.connect();expect(await d.account()).toBe('Drive');
+  expect(await d.info()).toBeNull();expect(await d.download()).toBeNull();
+  expect(await d.upload('{"a":1}')).toEqual({modifiedAt:'2026-10-28T10:00:00.000Z'});
+  expect(await d.download()).toEqual({text:'{"a":1}',info:{modifiedAt:'2026-10-28T10:00:00.000Z'}});
+  await expect(d.session.send({method:'GET',url:'https://example.org'})).rejects.toBeInstanceOf(CloudError);
+  await d.session.disconnect();expect(await d.session.connected()).toBe(false);
+ });
+ it('treats a closed folder dialog as cancelled',async()=>{
+  const b={...fake(),pick:async()=>null};
+  await expect(folderDrive(b).session.connect()).rejects.toMatchObject({kind:'cancelled'});
  });
 });

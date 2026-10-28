@@ -6,7 +6,7 @@ No. I progetti sono salvati nel browser che stai usando, sullo stesso computer. 
 
 ## Come porto un progetto su un altro computer?
 
-Con una copia in un file, «Esporta una copia» e poi «Importa archivio», oppure salvando sul drive. I passi sono in [Salvare e spostare i dati](05-dati.md).
+Con una cartella sincronizzata, con una copia in un file («Esporta una copia» e poi «Importa archivio») oppure salvando sul drive. I passi sono in [Salvare e spostare i dati](05-dati.md).
 
 ## L’archivio dell’app desktop e quello web sono lo stesso?
 
@@ -38,11 +38,24 @@ In ogni caso la tua risposta non viene modificata: puoi continuare il percorso a
 
 | Messaggio | Che cosa fare |
 |---|---|
-| Il servizio non è configurato | L’ente non ha ancora registrato l’app presso Google o Microsoft. Vedi [Installare e configurare](08-installare.md). |
+| Il servizio non è configurato | L’ente non ha ancora registrato l’app presso Google o Microsoft: usa la cartella sincronizzata, oppure vedi [Installare e configurare](09-installare.md). |
+| Non è stato possibile leggere o scrivere nella cartella | Controlla che la cartella esista ancora e che tu abbia i permessi, oppure scegline un’altra con «Cambia cartella». |
 | Il browser ha bloccato la finestra di accesso | Consenti i popup per questo sito e riprova. |
 | Serve l’approvazione di un amministratore | Rivolgiti all’amministratore di Microsoft 365 dell’ente. |
 | L’accesso è scaduto | Collega di nuovo l’account. Nel browser succede a ogni ricaricamento della pagina. |
 | Passphrase errata o archivio danneggiato | Riprova con la passphrase usata per il salvataggio. Senza di essa il backup non si può aprire. |
+
+## Nella cartella sincronizzata vedo più copie dell’archivio
+
+Se due computer salvano quasi insieme, il programma di sincronizzazione può creare copie con nomi come `ethicanvas-archivio (1).json`. L’app legge solo il file «ethicanvas-archivio.json»: apri l’app sul computer con il lavoro più recente, ripristina, poi salva di nuovo. Le copie in più si possono eliminare.
+
+## Non riesco a scegliere una cartella nel browser
+
+La scelta della cartella funziona con Chrome ed Edge. Con altri browser usa l’app desktop, oppure «Esporta una copia» e salva il file nella cartella sincronizzata a mano.
+
+## Ho ricevuto una richiesta di contributo: devo installare qualcosa?
+
+No. Apri l’app nel browser, premi «Rispondi a una richiesta» e carica il file. Vedi [Contributi delle figure coinvolte](08-contributi.md#rispondere-a-una-richiesta).
 
 ## Ho trovato due progetti «in conflitto» dopo il ripristino
 

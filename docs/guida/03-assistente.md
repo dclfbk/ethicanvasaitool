@@ -4,7 +4,7 @@ L’assistente usa Gemini, il modello di intelligenza artificiale di Google, per
 
 ## Prima di cominciare
 
-Ti serve una **chiave API Gemini**, creata in Google AI Studio. Un abbonamento all’app Gemini non basta. Se la chiave te la fornisce l’ente, chiedi a chi l’ha configurata; i dettagli sono nel capitolo [Installare e configurare](08-installare.md).
+Ti serve una **chiave API Gemini**, creata in Google AI Studio. Un abbonamento all’app Gemini non basta. Se la chiave te la fornisce l’ente, chiedi a chi l’ha configurata; i dettagli sono nel capitolo [Installare e configurare](09-installare.md).
 
 ## Attivare l’assistente
 

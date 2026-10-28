@@ -28,7 +28,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import { CloudError, type CloudErrorKind, type CloudHttpResponse, type CloudProviderId, type CloudSession } from './provider';
+import { CloudError, type CloudErrorKind, type CloudHttpResponse, type CloudSession, type OAuthProviderId } from './provider';
 
 // On desktop the sign-in runs in the system browser with a loopback redirect; the Rust side keeps the refresh token
 // in the operating system keychain, attaches the access token and never returns it to the web view.
@@ -39,7 +39,7 @@ function toCloudError(e: unknown) {
 }
 const call = async <T>(command: string, args: Record<string, unknown>) => { try { return await invoke<T>(command, args); } catch (e) { throw toCloudError(e); } };
 
-export function tauriSession(provider: CloudProviderId): CloudSession {
+export function tauriSession(provider: OAuthProviderId): CloudSession {
  return {
   scope: 'system',
   configured: () => call<boolean>('cloud_configured', {provider}),
