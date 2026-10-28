@@ -30,7 +30,6 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowUpRight,FilePlus2,Library,Send,Square} from 'lucide-react';
 import type {AssistantSettings} from './assistantSettings';
-import {llmErrorMessages} from './assistantText';
 import {buildKnowledgeContext,buildKnowledgeRequest,defaultCaseIds,knowledgeBase,knowledgeTooLarge,parseKnowledgeResult,prefillAnswers,prefillExcluded,prefillTargets,proposedDraft,rankCases,scenarioText,type KnowledgeResult,type Scenario} from './knowledge';
 import type {LlmRuntime} from './llm';
 import {LlmError} from './llm/provider';
@@ -59,18 +58,18 @@ export default function KnowledgePanel({projects,settings,runtime,onCreate,onUpd
  const cases=matches.filter(m=>selected.includes(m.project.id)).map(m=>m.project);
  const items=buildKnowledgeContext(scenario,cases),request=buildKnowledgeRequest(scenario,items,{prefill}),tooLarge=knowledgeTooLarge(request);
  const targets=prefill?prefillTargets(scenario).map(q=>q.id):[];
- const canSend=ready&&cases.length>0&&!tooLarge&&hasKey===true&&phase.name!=='loading';
+ const canSend=ready&&cases.length>0&&!tooLarge&&(hasKey===true||!runtime.requiresKey&&hasKey!==null)&&phase.name!=='loading';
  function reset(){controller.current?.abort();setChosen(null);setPhase({name:'idle'});setOutcome('');}
  const toggle=(id:string)=>{setChosen(selected.includes(id)?selected.filter(x=>x!==id):[...selected,id]);};
  async function send(){
   if(!canSend)return;
   const c=new AbortController();controller.current=c;setPhase({name:'loading'});setOutcome('');
   try{
-   const res=await runtime.provider.generate(settings.model,request,c.signal);if(c.signal.aborted)return;
+   const res=await runtime.provider.generate(runtime.model,request,c.signal);if(c.signal.aborted)return;
    const result=parseKnowledgeResult(res.text,items,targets),labels=Object.fromEntries(items.filter(i=>i.caseId).map(i=>[i.id,cases.find(p=>p.id===i.caseId)!.name]));
    setDrafts(Object.fromEntries(result.answers.map(a=>[a.questionId,{text:proposedDraft(a),include:true,basedOn:a.sources.flatMap(id=>labels[id]?[labels[id]]:[])}])));
    setPhase({name:'result',result,model:res.model,at:new Date().toISOString(),labels});
-  }catch(e){if(c.signal.aborted&&!(e instanceof LlmError&&e.kind==='timeout'))setPhase({name:'idle'});else setPhase({name:'error',message:e instanceof LlmError?llmErrorMessages[e.kind]:llmErrorMessages['bad-response']});}
+  }catch(e){if(c.signal.aborted&&!(e instanceof LlmError&&e.kind==='timeout'))setPhase({name:'idle'});else setPhase({name:'error',message:e instanceof LlmError?runtime.texts.errors[e.kind]:runtime.texts.errors['bad-response']});}
   finally{if(controller.current===c)controller.current=null;}
  }
  function apply(){
@@ -106,21 +105,21 @@ export default function KnowledgePanel({projects,settings,runtime,onCreate,onUpd
    :<ul className="case-list">{matches.map(m=>{const r=evaluate(m.project);return <li key={m.project.id}><label className="check"><input type="checkbox" checked={selected.includes(m.project.id)} onChange={()=>toggle(m.project.id)}/><span><b>{m.project.name}</b><small>{m.project.organization||'Ente non indicato'} · {statusLabels[r.status]} · {r.done.length} di {questions.length} risposte completate{m.shared.length?' · in comune: '+m.shared.join(', '):''}</small></span></label><span className="score" title="Somiglianza testuale">{percent(m.score)}</span><button className="text-button" onClick={()=>onOpen(m.project)}>Apri <ArrowUpRight size={14}/></button></li>;})}</ul>}
   </section>
   <section className="panel"><h2>3. Analisi con l’assistente</h2>
-   {!settings.enabled?<div className="button-row"><span>Per l’analisi comparativa e la precompilazione attiva l’assistente Gemini.</span><button className="secondary" onClick={onOpenSettings}>Configura Gemini</button></div>:<>
+   {!settings.enabled?<div className="button-row"><span>Per l’analisi comparativa e la precompilazione attiva l’assistente.</span><button className="secondary" onClick={onOpenSettings}>{runtime.texts.configure}</button></div>:<>
     <label className="switch-row"><input type="checkbox" checked={prefill} onChange={e=>setPrefill(e.target.checked)}/>Proponi anche le risposte al questionario{mode==='project'?' (solo quelle ancora vuote)':''}</label>
     {prefill&&<p className="key-scope">L’inquadramento normativo ({prefillExcluded.map(title).join(', ')}) non viene mai precompilato: va valutato con un esperto legale.</p>}
     <details className="preview"><summary>Anteprima esatta del testo inviato ({request.input.length.toLocaleString('it-IT')} caratteri)</summary><pre>{request.input}</pre></details>
     {tooLarge&&<p className="assist-status error">Il contesto supera {maxContextChars.toLocaleString('it-IT')} caratteri. Deseleziona qualche caso o accorcia lo scenario.</p>}
-    <p className="notice">Saranno inviati a Google tramite la Gemini API, modello {settings.model}, lo scenario e i {cases.length} casi selezionati: nomi, enti, descrizioni e risposte. Allegati, note e nomi delle persone non vengono inviati. I casi possono contenere informazioni di altri uffici: invia solo ciò che puoi condividere.</p>
-    {hasKey===false?<div className="button-row"><span>Manca la chiave API.</span><button className="secondary" onClick={onOpenSettings}>Configura Gemini</button></div>
-    :phase.name==='loading'?<div aria-busy="true"><p role="status" className="assist-status busy">Gemini sta confrontando i casi…</p><button className="secondary" onClick={()=>controller.current?.abort()}><Square size={14}/>Annulla richiesta</button></div>
-    :<button className="primary" disabled={!canSend} onClick={()=>void send()}><Send size={16}/>Analizza con Gemini</button>}
+    <p className="notice">Saranno inviati {runtime.texts.destination(runtime.model)} lo scenario e i {cases.length} casi selezionati: nomi, enti, descrizioni e risposte. Allegati, note e nomi delle persone non vengono inviati. I casi possono contenere informazioni di altri uffici: invia solo ciò che puoi condividere.</p>
+    {runtime.requiresKey&&hasKey===false?<div className="button-row"><span>Manca la chiave API.</span><button className="secondary" onClick={onOpenSettings}>{runtime.texts.configure}</button></div>
+    :phase.name==='loading'?<div aria-busy="true"><p role="status" className="assist-status busy">{runtime.texts.busy} confrontando i casi…</p><button className="secondary" onClick={()=>controller.current?.abort()}><Square size={14}/>Annulla richiesta</button></div>
+    :<button className="primary" disabled={!canSend} onClick={()=>void send()}><Send size={16}/>{runtime.texts.analyze}</button>}
     {phase.name==='error'&&<p role="alert" className="assist-status error">{phase.message}</p>}
    </>}
   </section>
   {phase.name==='result'&&<section className="panel assistant-box">
    <div className="assistant-head"><b><Library size={16}/> Risultato del confronto</b></div>
-   <small className="provenance">Proposta di Gemini · {phase.model} · {new Date(phase.at).toLocaleString('it-IT')} · da verificare</small>
+   <small className="provenance">{runtime.texts.proposal} · {phase.model} · {new Date(phase.at).toLocaleString('it-IT')} · da verificare</small>
    {phase.result.summary&&<p>{phase.result.summary}</p>}
    {phase.result.userAnswer&&<><h4>La tua domanda</h4><p>{phase.result.userAnswer}</p></>}
    {phase.result.comparisons.map(c=><div key={c.id}><h4>{c.label}</h4>

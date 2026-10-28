@@ -27,7 +27,7 @@
  * source code to users who interact with the software over a network.
  */
 
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowLeft,ArrowRight,ArrowUpRight,BookOpen,Check,CheckCircle2,ChevronRight,Download,FileText,FolderOpen,Gauge,HelpCircle,History as HistoryIcon,LayoutDashboard,Library,LifeBuoy,Link,Pause,Plus,Search,ShieldCheck,Sparkles,Trash2,Upload,Users,X} from 'lucide-react';
 import {accepted,createBackup,createProject,demoProject,evaluate,questions,questionnaireVersion,readBackup,sections,statusLabels,type Answer,type Profile,type Project,type Reference} from './model';
 import AssistantPanel from './AssistantPanel';
@@ -43,7 +43,9 @@ import {dueLabel,outcomeLabels} from './historyText';
 import KnowledgePanel from './KnowledgePanel';
 import ReportExportPanel from './ReportExportPanel';
 import {clearAssistantSettings,defaultAssistantSettings,loadAssistantSettings,saveAssistantSettings,type AssistantSettings} from './assistantSettings';
-import {geminiRuntime} from './llm';
+import {assistantRuntime} from './llm';
+import {configureLocalServer} from './llm/localTauri';
+import {isTauri} from '@tauri-apps/api/core';
 import {UpdateDialog,UpdateSettingsPanel} from './UpdatePanel';
 import {findUpdate,loadUpdateSettings,saveUpdateSettings,updatesSupported,type PendingUpdate,type UpdateSettings} from './updates';
 import {canExtract,extractText} from './textExtraction';
@@ -71,7 +73,10 @@ export default function App(){
  const [loading,setLoading]=useState(true),[error,setError]=useState(''),[saving,setSaving]=useState<SaveState>('saved');
  const [search,setSearch]=useState(''),[filter,setFilter]=useState('all'),[newOpen,setNewOpen]=useState(false),[refOpen,setRefOpen]=useState(false),[help,setHelp]=useState(false);
  const [newName,setNewName]=useState(''),[newDescription,setNewDescription]=useState(''),[newOrg,setNewOrg]=useState('');
- const [assistant,setAssistant]=useState<AssistantSettings>(loadAssistantSettings),runtime=geminiRuntime();
+ const [assistant,setAssistant]=useState<AssistantSettings>(loadAssistantSettings);
+ const runtime=useMemo(()=>assistantRuntime(assistant),[assistant.provider,assistant.model,assistant.local.protocol,assistant.local.url,assistant.local.model]);
+ // On desktop the Rust side keeps the local server address; it is aligned with the preferences at start-up.
+ useEffect(()=>{if(isTauri()&&assistant.provider==='local')configureLocalServer(assistant.local.url,assistant.local.protocol).catch(()=>{/* shown when the assistant is used */});},[assistant.provider,assistant.local.url,assistant.local.protocol]);
  const [updates,setUpdates]=useState<UpdateSettings>(loadUpdateSettings),[pendingUpdate,setPendingUpdate]=useState<PendingUpdate|null>(null);
  const [refExcerpt,setRefExcerpt]=useState(''),[refTitle,setRefTitle]=useState(''),[refUrl,setRefUrl]=useState(''),[refNote,setRefNote]=useState(''),[refKind,setRefKind]=useState<Reference['kind']>('document'),[refFile,setRefFile]=useState<File|null>(null),[refBusy,setRefBusy]=useState(false);
  const queue=useRef(Promise.resolve()),seq=useRef(0),importInput=useRef<HTMLInputElement>(null);

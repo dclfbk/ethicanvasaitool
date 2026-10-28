@@ -13,7 +13,7 @@
     "test": "vitest run",
     "tauri": "tauri",
     "guide:screenshots": "node scripts/guide-screenshots.mjs",
-    "test:smoke": "node scripts/smoke.mjs && node scripts/smoke-assistant.mjs && node scripts/smoke-knowledge.mjs && node scripts/smoke-cloud.mjs && node scripts/smoke-folder.mjs && node scripts/smoke-export.mjs && node scripts/smoke-guide.mjs && node scripts/smoke-history.mjs && node scripts/smoke-contributions.mjs && node scripts/smoke-dashboard.mjs"
+    "test:smoke": "node scripts/smoke.mjs && node scripts/smoke-assistant.mjs && node scripts/smoke-local-model.mjs && node scripts/smoke-knowledge.mjs && node scripts/smoke-cloud.mjs && node scripts/smoke-folder.mjs && node scripts/smoke-export.mjs && node scripts/smoke-guide.mjs && node scripts/smoke-history.mjs && node scripts/smoke-contributions.mjs && node scripts/smoke-dashboard.mjs"
   },
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",

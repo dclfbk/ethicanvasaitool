@@ -148,7 +148,8 @@ export function parseReportResult(text: string, items: ReportItem[]): ReportSynt
 }
 
 // Editable form of the synthesis: one textarea per part, one item per line.
-export interface ReportDraft { summary: string; sections: Partial<Record<Section, string>>; strengths: string; risks: string; actions: string; missing: string; people: string; caveats: string; model: string; at: string; }
+// author names who proposed the text in the report, for example "Gemini" or "Il modello locale".
+export interface ReportDraft { summary: string; sections: Partial<Record<Section, string>>; strengths: string; risks: string; actions: string; missing: string; people: string; caveats: string; model: string; at: string; author: string; }
 function sourceLabel(i: ReportItem) {
  if (i.id === 'P') return 'descrizione del progetto';
  if (i.id === 'V') return 'stato calcolato';
@@ -159,10 +160,10 @@ function line(s: Sourced, labels: Record<string, string>) {
  const from = s.sources.length ? ' (fonti: ' + s.sources.map(id => labels[id] ?? id).join('; ') + ')' : '';
  return '- ' + s.text + from + (s.unverified ? ' [da verificare: fonte non riconosciuta]' : '');
 }
-export function toDraft(r: ReportSynthesis, items: ReportItem[], model: string, at: string): ReportDraft {
+export function toDraft(r: ReportSynthesis, items: ReportItem[], model: string, at: string, author = 'Gemini'): ReportDraft {
  const labels = sourceLabels(items);
  return {
-  summary: r.summary, model, at,
+  summary: r.summary, model, at, author,
   sections: Object.fromEntries(r.sections.map(s => [s.id, [...s.conclusions.map(c => line(c, labels)), ...s.open.map(o => '- Da chiarire: ' + o)].join('\n')])),
   strengths: r.strengths.map(s => line(s, labels)).join('\n'), risks: r.risks.map(s => line(s, labels)).join('\n'),
   actions: r.actions.map(a => line({...a, text: a.text + (a.owner ? ' — responsabile: ' + a.owner : '')}, labels)).join('\n'),
@@ -187,7 +188,7 @@ export function buildReportBlocks(project: Project, draft: ReportDraft | null, o
  blocks.push(...historyBlocks(project, now));
  if (draft) {
   const part = (title: string, text: string) => { const items = draftItems(text); if (items.length) blocks.push({type: 'h2', text: title}, {type: 'bullets', items}); };
-  blocks.push({type: 'h1', text: 'Sintesi delle conclusioni'}, {type: 'note', text: `Testo proposto da Gemini (${draft.model}, ${dateLabel(new Date(draft.at))}) e rivisto prima dell’esportazione. È una bozza da verificare con le figure competenti: non sostituisce la loro valutazione.`});
+  blocks.push({type: 'h1', text: 'Sintesi delle conclusioni'}, {type: 'note', text: `Testo proposto da ${draft.author === 'Gemini' ? 'Gemini' : 'un modello locale'} (${draft.model}, ${dateLabel(new Date(draft.at))}) e rivisto prima dell’esportazione. È una bozza da verificare con le figure competenti: non sostituisce la loro valutazione.`});
   if (draft.summary.trim()) blocks.push({type: 'p', text: draft.summary.trim()});
   part('Punti di forza', draft.strengths); part('Rischi e criticità', draft.risks); part('Azioni raccomandate', draft.actions);
   const bySection = sections.filter(s => draftItems(draft.sections[s.id] ?? '').length);

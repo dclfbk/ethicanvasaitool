@@ -57,6 +57,14 @@ Ogni utente inserisce una chiave API Gemini creata in Google AI Studio. Per l’
 
 Le richieste usano l’opzione che disattiva la conservazione delle interazioni sui server Google. Restano validi i termini del servizio.
 
+## Il modello locale
+
+L’assistente può usare un server di modelli dell’ente o del computer dell’utente al posto di Gemini: Ollama oppure un server compatibile con l’API di OpenAI (llama.cpp, vLLM, LM Studio, LocalAI). L’utente indica tipo, indirizzo, modello e, se serve, una chiave.
+
+- **Desktop**: le richieste partono dal processo Rust. Indirizzo e protocollo sono salvati nella cartella di configurazione dell’app e la chiave nel portachiavi; se l’indirizzo cambia, la chiave viene cancellata. Sono raggiungibili solo l’elenco dei modelli e la chat del protocollo scelto.
+- **Browser**: le richieste partono dalla pagina. Il server deve consentire l’origine del sito (per Ollama, `OLLAMA_ORIGINS`) e, per un server su `localhost` raggiunto da un sito pubblico, il browser può chiedere il permesso di accedere alla rete locale.
+- La finestra di contesto di Ollama viene impostata sulla lunghezza della richiesta, fino a 32.768 token. Servono modelli capaci di rispettare uno schema JSON: con i modelli piccoli l’app segnala le risposte non utilizzabili.
+
 ## La cartella sincronizzata
 
 Non richiede configurazione: è l’opzione predefinita dell’archivio sul drive e funziona con qualunque programma di sincronizzazione già presente sul computer.
@@ -81,7 +89,7 @@ Nei workflow GitHub i valori vengono dalle variabili del repository `GOOGLE_WEB_
 
 ## Sicurezza e dati in sintesi
 
-- **Nessun server applicativo.** I dati restano sul dispositivo. Le uniche connessioni esterne sono verso la Gemini API, se l’utente attiva l’assistente; verso Google Drive o Microsoft Graph, se collega un drive con l’account; verso GitHub, per il controllo degli aggiornamenti dell’app desktop. La cartella sincronizzata e i contributi non usano la rete: sono file.
+- **Nessun server applicativo.** I dati restano sul dispositivo. Le uniche connessioni esterne sono verso la Gemini API o il server del modello locale, se l’utente attiva l’assistente; verso Google Drive o Microsoft Graph, se collega un drive con l’account; verso GitHub, per il controllo degli aggiornamenti dell’app desktop. La cartella sincronizzata e i contributi non usano la rete: sono file.
 - **Endpoint fissi.** Le chiamate verso Gemini, Drive e Graph sono limitate a un elenco fisso di indirizzi, controllato sia nell’interfaccia sia, nel desktop, dal processo Rust.
 - **Niente segreti in chiaro.** Chiavi, token e passphrase non vengono mai scritti in archivio, backup, URL o log. La passphrase dell’archivio cifrato non viene salvata da nessuna parte.
 - **Cifratura dell’archivio sul drive**: AES-256-GCM con chiave derivata dalla passphrase (PBKDF2-SHA-256, 600.000 iterazioni), sul dispositivo e prima del caricamento.

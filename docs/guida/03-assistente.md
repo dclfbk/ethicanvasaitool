@@ -1,6 +1,6 @@
 # Farsi aiutare dall’assistente
 
-L’assistente usa Gemini, il modello di intelligenza artificiale di Google, per spiegare le domande e preparare bozze. È facoltativo: il percorso, le regole di completezza e i risultati funzionano allo stesso modo anche senza.
+L’assistente usa un modello di intelligenza artificiale per spiegare le domande e preparare bozze. Puoi scegliere tra Gemini, il servizio di Google, e un **modello locale**, che gira sul tuo computer o su un server dell’ente. È facoltativo: il percorso, le regole di completezza e i risultati funzionano allo stesso modo anche senza.
 
 ## Prima di cominciare
 
@@ -8,14 +8,32 @@ Ti serve una **chiave API Gemini**, creata in Google AI Studio. Un abbonamento a
 
 ## Attivare l’assistente
 
-1. Apri «Metodo e impostazioni» e scorri fino a «Assistente Gemini (facoltativo)».
-2. Spunta «Attiva l’assistente durante la compilazione» e scegli il modello. Quello consigliato va bene nella maggior parte dei casi.
+1. Apri «Metodo e impostazioni» e scorri fino a «Assistente AI (facoltativo)».
+2. Spunta «Attiva l’assistente durante la compilazione», lascia selezionato «Gemini (Google)» e scegli il modello. Quello consigliato va bene nella maggior parte dei casi.
 3. Incolla la chiave in «Chiave API Gemini» e premi «Usa per questa sessione» (versione web) o «Salva nel portachiavi» (versione desktop).
 4. Premi «Verifica connessione».
 
 [Vai alle impostazioni](#app-settings)
 
 Nella versione web la chiave resta solo nella scheda aperta e si perde ricaricando la pagina. Nella versione desktop è conservata nel portachiavi del sistema operativo. Con «Elimina chiave e configurazione» cancelli chiave e preferenze.
+
+## Usare un modello locale
+
+Con un modello locale i dati non escono verso servizi esterni: vanno solo al server che indichi. È la scelta adatta per informazioni riservate, se il server è sotto il controllo dell’ente.
+
+1. Installa un server di modelli, ad esempio Ollama, sul tuo computer, oppure chiedi all’ente l’indirizzo del suo server.
+2. In «Assistente AI (facoltativo)» scegli «Modello locale».
+3. In «Tipo di server» scegli Ollama, oppure «Compatibile OpenAI» per llama.cpp, vLLM, LM Studio e server simili.
+4. Scrivi l’«Indirizzo del server», ad esempio `http://localhost:11434` per Ollama sul tuo computer, e premi «Salva l’indirizzo».
+5. Premi «Aggiorna l’elenco dei modelli» e scegli il «Modello».
+6. Se il server richiede una chiave, inseriscila in «Chiave di accesso (facoltativa)».
+7. Premi «Verifica connessione».
+
+Nell’app desktop funziona subito. Nel browser il server deve accettare le richieste dalla pagina dell’app: per Ollama va avviato con la variabile `OLLAMA_ORIGINS` che include l’indirizzo del sito, e il browser può chiedere il permesso di accedere alla rete locale.
+
+> **Modelli piccoli.** Le risposte devono seguire un formato preciso. Alcuni modelli piccoli non ci riescono e l’app lo segnala: in quel caso usa un modello più grande.
+
+I pulsanti e gli avvisi indicano sempre dove vanno i dati: con Gemini «Invia a Gemini», con un modello locale «Invia al modello locale» e l’indirizzo del server.
 
 ## Le tre azioni
 

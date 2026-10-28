@@ -31,6 +31,7 @@
 
 mod cloud;
 mod folder;
+mod local_llm;
 mod gemini;
 
 fn main() {
@@ -41,6 +42,7 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .manage(gemini::PendingRequests::default())
         .manage(cloud::CloudTokens::default())
+        .manage(local_llm::LocalPending::default())
         .invoke_handler(tauri::generate_handler![
             gemini::gemini_key_set,
             gemini::gemini_key_status,
@@ -57,7 +59,14 @@ fn main() {
             folder::folder_forget,
             folder::folder_info,
             folder::folder_read,
-            folder::folder_write
+            folder::folder_write,
+            local_llm::local_llm_configure,
+            local_llm::local_llm_config,
+            local_llm::local_llm_key_set,
+            local_llm::local_llm_key_status,
+            local_llm::local_llm_key_delete,
+            local_llm::local_llm_request,
+            local_llm::local_llm_cancel
         ])
         .run(tauri::generate_context!())
         .expect("Failed to start EthiCanvas AI");
