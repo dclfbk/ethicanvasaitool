@@ -34,7 +34,7 @@ import {linkTarget,parseMarkdown,plain,type Block,type Inline} from './guideMark
 // The guide is the Markdown in docs/guida, bundled at build time; screenshots are separate assets loaded on view.
 const sources = import.meta.glob('../docs/guida/*.md', {query: '?raw', import: 'default', eager: true}) as Record<string, string>;
 const images = import.meta.glob('../docs/guida/img/*.png', {query: '?url', import: 'default', eager: true}) as Record<string, string>;
-export const guideActions = ['demo', 'new', 'archive', 'settings', 'knowledge', 'respond'] as const;
+export const guideActions = ['demo', 'new', 'archive', 'settings', 'knowledge', 'respond', 'dashboard'] as const;
 export type GuideAction = typeof guideActions[number];
 export interface Chapter { file: string; title: string; blocks: Block[]; }
 export const chapters: Chapter[] = Object.entries(sources).map(([path, text]) => {
