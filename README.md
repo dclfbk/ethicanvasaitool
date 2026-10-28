@@ -37,14 +37,14 @@ Su Linux servono anche `libwebkit2gtk-4.1-dev`, `librsvg2-dev` e `libdbus-1-dev`
 ### Build automatiche su GitHub
 
 - [.github/workflows/ci.yml](.github/workflows/ci.yml): a ogni push su `main` e a ogni pull request esegue test, build, test browser e test Rust.
-- [.github/workflows/release.yml](.github/workflows/release.yml): crea i pacchetti **Linux** (deb, rpm, AppImage) e **Windows** (msi, exe) con `tauri-action`. Parte con un tag `v*` oppure a mano dalla scheda Actions; i pacchetti vengono allegati a una release in bozza, da controllare prima della pubblicazione. I tag con suffisso, come `v0.3.0-alpha.1`, producono una pre-release. I pacchetti non sono firmati con un certificato di codice: Windows SmartScreen mostrerà un avviso.
+- [.github/workflows/release.yml](.github/workflows/release.yml): crea i pacchetti con `tauri-action`. Le release stabili includono **Linux** (deb, rpm, AppImage) e **Windows** (msi, exe); le pre-release alpha includono **Linux** (deb, AppImage) e **Windows** (exe), perché RPM e MSI non accettano questi identificativi SemVer. Parte con un tag `v*` oppure a mano dalla scheda Actions; i pacchetti vengono allegati a una release in bozza, da controllare prima della pubblicazione. I tag con suffisso, come `v0.3.0-alpha.2`, producono una pre-release. I pacchetti non sono firmati con un certificato di codice: Windows SmartScreen mostrerà un avviso.
 - [.github/workflows/pages.yml](.github/workflows/pages.yml): a ogni push su `main` pubblica la versione web su GitHub Pages, all'indirizzo <https://dclfbk.github.io/ethicanvasaitool/>. I dati restano nel browser di chi la usa (IndexedDB): il sito non ha un server né un archivio condiviso.
 
 ### Aggiornamenti dell'app desktop
 
 All'avvio l'app desktop controlla `https://github.com/dclfbk/ethicanvasaitool/releases/latest/download/latest.json`. Se trova una versione più recente chiede all'utente se installarla: scarica il pacchetto, ne verifica la firma, lo installa e riavvia. Il controllo si può disattivare in *Metodo e impostazioni*. La versione web non fa questo controllo: la aggiorna chi gestisce il server.
 
-Il numero di versione va aggiornato in [package.json](package.json), [src-tauri/Cargo.toml](src-tauri/Cargo.toml) e [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json) e deve corrispondere al tag (`v0.3.0-alpha.1` → `0.3.0-alpha.1`). Solo le release stabili pubblicate, non le bozze né le pre-release, vengono proposte agli utenti dall’aggiornamento automatico.
+Il numero di versione va aggiornato in [package.json](package.json), [src-tauri/Cargo.toml](src-tauri/Cargo.toml), [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json) e nei relativi lockfile e deve corrispondere al tag (`v0.3.0-alpha.2` → `0.3.0-alpha.2`). Solo le release stabili pubblicate, non le bozze né le pre-release, vengono proposte agli utenti dall’aggiornamento automatico.
 
 Configurazione da fare una volta, prima della prima release:
 
