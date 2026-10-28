@@ -39,7 +39,7 @@ Il numero di versione va aggiornato in [package.json](package.json), [src-tauri/
 Configurazione da fare una volta, prima della prima release:
 
 1. Generare la coppia di chiavi di firma: `npm run tauri signer generate -- -w ~/.tauri/ethicanvasaitool.key`. Conservare la chiave privata e la password fuori dal repository: se si perdono, le installazioni esistenti non potranno più aggiornarsi.
-2. Copiare il contenuto di `~/.tauri/ethicanvasaitool.key.pub` al posto di `REPLACE_WITH_UPDATER_PUBLIC_KEY` in [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json).
+2. Copiare il contenuto di `~/.tauri/ethicanvasaitool.key.pub` nel campo `plugins.updater.pubkey` di [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json) (già fatto per la chiave attuale).
 3. Nei secret del repository GitHub aggiungere `TAURI_SIGNING_PRIVATE_KEY` (il contenuto della chiave privata) e `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
 
 Il workflow di release usa [src-tauri/tauri.release.conf.json](src-tauri/tauri.release.conf.json) per creare i pacchetti di aggiornamento firmati e allegare `latest.json` alla release. Le build locali non ne hanno bisogno.
