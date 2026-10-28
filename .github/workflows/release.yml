@@ -71,6 +71,11 @@ jobs:
           # Signs the update packages; the matching public key is in tauri.conf.json.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # OAuth clients for the cloud archive, compiled into the Rust side; unset means unavailable.
+          CANVAS_GOOGLE_DESKTOP_CLIENT_ID: ${{ vars.GOOGLE_DESKTOP_CLIENT_ID }}
+          CANVAS_GOOGLE_DESKTOP_CLIENT_SECRET: ${{ secrets.GOOGLE_DESKTOP_CLIENT_SECRET }}
+          CANVAS_MS_CLIENT_ID: ${{ vars.MS_CLIENT_ID }}
+          CANVAS_MS_TENANT: ${{ vars.MS_TENANT }}
         with:
           # Builds the signed update artifacts and attaches latest.json to the release.
           args: --config src-tauri/tauri.release.conf.json

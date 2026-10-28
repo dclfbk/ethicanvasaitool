@@ -2,6 +2,13 @@
 
 Applicazione React + TypeScript con archivio locale e contenitore Tauri 2. L'assistente Gemini è facoltativo: senza configurarlo l'applicazione funziona interamente in locale.
 
+## Guida
+
+La guida per chi compila, chi coordina e chi installa è in [docs/guida](docs/guida/00-indice.md) ed è consultabile anche nell'app, dalla voce **Guida** del menu, senza connessione. Il testo è scritto in Markdown, che l'app legge al momento della build con un piccolo lettore interno ([src/guideMarkdown.ts](src/guideMarkdown.ts)), senza HTML dal testo. I link `#app-…` aprono le funzioni dell'app.
+
+- Le etichette dell'interfaccia citate tra «» devono esistere nel codice: [src/guide.test.ts](src/guide.test.ts) lo verifica insieme a link, ancore e immagini. Se si rinomina un pulsante, il test segnala il capitolo da aggiornare.
+- Gli screenshot in `docs/guida/img` si rigenerano dall'app con dati di esempio: `npm run guide:screenshots`.
+
 ## Avvio web
 
 Richiede Node.js 22.12+ (o 20.19+).
@@ -11,7 +18,7 @@ npm ci
 npm run dev
 ```
 
-Aprire http://localhost:1420. Per una distribuzione web: `npm run build` e pubblicare il contenuto di `dist/` su un hosting statico. Nessun backend e nessun account richiesti. Il database è IndexedDB, legato all'origine e al profilo del browser. Nessun font remoto; l'unica connessione esterna possibile è quella verso la Gemini API, solo se l'utente attiva l'assistente.
+Aprire http://localhost:1420. Per una distribuzione web: `npm run build` e pubblicare il contenuto di `dist/` su un hosting statico. Nessun backend e nessun account richiesti. Il database è IndexedDB, legato all'origine e al profilo del browser. Nessun font remoto. Le sole connessioni esterne possibili partono da un'azione dell'utente: verso la Gemini API se attiva l'assistente, verso Google Drive o Microsoft Graph se collega un drive.
 
 ## Desktop Tauri
 
@@ -58,9 +65,13 @@ Il workflow di release usa [src-tauri/tauri.release.conf.json](src-tauri/tauri.r
 - Riferimenti per domanda: documenti, leggi, dataset, esperti e verifiche.
 - Allegati locali fino a 10 MB ciascuno, inclusi nel database in formato data URL.
 - Riepilogo parziale o completo con lacune, figure da coinvolgere e profilo descrittivo dichiarato.
-- Rapporto Markdown e backup JSON completo di allegati. L'importazione crea copie senza sovrascrivere progetti esistenti (massimo 100 MB per pacchetto). Sono accettati i backup della versione 0.1 (formato 1) e quelli attuali (formato 2).
+- Rapporto Markdown e backup JSON completo di allegati. L'importazione crea copie senza sovrascrivere progetti esistenti (massimo 100 MB per pacchetto). Sono accettati i backup della versione 0.1 (formato 1), quelli con l'assistente (formato 2), quelli con la provenienza delle risposte precompilate dai casi a confronto (formato 3) e quelli attuali (formato 4, che aggiunge versioni, revisioni e piano di riesame).
 - Estratti testuali per ogni riferimento, incollati a mano o estratti in locale dai file TXT, MD, CSV e JSON.
 - Assistente Gemini facoltativo: «Spiegami la domanda», «Aiutami a formulare una risposta», «Che cosa manca per rispondere?».
+- Versioni, revisioni e riesame: istantanee della valutazione, revisioni con ruolo ed esito, confronto parola per parola, ripristino, data del riesame con file per il calendario.
+- Esportazione del canvas in PDF, nello stile grafico dell'AI Ethics Canvas originale oppure come poster A3 con pagine di dettaglio, e rapporto in DOCX o ODT, con la sintesi delle conclusioni proposta da Gemini se l'assistente è attivo.
+- Archivio sul drive personale (Google Drive o OneDrive di Microsoft 365): salvataggio e ripristino con unione dei progetti e cifratura facoltativa.
+- Casi a confronto: ricerca locale dei progetti simili nell'archivio e, con Gemini, analisi comparativa e precompilazione del questionario.
 
 ## Assistente Gemini (facoltativo)
 
@@ -94,11 +105,75 @@ Prima di ogni richiesta l'utente vede l'elenco del contesto e l'anteprima esatta
 - Le regole di completezza e gli stati della valutazione non dipendono da Gemini. Sulla domanda sull'inquadramento normativo il modello organizza informazioni e verifiche, ma non assegna categorie AI Act né conformità.
 - La richiesta mostra lo stato di caricamento e si può annullare; gli invii duplicati sono bloccati. Gli errori (chiave non valida, permessi, quota, limite di frequenza, credito esaurito, modello non disponibile, timeout, rete assente, servizio non disponibile, risposta bloccata) hanno un messaggio dedicato e non toccano la risposta. Cambiando progetto o domanda la richiesta in corso viene annullata e il suo risultato scartato.
 
+## Versioni, revisioni e riesame
+
+Dentro un progetto, **Versioni e revisioni** apre la cronologia della valutazione.
+
+- **Versioni**: istantanee immutabili di nome, descrizione, risposte, note e riferimenti. Gli allegati non vengono copiati: restano titolo, collegamento ed estratto. L'app salva una versione da sola prima di un ripristino e prima della precompilazione dai casi a confronto.
+- **Revisioni**: ruolo (obbligatorio) e nome (facoltativo) di chi rivede, esito («Valutazione condivisa», «Condivisa con condizioni», «Da rivedere»), condizioni e osservazioni. Ogni revisione salva la versione a cui si riferisce. Non cambia completezza né stati: non è una validazione. Le risposte modificate dopo l'ultima revisione sono segnalate sotto la domanda.
+- **Confronto** tra due versioni, o con lo stato attuale: per ogni domanda, parole aggiunte e tolte, cambi di stato, riferimenti aggiunti e tolti.
+- **Ripristino** di una versione, dopo aver salvato lo stato attuale.
+- **Riesame**: data, responsabile, eventi che lo anticipano e note. Le schede dell'archivio segnalano i riesami vicini o scaduti; «Aggiungi al calendario» scarica un evento iCalendar (`.ics`).
+- Il riepilogo mostra l'ultima revisione e il prossimo riesame. Il rapporto DOCX/ODT e il PDF poster riportano lo storico completo; il PDF in stile originale lo riassume in copertina.
+
+## Esportazione del canvas e rapporto
+
+Nella pagina **Vedi il risultato** di ogni progetto, il pannello **Esporta il progetto** genera i documenti sul dispositivo, senza servizi esterni.
+
+- **Canvas in PDF · stile originale**: riproduce l'impaginazione dell'AI Ethics Canvas (A4 orizzontale), cioè versione, loghi, cerchio numerato, titolo in Barlow Condensed, filetto azzurro e piede con la licenza CC BY-SA. I post-it sono colorati secondo il profilo della domanda: giallo con triangolo per AI user, ciano con cerchio per AI engineer, verde con quadrato per AI scientist, sfumato quando la domanda riguarda più profili. Le pagine sono:
+  - la copertina, con il riquadro «Caso d'uso», i dati del progetto, l'avanzamento per sezione e la legenda;
+  - la pagina «Caso d'uso» e le cinque sezioni numerate come nell'originale, una domanda per riquadro, con la risposta nella casella a bordo scuro;
+  - le pagine «Risposte complete» per le risposte che non entrano nei riquadri, rinviate con il numero di pagina;
+  - una pagina «Note e riferimenti» con figure, contributi richiesti, note, riferimenti e testo proposto dall'AI.
+
+  Colori e posizioni sono ricavati dal PDF originale. Le caselle sono le 20 domande del percorso, non i riquadri del canvas cartaceo, perché il questionario ne è un adattamento.
+- **Canvas in PDF · poster e dettaglio**: la prima pagina è un poster A3 orizzontale con le sei sezioni del canvas a riquadri colorati e le risposte abbreviate. Lo spazio di ogni riquadro viene diviso tra le domande in base alla lunghezza delle risposte; le risposte troncate terminano con «(segue)». Le pagine A4 successive riportano ogni risposta per intero, con stato, origine nel canvas, figure da coinvolgere, contributi richiesti, note, riferimenti e provenienza AI, poi i punti da completare e l'inquadramento normativo. Entrambi i formati usano `pdf-lib` e incorporano Fira Sans e Barlow Condensed (OFL), ridotti ai caratteri latini. La libreria e i font si caricano solo al momento dell'esportazione.
+- **Rapporto DOCX o ODT**: contiene descrizione del progetto, stato della compilazione calcolato dall'applicazione (completezza, punti essenziali mancanti, contributi in attesa) e inquadramento normativo con un testo fisso. In allegato, se richiesto, ci sono tutte le risposte. I file sono scritti direttamente in Office Open XML e OpenDocument, senza librerie, e si aprono in Word e LibreOffice.
+- **Sintesi delle conclusioni con Gemini** (solo con l'assistente attivo): Gemini riceve descrizione, stato calcolato, risposte e contributi richiesti. Su scelta dell'utente riceve anche note ed estratti dei riferimenti, sempre con l'anteprima esatta del testo; i nomi delle persone indicate non vengono mai inviati. Restituisce sintesi, conclusioni per sezione, punti di forza, rischi, azioni con il ruolo responsabile, informazioni mancanti e figure da coinvolgere.
+  - Le citazioni vengono controllate: ogni voce riporta le proprie fonti, e una fonte non inviata viene segnalata «da verificare».
+  - Le frasi che sembrano una classificazione AI Act o una dichiarazione di conformità vengono rimosse e mostrate all'utente.
+  - La sintesi è una bozza modificabile: entra nel rapporto solo all'esportazione, con l'indicazione di modello e data. Non viene salvata nel progetto e non cambia completezza o stati.
+
+## Archivio sul drive personale
+
+In **Metodo e impostazioni → Archivio sul tuo drive** si salva una copia dell'archivio, allegati compresi, su Google Drive o su OneDrive di Microsoft 365, e la si ripristina su questo o su un altro dispositivo. Non c'è sincronizzazione automatica: il salvataggio e il ripristino partono solo da un clic.
+
+- **Dove finiscono i file**: un file `ethicanvas-archivio.json` nella cartella «EthiCanvas AI» del drive dell'utente. Su Google l'app usa l'ambito `drive.file` e vede solo i file che ha creato; su Microsoft usa `Files.ReadWrite` e `User.Read`, con soli account di lavoro o della PA (tenant `organizations`, oppure il tenant dell'ente).
+- **Ripristino**: unisce i progetti uno per uno e non elimina nulla. I progetti nuovi vengono aggiunti, quelli cambiati solo sul drive aggiornati. Se un progetto è cambiato in entrambi i posti dall'ultimo salvataggio da questo dispositivo, si conservano tutte e due le versioni, una con il nome «· copia … in conflitto». I progetti eliminati in locale ricompaiono se sono ancora nel backup.
+- **Salvataggio**: sostituisce il file sul drive. Se nel frattempo un altro dispositivo lo ha aggiornato, l'app chiede conferma e suggerisce di ripristinare prima. Google Drive e OneDrive conservano le versioni precedenti del file.
+- **Cifratura facoltativa**, attiva per impostazione predefinita: AES-256-GCM con chiave derivata dalla passphrase (PBKDF2-SHA-256, 600.000 iterazioni), sul dispositivo e prima del caricamento. La passphrase (almeno 12 caratteri) non viene salvata e non è recuperabile. Senza cifratura il fornitore del drive può leggere i contenuti: va verificato che le regole dell'ente lo consentano.
+- **Browser**: accesso in una finestra popup che ritorna a `oauth-callback.html`, una pagina statica senza script. Il token resta solo in memoria e si perde chiudendo o ricaricando la pagina; non si conservano refresh token. Google usa il flusso a token, Microsoft il codice di autorizzazione con PKCE.
+- **Desktop Tauri**: accesso nel browser di sistema con PKCE e redirect su `127.0.0.1`/`localhost` a porta casuale. Il refresh token è salvato nel portachiavi del sistema; le chiamate HTTP partono dal processo Rust ([src-tauri/src/cloud.rs](src-tauri/src/cloud.rs)), che aggiunge il token e accetta solo gli endpoint di Drive e Graph. Il token non torna mai all'interfaccia. «Scollega» elimina la credenziale e, per Google, la revoca.
+
+### Configurazione per chi distribuisce l'app
+
+Ogni installazione usa le proprie registrazioni OAuth. Gli identificativi sono pubblici e vengono inseriti al momento della build; un servizio senza identificativo appare come non disponibile.
+
+| Variabile | Dove | Registrazione |
+|---|---|---|
+| `VITE_GOOGLE_CLIENT_ID` | build web | Google Cloud, client OAuth «Applicazione web». URI di reindirizzamento: `https://<sito>/oauth-callback.html`; origine JavaScript: `https://<sito>`. Abilitare la Google Drive API. |
+| `VITE_MS_CLIENT_ID`, `VITE_MS_TENANT` | build web | Microsoft Entra, piattaforma «Applicazione a pagina singola» con URI `https://<sito>/oauth-callback.html`. Permessi delegati `User.Read` e `Files.ReadWrite`. Tenant facoltativo, predefinito `organizations`. |
+| `CANVAS_GOOGLE_DESKTOP_CLIENT_ID`, `CANVAS_GOOGLE_DESKTOP_CLIENT_SECRET` | build desktop | Google Cloud, client OAuth «App desktop». Google considera il secret di un'app installata non riservato, ma resta fuori dal codice sorgente. |
+| `CANVAS_MS_CLIENT_ID`, `CANVAS_MS_TENANT` | build desktop | La stessa app Entra, con in più la piattaforma «Applicazioni per dispositivi mobili e desktop» e l'URI `http://localhost`. |
+
+Nei workflow GitHub i valori vengono dalle variabili del repository `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_DESKTOP_CLIENT_ID`, `MS_CLIENT_ID`, `MS_TENANT` e dal secret `GOOGLE_DESKTOP_CLIENT_SECRET`. Finché l'app Google è in modalità «test», possono accedere solo gli utenti di prova indicati nella console. In alcuni tenant Microsoft serve l'approvazione dell'amministratore, e l'app lo segnala.
+
+## Casi a confronto
+
+La sezione **Casi a confronto** usa come knowledge base i progetti dell'archivio locale, compresi quelli importati da un archivio condiviso dall'ente. Gli esempi dimostrativi e i progetti senza risposte non ne fanno parte.
+
+- Lo scenario può essere un nuovo progetto descritto a parole oppure un progetto già presente nell'archivio. Si può aggiungere una domanda specifica.
+- I casi più simili vengono ordinati sul dispositivo con una similarità testuale (TF-IDF) su nome, descrizione e risposte, mostrando le parole in comune. Questa parte funziona senza assistente e non invia nulla.
+- Con l'assistente attivo l'utente sceglie quali casi inviare, con l'anteprima esatta del testo. Per ogni caso vengono inviati nome, ente, descrizione e risposte con il loro stato. Non vengono inviati allegati, estratti dei riferimenti, note, persone indicate e richieste di contributo.
+- Gemini restituisce una sintesi, somiglianze, differenze e soluzioni da valutare per ogni caso, raccomandazioni, informazioni mancanti e figure da coinvolgere. Le citazioni vengono controllate in locale: una fonte non inviata viene segnalata come da verificare.
+- Le risposte proposte sono modificabili e si applicano solo dopo una conferma. Partendo da uno scenario nuovo viene creato un nuovo progetto; partendo da un progetto esistente vengono riempite solo le risposte vuote, anche se nel frattempo ne sono state scritte altre. Ogni risposta entra come «bozza», con la provenienza (azione `prefill`) e i nomi dei casi citati.
+- La domanda sull'inquadramento normativo non viene mai precompilata, così l'assistente non può proporre categorie AI Act.
+
 ## Limiti espliciti
 
 È un MVP, non una implementazione integrale di ogni quesito del PDF. Le domande sono adattamenti tematici con origine indicata. Sono incluse estensioni su chatbot, inclusione e riesame. I ruoli sono suggerimenti, non la riproduzione delle attribuzioni grafiche originali.
 
-Non sono implementati classificazione normativa AI Act, revisione formale, cronologia completa delle valutazioni, estrazione del testo da PDF, Word o immagini, sincronizzazione, PWA offline, crittografia dell'archivio, integrazioni Ollama e Microsoft Copilot o un proxy per la chiave Gemini. Il rapporto non costituisce una certificazione. La presenza di evidenze non equivale a verifica della loro validità.
+Non sono implementati classificazione normativa AI Act, revisione formale, cronologia completa delle valutazioni, estrazione del testo da PDF, Word o immagini, sincronizzazione automatica tra dispositivi, PWA offline, crittografia dell'archivio locale, integrazioni Ollama e Microsoft Copilot o un proxy per la chiave Gemini. Il rapporto non costituisce una certificazione. La presenza di evidenze non equivale a verifica della loro validità.
 
 Il salvataggio locale non è un backup. Esportare copie, soprattutto prima di cancellare dati del browser o cambiare dispositivo. Gli allegati sono incorporati per portabilità; per archivi estesi sarà opportuno separarli in un file store con transazioni e controlli di integrità. La versione desktop e quella web hanno archivi separati.
 
@@ -114,6 +189,15 @@ Il salvataggio locale non è un backup. Esportare copie, soprattutto prima di ca
 - `src/llm/geminiBrowser.ts`, `src/llm/geminiTauri.ts`: trasporto e credenziali per browser (chiave in memoria) e desktop (portachiavi).
 - `src/assistant.ts`: contesto autorizzato, istruzioni, schema della risposta, verifica delle citazioni, inserimento come bozza.
 - `src/AssistantPanel.tsx`, `src/AssistantSettingsPanel.tsx`: interfaccia dell'assistente e impostazioni.
+- `src/history.ts`, `src/historyText.ts`, `src/HistoryPanel.tsx`: versioni, revisioni, confronto, ripristino e riesame.
+- `docs/guida/`, `src/GuidePanel.tsx`, `src/guideMarkdown.ts`: guida all'uso in Markdown e sua visualizzazione nell'app.
+- `src/canvasOriginalPdf.ts`: canvas in PDF nello stile dell'AI Ethics Canvas originale.
+- `src/canvasPdf.ts`: canvas in PDF come poster A3 con pagine di dettaglio.
+- `src/pdfText.ts`, `src/pdfAssets.ts`: testo, a capo e troncamento condivisi; font e loghi incorporati nei PDF.
+- `src/report.ts`, `src/documents.ts`, `src/zip.ts`, `src/ReportExportPanel.tsx`: rapporto, sintesi con Gemini, scrittura di DOCX e ODT.
+- `src/cloud/`: archivio sul drive (protocolli Google Drive e Microsoft Graph, accesso nel browser e su desktop, cifratura, unione al ripristino); `src/CloudSyncPanel.tsx` è l'interfaccia.
+- `src-tauri/src/cloud.rs`: accesso OAuth con redirect locale, portachiavi e chiamate HTTP lato desktop.
+- `src/knowledge.ts`, `src/KnowledgePanel.tsx`: ricerca locale dei casi simili, analisi comparativa e precompilazione.
 - `src/textExtraction.ts`: estrazione locale del testo dai file di testo.
 - `src-tauri/src/gemini.rs`: portachiavi e chiamate HTTP lato desktop.
 - `src-tauri/`: configurazione e ingresso Rust.
@@ -136,7 +220,7 @@ cd src-tauri && cargo test            # test Rust
 cd src-tauri && cargo test -- --ignored  # prova reale del portachiavi del sistema
 ```
 
-I test non richiedono credenziali reali. I test unitari usano un fornitore e un trasporto simulati. `scripts/smoke-assistant.mjs` intercetta in Playwright tutte le chiamate verso `generativelanguage.googleapis.com` e risponde con un server simulato. Così verifica: assistente disattivato per impostazione predefinita, chiave di sessione, test di connessione, estrazione locale, anteprima del contesto, annullamento, errori di quota e chiave non valida, invio singolo con doppio clic, nessuna sovrascrittura, bozza con provenienza, risultato tardivo scartato, assenza della chiave da archivio, backup e console.
+I test non richiedono credenziali reali. I test unitari usano un fornitore e un trasporto simulati. `scripts/smoke-assistant.mjs` intercetta in Playwright tutte le chiamate verso `generativelanguage.googleapis.com` e risponde con un server simulato. Così verifica: assistente disattivato per impostazione predefinita, chiave di sessione, test di connessione, estrazione locale, anteprima del contesto, annullamento, errori di quota e chiave non valida, invio singolo con doppio clic, nessuna sovrascrittura, bozza con provenienza, risultato tardivo scartato, assenza della chiave da archivio, backup e console. `scripts/smoke-knowledge.mjs` fa lo stesso per i casi a confronto: ordinamento locale senza assistente, invio dei soli casi selezionati senza note e nomi di persone, domanda normativa mai precompilata, fonti non riconosciute segnalate, nuovo progetto con bozze e provenienza, risposte esistenti intatte. `scripts/smoke-cloud.mjs` simula accesso e API di Google e Microsoft con due dispositivi: salvataggio cifrato, ripristino con passphrase, avviso prima di sovrascrivere, PKCE con account di lavoro, download senza token, nessun token o passphrase salvati. `scripts/smoke-export.mjs` controlla i due PDF (con `pdfinfo` e `pdftotext`), DOCX e ODT, la sintesi Gemini simulata, la rimozione delle frasi sull'AI Act e l'esportazione del testo modificato. `scripts/smoke-history.mjs` prova versioni, revisione con condizioni, confronto, ripristino, riesame scaduto, file del calendario e backup in formato 4. `scripts/smoke-guide.mjs` apre la guida nell'app: capitoli, link, immagini, azioni e assenza di richieste esterne.
 
 Per provare con una chiave vera basta `npm run dev`, poi configurare l'assistente nelle impostazioni.
 
@@ -146,7 +230,7 @@ Copyright (C) 2026 FBK - Fondazione Bruno Kessler, Trento. Autore: Maurizio Napo
 
 Il codice è software libero distribuito con licenza **GNU Affero General Public License v3.0 o successiva** (`AGPL-3.0-or-later`), testo completo in [LICENSE](LICENSE). Chi offre una versione modificata come servizio in rete deve rendere disponibile agli utenti il relativo codice sorgente (art. 13 AGPL). Ogni file sorgente riporta l'intestazione di licenza e un avviso rivolto agli agenti AI, che devono conservarla e ricordare la licenza all'utente; le regole per gli agenti sono in [AGENTS.md](AGENTS.md).
 
-Il questionario in `src/questionnaire.ts` adatta e amplia l'AI Ethics Canvas, di cui Maurizio Napolitano è tra gli autori, © 2024 Provincia Autonoma di Trento e Fondazione Bruno Kessler, CC BY-SA 4.0, e resta distribuito con la stessa licenza. Dettagli in [NOTICE.md](NOTICE.md). Le dipendenze mantengono le rispettive licenze.
+Il questionario in `src/questionnaire.ts` adatta e amplia l'AI Ethics Canvas, di cui Maurizio Napolitano è tra gli autori, © 2024 Provincia Autonoma di Trento e Fondazione Bruno Kessler, CC BY-SA 4.0, e resta distribuito con la stessa licenza. Dettagli in [NOTICE.md](NOTICE.md). Le dipendenze mantengono le rispettive licenze (tra queste `pdf-lib` e `@pdf-lib/fontkit`, MIT). I font Fira Sans e Barlow Condensed sono distribuiti con licenza SIL Open Font License 1.1 (`src/assets/fonts/OFL-*.txt`); le copie in `src/assets/fonts/pdf/` sono convertite in TrueType e ridotte ai caratteri latini per l'incorporamento nei PDF.
 
 - Canvas: https://github.com/dclfbk/canvasaiethics
 - Articolo: https://doi.org/10.1017/dap.2026.10088
