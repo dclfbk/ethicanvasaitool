@@ -37,6 +37,19 @@ Ogni revisione salva anche una versione dello stato attuale, così resta chiaro 
 
 Il riepilogo del progetto mostra l’ultima revisione e il prossimo riesame; il rapporto e il PDF in formato poster riportano anche lo storico completo.
 
+## Esaminare l’inquadramento normativo
+
+Dentro il progetto premi «Inquadramento normativo». La checklist raccoglie temi da esaminare con un esperto legale: non assegna categorie di rischio e non determina obblighi o conformità.
+
+![La checklist di supporto all’inquadramento normativo](img/inquadramento-normativo.png)
+
+1. Per ogni punto seleziona «Sì», «No», «Da verificare» o «Non pertinente» e annota i dubbi per l’esperto.
+2. Scrivi le conclusioni e le fonti che le sostengono.
+3. Indica il «Ruolo dell’esperto legale» e premi «Registra l’inquadramento». Il nome è facoltativo. La registrazione salva una versione e indica chi ha scritto le conclusioni e quando.
+4. Se in seguito modifichi la checklist o le conclusioni, l’app segnala che l’inquadramento va riesaminato.
+
+La checklist è una bozza: i contenuti e i riferimenti devono essere verificati da un esperto legale prima dell’uso. «Punti da approfondire» segnala temi per la revisione, non risultati automatici. Puoi riportare le conclusioni nella risposta del canvas solo come bozza: scegli se inserirle, aggiungerle al testo esistente o sostituirlo.
+
 ## Confrontare due versioni
 
 1. Nella «Cronologia» premi «Confronta» accanto a una versione: viene confrontata con lo stato attuale.

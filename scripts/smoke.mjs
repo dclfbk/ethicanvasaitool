@@ -43,6 +43,7 @@ try{
  page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url())&&!r.url().includes('127.0.0.1'))external.push(r.url());});
  await page.goto('http://127.0.0.1:'+server.address().port);
  await page.getByRole('heading',{name:'I tuoi progetti AI.'}).waitFor();
+ await page.getByText('VERSIONE ALPHA — INSTABILE.',{exact:false}).waitFor();
  await page.getByRole('button',{name:'Nuovo progetto',exact:true}).click();
  await page.getByLabel('Nome del progetto').fill('Sportello AI di prova');
  await page.getByLabel('Ente o organizzazione').fill('Pubblica Amministrazione di prova');
@@ -69,10 +70,19 @@ try{
  await page.getByRole('button',{name:'Vedi il risultato'}).click();
  await page.getByText('Valutazione preliminare',{exact:true}).waitFor();
  await page.getByText('Da coinvolgere: Referente del servizio',{exact:false}).waitFor();
+ await page.getByRole('button',{name:'Inquadramento normativo',exact:true}).click();
+ await page.getByLabel(/^Risposta:/).first().selectOption('yes');
+ await page.getByLabel('Conclusioni').fill('Conclusione da verificare con le figure competenti.');
+ await page.getByLabel('Fonti e riferimenti').fill('Riferimento da approfondire.');
+ await page.getByLabel('Ruolo dell’esperto legale').fill('Esperto legale');
+ await page.getByRole('button',{name:'Registra l’inquadramento'}).click();
+ await page.getByText('Ultima registrazione',{exact:false}).waitFor();
+ await page.getByRole('button',{name:'Inserisci nel canvas come bozza'}).click();
+ await page.getByRole('button',{name:'Chiudi inquadramento'}).click();
  await page.getByRole('button',{name:'Archivio',exact:true}).click();
  const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Esporta una copia'}).click();
  const download=await downloadPromise;const backup=JSON.parse(await readFile(await download.path(),'utf8'));
- assert.equal(backup.projects.length,1);assert.equal(backup.projects[0].paused,true);assert.equal(backup.projects[0].references[0].fileName,'nota.txt');assert.equal(backup.projects[0].answers.purpose.state,'answered');assert.equal(backup.projects[0].answers.audience.state,'waiting');
+ assert.equal(backup.projects.length,1);assert.equal(backup.projects[0].paused,true);assert.equal(backup.projects[0].references[0].fileName,'nota.txt');assert.equal(backup.projects[0].answers.purpose.state,'answered');assert.equal(backup.projects[0].answers.audience.state,'waiting');assert.equal(backup.projects[0].answers.risk.state,'draft');assert.equal(backup.projects[0].regulatory.conclusions,'Conclusione da verificare con le figure competenti.');assert.equal(backup.projects[0].versions.at(-1).snapshot.regulatory.expert.role,'Esperto legale');
  await page.locator('input[type=file]').first().setInputFiles({name:'backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(backup))});
  await page.getByRole('heading',{name:'Sportello AI di prova · importato',exact:true}).waitFor();
  await page.getByLabel('Cerca nell’archivio').fill('Sportello');
@@ -83,6 +93,12 @@ try{
  await page.getByRole('button',{name:'Riprendi',exact:true}).first().click();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
  await page.screenshot({path:'/tmp/canvas-qa/mobile.png',fullPage:true});
+ await page.getByRole('button',{name:'Archivio',exact:true}).click();
+ const deletionDialogs=[];page.on('dialog',dialog=>{deletionDialogs.push(dialog.message());void dialog.accept();});
+ await page.getByRole('button',{name:'Elimina Sportello AI di prova · importato'}).click();
+ await page.getByRole('heading',{name:'Sportello AI di prova · importato',exact:true}).waitFor({state:'detached'});
+ assert.equal(await page.locator('.project-card').count(),1);
+ assert.match(deletionDialogs[0],/Esporta prima una copia/);
  assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
- console.log('PASS: creation, suggestions, confirmation, waiting, attachments, pause/resume, persistence, partial report, backup/import, responsive layout and no external requests.');
+ console.log('PASS: creation, suggestions, confirmation, waiting, attachments, pause/resume, persistence, regulatory checklist and registration, draft insertion, backup/import, archive deletion, responsive layout and no external requests.');
 }finally{await browser?.close();server.close();}

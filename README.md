@@ -2,6 +2,8 @@
 
 Applicazione React + TypeScript con archivio locale e contenitore Tauri 2. L'assistente Gemini è facoltativo: senza configurarlo l'applicazione funziona interamente in locale.
 
+> **Versione alpha — instabile.** Questa versione è in prova, può contenere errori, perdere dati o cambiare senza preavviso. Non usarla per attività operative né con dati reali, personali o riservati. Esporta copie di sicurezza dei progetti che vuoi conservare.
+
 ## Guida
 
 La guida per chi compila, chi coordina e chi installa è in [docs/guida](docs/guida/00-indice.md) ed è consultabile anche nell'app, dalla voce **Guida** del menu, senza connessione. Il testo è scritto in Markdown, che l'app legge al momento della build con un piccolo lettore interno ([src/guideMarkdown.ts](src/guideMarkdown.ts)), senza HTML dal testo. I link `#app-…` aprono le funzioni dell'app.
@@ -35,14 +37,14 @@ Su Linux servono anche `libwebkit2gtk-4.1-dev`, `librsvg2-dev` e `libdbus-1-dev`
 ### Build automatiche su GitHub
 
 - [.github/workflows/ci.yml](.github/workflows/ci.yml): a ogni push su `main` e a ogni pull request esegue test, build, test browser e test Rust.
-- [.github/workflows/release.yml](.github/workflows/release.yml): crea i pacchetti **Linux** (deb, rpm, AppImage) e **Windows** (msi, exe) con `tauri-action`. Parte con un tag `v*` (ad esempio `git tag v0.2.0 && git push --tags`) oppure a mano dalla scheda Actions; i pacchetti vengono allegati a una release in bozza, da controllare prima della pubblicazione. Non sono firmati: Windows SmartScreen mostrerà un avviso.
+- [.github/workflows/release.yml](.github/workflows/release.yml): crea i pacchetti **Linux** (deb, rpm, AppImage) e **Windows** (msi, exe) con `tauri-action`. Parte con un tag `v*` oppure a mano dalla scheda Actions; i pacchetti vengono allegati a una release in bozza, da controllare prima della pubblicazione. I tag con suffisso, come `v0.3.0-alpha.1`, producono una pre-release. I pacchetti non sono firmati con un certificato di codice: Windows SmartScreen mostrerà un avviso.
 - [.github/workflows/pages.yml](.github/workflows/pages.yml): a ogni push su `main` pubblica la versione web su GitHub Pages, all'indirizzo <https://dclfbk.github.io/ethicanvasaitool/>. I dati restano nel browser di chi la usa (IndexedDB): il sito non ha un server né un archivio condiviso.
 
 ### Aggiornamenti dell'app desktop
 
 All'avvio l'app desktop controlla `https://github.com/dclfbk/ethicanvasaitool/releases/latest/download/latest.json`. Se trova una versione più recente chiede all'utente se installarla: scarica il pacchetto, ne verifica la firma, lo installa e riavvia. Il controllo si può disattivare in *Metodo e impostazioni*. La versione web non fa questo controllo: la aggiorna chi gestisce il server.
 
-Il numero di versione va aggiornato in [package.json](package.json), [src-tauri/Cargo.toml](src-tauri/Cargo.toml) e [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json) e deve corrispondere al tag (`v0.2.0` → `0.2.0`). Solo le release pubblicate, non le bozze né le pre-release, vengono proposte agli utenti.
+Il numero di versione va aggiornato in [package.json](package.json), [src-tauri/Cargo.toml](src-tauri/Cargo.toml) e [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json) e deve corrispondere al tag (`v0.3.0-alpha.1` → `0.3.0-alpha.1`). Solo le release stabili pubblicate, non le bozze né le pre-release, vengono proposte agli utenti dall’aggiornamento automatico.
 
 Configurazione da fare una volta, prima della prima release:
 
@@ -65,10 +67,11 @@ Il workflow di release usa [src-tauri/tauri.release.conf.json](src-tauri/tauri.r
 - Riferimenti per domanda: documenti, leggi, dataset, esperti e verifiche.
 - Allegati locali fino a 10 MB ciascuno, inclusi nel database in formato data URL.
 - Riepilogo parziale o completo con lacune, figure da coinvolgere e profilo descrittivo dichiarato.
-- Rapporto Markdown e backup JSON completo di allegati. L'importazione crea copie senza sovrascrivere progetti esistenti (massimo 100 MB per pacchetto). Sono accettati i backup della versione 0.1 (formato 1), quelli con l'assistente (formato 2), quelli con la provenienza delle risposte precompilate dai casi a confronto (formato 3) e quelli attuali (formato 4, che aggiunge versioni, revisioni e piano di riesame).
+- Rapporto Markdown e backup JSON completo di allegati. L'importazione crea copie senza sovrascrivere progetti esistenti (massimo 100 MB per pacchetto). Sono accettati i backup della versione 0.1 (formato 1), quelli con l'assistente (formato 2), quelli con la provenienza delle risposte precompilate dai casi a confronto (formato 3), quelli con versioni, revisioni e piano di riesame (formato 4) e quelli correnti (formato 5, che aggiunge l’inquadramento normativo).
 - Estratti testuali per ogni riferimento, incollati a mano o estratti in locale dai file TXT, MD, CSV e JSON.
 - Assistente facoltativo con Gemini oppure con un modello locale (Ollama o server compatibile OpenAI): «Spiegami la domanda», «Aiutami a formulare una risposta», «Che cosa manca per rispondere?».
 - Versioni, revisioni e riesame: istantanee della valutazione, revisioni con ruolo ed esito, confronto parola per parola, ripristino, data del riesame con file per il calendario.
+- Checklist normativa di supporto, conclusioni e fonti dell’esperto, incluse in versioni ed esportazioni. È una bozza da verificare: non assegna categorie di rischio e non determina la conformità.
 - Esportazione del canvas in PDF, nello stile grafico dell'AI Ethics Canvas originale oppure come poster A3 con pagine di dettaglio, e rapporto in DOCX o ODT, con la sintesi delle conclusioni proposta da Gemini se l'assistente è attivo.
 - Archivio in una cartella sincronizzata (Google Drive, OneDrive, Nextcloud… tramite il loro programma) o direttamente su Google Drive e OneDrive di Microsoft 365: salvataggio e ripristino con unione dei progetti e cifratura facoltativa.
 - Quadro dell'ente: stato dei progetti, riesami scaduti e vicini, contributi in attesa per figura, completamento per sezione, lacune ricorrenti, esportazione CSV.

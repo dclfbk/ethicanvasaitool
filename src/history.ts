@@ -27,16 +27,16 @@
  * source code to users who interact with the software over a network.
  */
 
-import { portableAnswers, questions, type AnswerState, type Project, type ProjectSnapshot, type ProjectVersion, type Review, type ReviewOutcome, type ReviewPlan, type VersionReason } from './model';
+import { portableAnswers, portableRegulatory, questions, type AnswerState, type Project, type ProjectSnapshot, type ProjectVersion, type Review, type ReviewOutcome, type ReviewPlan, type VersionReason } from './model';
 
 // Versions, reviews and the review plan of a project. Every function returns a new project and never
 // changes completeness or answer states: a review is information about the assessment, not a validation.
 
 export function snapshotOf(p: Project): ProjectSnapshot {
- return {name: p.name, description: p.description, organization: p.organization, answers: portableAnswers(p.answers), references: p.references.map(({data: _attachment, ...r}) => r)};
+ return {name: p.name, description: p.description, organization: p.organization, answers: portableAnswers(p.answers), references: p.references.map(({data: _attachment, ...r}) => r), ...(p.regulatory?{regulatory:portableRegulatory(p.regulatory)}:{})};
 }
 // Snapshots are read like projects, for example to compute the completeness of an old version.
-export const asProject = (p: Project, s: ProjectSnapshot): Project => ({...p, name: s.name, description: s.description, organization: s.organization, answers: s.answers, references: s.references});
+export const asProject = (p: Project, s: ProjectSnapshot): Project => ({...p, name: s.name, description: s.description, organization: s.organization, answers: s.answers, references: s.references, ...(s.regulatory?{regulatory:s.regulatory}:{})});
 
 export function addVersion(p: Project, v: {label: string; reason: VersionReason; note?: string}, now = new Date().toISOString()): {project: Project; version: ProjectVersion} {
  const version: ProjectVersion = {id: crypto.randomUUID(), label: v.label.trim(), reason: v.reason, note: (v.note ?? '').trim(), createdAt: now, snapshot: snapshotOf(p)};
@@ -58,7 +58,7 @@ export function restoreVersion(p: Project, versionId: string, label: string, now
  const {project} = addVersion(p, {label, reason: 'restore'}, now);
  const files = new Map(p.references.filter(r => r.data).map(r => [r.id, r.data]));
  const s = target.snapshot;
- return {...project, name: s.name, description: s.description, organization: s.organization, updatedAt: now, answers: portableAnswers(s.answers),
+ return {...project, name: s.name, description: s.description, organization: s.organization, updatedAt: now, answers: portableAnswers(s.answers), ...(s.regulatory?{regulatory:s.regulatory}:{}),
   references: s.references.map(r => files.has(r.id) ? {...r, data: files.get(r.id)} : r)};
 }
 

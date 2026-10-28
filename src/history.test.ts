@@ -119,11 +119,11 @@ describe('Review plan',()=>{
  });
 });
 
-describe('Archive format 4',()=>{
+describe('Archive format 5',()=>{
  it('round-trips versions, reviews and the plan, and rejects broken history',()=>{
   const p={...addReview(sample(),{role:'DPO',outcome:'shared'},'R','2026-10-05T10:00:00.000Z'),reviewPlan:{nextAt:'2027-03-12',owner:'Referente',triggers:['model' as const],note:''}};
   const backup=JSON.parse(JSON.stringify(createBackup([p])));
-  expect(backup.version).toBe(4);expect(readBackup(backup)).toEqual([p]);
+  expect(backup.version).toBe(5);expect(readBackup(backup)).toEqual([p]);
   expect(validateProject({...p,reviews:[{...p.reviews![0],versionId:'missing'}]})).toBe(false);
   expect(validateProject({...p,reviewPlan:{...p.reviewPlan,nextAt:'12/03/2027'}})).toBe(false);
   expect(validateProject({...p,versions:[{...p.versions![0],snapshot:{...p.versions![0].snapshot,references:[{...sample().references[0]}]}}]})).toBe(false);

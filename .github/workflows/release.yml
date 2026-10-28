@@ -81,6 +81,9 @@ jobs:
           args: --config src-tauri/tauri.release.conf.json
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}-build', github.run_number) }}
           releaseName: EthiCanvas AI ${{ github.ref_type == 'tag' && github.ref_name || format('build {0}', github.run_number) }}
-          releaseBody: Desktop packages for Linux (deb, rpm, AppImage) and Windows (msi, exe). Not code-signed; updates are signed with the updater key.
+          releaseBody: >-
+            ${{ contains(github.ref_name, '-') &&
+            'Pre-release alpha: versione sperimentale e instabile, da usare solo per la revisione e non per attività operative o dati reali.' ||
+            'Desktop packages for Linux (deb, rpm, AppImage) and Windows (msi, exe). Not code-signed; updates are signed with the updater key.' }}
           releaseDraft: true
-          prerelease: ${{ github.ref_type != 'tag' }}
+          prerelease: ${{ github.ref_type != 'tag' || contains(github.ref_name, '-') }}
