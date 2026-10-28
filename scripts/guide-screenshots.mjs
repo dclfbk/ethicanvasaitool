@@ -139,6 +139,10 @@ try{
  await shot(page,'risultato');
  await shot(page.locator('.report-export'),'esporta');
 
+ await page.getByRole('button',{name:'Quadro dell’ente'}).click();
+ await page.getByLabel('Includi gli esempi dimostrativi').check();
+ await page.evaluate(()=>window.scrollTo(0,0));
+ await shot(page,'quadro');
  await page.getByRole('button',{name:'Casi a confronto'}).click();
  await page.getByLabel('Nome del progetto').fill('Chatbot per i servizi anagrafici');
  await page.getByLabel('Descrizione dello scenario').fill('Un chatbot che risponde ai cittadini sui servizi anagrafici e sulle scadenze dei documenti.');

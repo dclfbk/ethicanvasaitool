@@ -71,6 +71,7 @@ Il workflow di release usa [src-tauri/tauri.release.conf.json](src-tauri/tauri.r
 - Versioni, revisioni e riesame: istantanee della valutazione, revisioni con ruolo ed esito, confronto parola per parola, ripristino, data del riesame con file per il calendario.
 - Esportazione del canvas in PDF, nello stile grafico dell'AI Ethics Canvas originale oppure come poster A3 con pagine di dettaglio, e rapporto in DOCX o ODT, con la sintesi delle conclusioni proposta da Gemini se l'assistente è attivo.
 - Archivio in una cartella sincronizzata (Google Drive, OneDrive, Nextcloud… tramite il loro programma) o direttamente su Google Drive e OneDrive di Microsoft 365: salvataggio e ripristino con unione dei progetti e cifratura facoltativa.
+- Quadro dell'ente: stato dei progetti, riesami scaduti e vicini, contributi in attesa per figura, completamento per sezione, lacune ricorrenti, esportazione CSV.
 - Contributi delle figure coinvolte senza server: richiesta e risposta come file, importazione in bozza.
 - Casi a confronto: ricerca locale dei progetti simili nell'archivio e, con Gemini, analisi comparativa e precompilazione del questionario.
 
@@ -134,6 +135,16 @@ Nella pagina **Vedi il risultato** di ogni progetto, il pannello **Esporta il pr
   - Le citazioni vengono controllate: ogni voce riporta le proprie fonti, e una fonte non inviata viene segnalata «da verificare».
   - Le frasi che sembrano una classificazione AI Act o una dichiarazione di conformità vengono rimosse e mostrate all'utente.
   - La sintesi è una bozza modificabile: entra nel rapporto solo all'esportazione, con l'indicazione di modello e data. Non viene salvata nel progetto e non cambia completezza o stati.
+
+## Quadro dell'ente
+
+**Quadro dell'ente** nel menu riassume i progetti dell'archivio, esclusi gli esempi dimostrativi salvo scelta contraria. Tutto è calcolato sul dispositivo ([src/dashboard.ts](src/dashboard.ts)) e non cambia i progetti.
+
+- Contatori: progetti per stato, completezza media, contributi in attesa, riesami scaduti ed entro 30 giorni.
+- Riesami scaduti, vicini e non pianificati, ed esito dell'ultima revisione di ogni progetto.
+- Contributi in attesa in tutti i progetti, dal più vecchio, filtrabili per figura.
+- Completamento medio per sezione e lacune ricorrenti per domanda, in barre orizzontali con il valore scritto accanto. Una lacuna apre il primo progetto in cui manca, su quella domanda.
+- **Esporta i progetti in CSV**: separatore punto e virgola e UTF-8 con BOM, per Excel e LibreOffice in italiano. Le celle che un foglio di calcolo interpreterebbe come formula sono precedute da un apostrofo.
 
 ## Contributi delle figure coinvolte
 
@@ -212,6 +223,7 @@ Il salvataggio locale non è un backup. Esportare copie, soprattutto prima di ca
 - `src/canvasPdf.ts`: canvas in PDF come poster A3 con pagine di dettaglio.
 - `src/pdfText.ts`, `src/pdfAssets.ts`: testo, a capo e troncamento condivisi; font e loghi incorporati nei PDF.
 - `src/report.ts`, `src/documents.ts`, `src/zip.ts`, `src/ReportExportPanel.tsx`: rapporto, sintesi con Gemini, scrittura di DOCX e ODT.
+- `src/dashboard.ts`, `src/DashboardPanel.tsx`: quadro dell'ente ed esportazione CSV.
 - `src/contributions.ts`, `src/contributionFiles.ts`, `src/ContributionsPanel.tsx`, `src/RespondPanel.tsx`: contributi delle figure coinvolte.
 - `src/cloud/folder.ts`, `src-tauri/src/folder.rs`: cartella sincronizzata nel browser e sul desktop.
 - `src/cloud/`: archivio sul drive (protocolli Google Drive e Microsoft Graph, accesso nel browser e su desktop, cifratura, unione al ripristino); `src/CloudSyncPanel.tsx` è l'interfaccia.
@@ -239,7 +251,7 @@ cd src-tauri && cargo test            # test Rust
 cd src-tauri && cargo test -- --ignored  # prova reale del portachiavi del sistema
 ```
 
-I test non richiedono credenziali reali. I test unitari usano un fornitore e un trasporto simulati. `scripts/smoke-assistant.mjs` intercetta in Playwright tutte le chiamate verso `generativelanguage.googleapis.com` e risponde con un server simulato. Così verifica: assistente disattivato per impostazione predefinita, chiave di sessione, test di connessione, estrazione locale, anteprima del contesto, annullamento, errori di quota e chiave non valida, invio singolo con doppio clic, nessuna sovrascrittura, bozza con provenienza, risultato tardivo scartato, assenza della chiave da archivio, backup e console. `scripts/smoke-knowledge.mjs` fa lo stesso per i casi a confronto: ordinamento locale senza assistente, invio dei soli casi selezionati senza note e nomi di persone, domanda normativa mai precompilata, fonti non riconosciute segnalate, nuovo progetto con bozze e provenienza, risposte esistenti intatte. `scripts/smoke-cloud.mjs` simula accesso e API di Google e Microsoft con due dispositivi: salvataggio cifrato, ripristino con passphrase, avviso prima di sovrascrivere, PKCE con account di lavoro, download senza token, nessun token o passphrase salvati. `scripts/smoke-export.mjs` controlla i due PDF (con `pdfinfo` e `pdftotext`), DOCX e ODT, la sintesi Gemini simulata, la rimozione delle frasi sull'AI Act e l'esportazione del testo modificato. `scripts/smoke-folder.mjs` prova la cartella sincronizzata con due browser (scelta, salvataggio cifrato, ripristino, avviso prima di sovrascrivere, browser senza supporto). `scripts/smoke-contributions.mjs` prova richiesta, risposta senza archivio e importazione in bozza. `scripts/smoke-history.mjs` prova versioni, revisione con condizioni, confronto, ripristino, riesame scaduto, file del calendario e backup in formato 4. `scripts/smoke-guide.mjs` apre la guida nell'app: capitoli, link, immagini, azioni e assenza di richieste esterne.
+I test non richiedono credenziali reali. I test unitari usano un fornitore e un trasporto simulati. `scripts/smoke-assistant.mjs` intercetta in Playwright tutte le chiamate verso `generativelanguage.googleapis.com` e risponde con un server simulato. Così verifica: assistente disattivato per impostazione predefinita, chiave di sessione, test di connessione, estrazione locale, anteprima del contesto, annullamento, errori di quota e chiave non valida, invio singolo con doppio clic, nessuna sovrascrittura, bozza con provenienza, risultato tardivo scartato, assenza della chiave da archivio, backup e console. `scripts/smoke-knowledge.mjs` fa lo stesso per i casi a confronto: ordinamento locale senza assistente, invio dei soli casi selezionati senza note e nomi di persone, domanda normativa mai precompilata, fonti non riconosciute segnalate, nuovo progetto con bozze e provenienza, risposte esistenti intatte. `scripts/smoke-cloud.mjs` simula accesso e API di Google e Microsoft con due dispositivi: salvataggio cifrato, ripristino con passphrase, avviso prima di sovrascrivere, PKCE con account di lavoro, download senza token, nessun token o passphrase salvati. `scripts/smoke-export.mjs` controlla i due PDF (con `pdfinfo` e `pdftotext`), DOCX e ODT, la sintesi Gemini simulata, la rimozione delle frasi sull'AI Act e l'esportazione del testo modificato. `scripts/smoke-folder.mjs` prova la cartella sincronizzata con due browser (scelta, salvataggio cifrato, ripristino, avviso prima di sovrascrivere, browser senza supporto). `scripts/smoke-contributions.mjs` prova richiesta, risposta senza archivio e importazione in bozza. `scripts/smoke-dashboard.mjs` prova il quadro su un archivio importato, compresi filtri, barre, CSV e apertura delle lacune. `scripts/smoke-history.mjs` prova versioni, revisione con condizioni, confronto, ripristino, riesame scaduto, file del calendario e backup in formato 4. `scripts/smoke-guide.mjs` apre la guida nell'app: capitoli, link, immagini, azioni e assenza di richieste esterne.
 
 Per provare con una chiave vera basta `npm run dev`, poi configurare l'assistente nelle impostazioni.
 

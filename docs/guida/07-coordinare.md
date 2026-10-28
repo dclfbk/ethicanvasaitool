@@ -44,6 +44,22 @@ Per costruire una base di conoscenza comune, raccogliete le copie degli archivi 
 
 > **Riservatezza.** Analizzando i casi, nomi, enti, descrizioni e risposte dei progetti selezionati partono verso Google. Allegati, note e persone indicate no. Seleziona solo i progetti che puoi condividere.
 
+## Il quadro dell’ente
+
+«Quadro dell’ente», nel menu, riassume tutti i progetti dell’archivio. È calcolato sul dispositivo e serve a organizzare il lavoro, non a dare un voto ai progetti.
+
+![Il quadro dell’ente](img/quadro.png)
+
+- **In alto**: quanti progetti ci sono e in che stato, la completezza media, i contributi in attesa e i riesami scaduti.
+- **Riesami e revisioni**: i riesami scaduti, quelli entro 30 giorni, i progetti senza una data di riesame e l’esito dell’ultima revisione di ciascuno.
+- **Contributi in attesa**: tutte le risposte che aspettano qualcuno, dalla più vecchia. Con i filtri vedi quelle di una sola figura, ad esempio tutte quelle per il DPO, e prepari un’unica richiesta di contributo per ogni progetto.
+- **Le sezioni del canvas**: la quota media di risposte completate per sezione, per capire dove i progetti dell’ente faticano di più.
+- **Lacune ricorrenti**: le domande ancora da completare nel maggior numero di progetti. Selezionandone una apri il primo progetto in cui manca, direttamente su quella domanda.
+
+Gli esempi dimostrativi restano fuori, a meno di spuntare «Includi gli esempi dimostrativi». Con «Esporta i progetti in CSV» ottieni una tabella da aprire con Excel o LibreOffice, con stato, completezza, contributi in attesa, ultima revisione e prossimo riesame di ogni progetto.
+
+[Apri il quadro dell’ente](#app-dashboard)
+
 ## Rivedere i risultati
 
 Il riepilogo e il rapporto aiutano a chiudere la valutazione, ma non la sostituiscono:
