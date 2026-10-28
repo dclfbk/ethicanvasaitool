@@ -57,7 +57,14 @@ Ogni utente inserisce una chiave API Gemini creata in Google AI Studio. Per l’
 
 Le richieste usano l’opzione che disattiva la conservazione delle interazioni sui server Google. Restano validi i termini del servizio.
 
-## L’archivio sul drive
+## La cartella sincronizzata
+
+Non richiede configurazione: è l’opzione predefinita dell’archivio sul drive e funziona con qualunque programma di sincronizzazione già presente sul computer.
+
+- **Desktop**: la cartella si sceglie con la finestra nativa del sistema. La ricorda il processo Rust, nella cartella di configurazione dell’app; l’interfaccia non passa mai un percorso e può leggere o scrivere solo il file `ethicanvas-archivio.json` in quella cartella. La scrittura avviene su un file temporaneo poi rinominato, così il programma di sincronizzazione non copia mai un file a metà.
+- **Browser**: usa la File System Access API (Chrome, Edge). Il riferimento alla cartella resta nel browser; il permesso può essere richiesto a ogni sessione.
+
+## L’archivio sul drive con l’account
 
 Per abilitare Google Drive e OneDrive l’ente registra l’applicazione presso i due servizi e inserisce gli identificativi al momento della build. Sono identificativi pubblici, non segreti; un servizio senza identificativo appare come non configurato.
 
@@ -74,7 +81,7 @@ Nei workflow GitHub i valori vengono dalle variabili del repository `GOOGLE_WEB_
 
 ## Sicurezza e dati in sintesi
 
-- **Nessun server applicativo.** I dati restano sul dispositivo. Le uniche connessioni esterne sono verso la Gemini API, se l’utente attiva l’assistente; verso Google Drive o Microsoft Graph, se collega un drive; verso GitHub, per il controllo degli aggiornamenti dell’app desktop.
+- **Nessun server applicativo.** I dati restano sul dispositivo. Le uniche connessioni esterne sono verso la Gemini API, se l’utente attiva l’assistente; verso Google Drive o Microsoft Graph, se collega un drive con l’account; verso GitHub, per il controllo degli aggiornamenti dell’app desktop. La cartella sincronizzata e i contributi non usano la rete: sono file.
 - **Endpoint fissi.** Le chiamate verso Gemini, Drive e Graph sono limitate a un elenco fisso di indirizzi, controllato sia nell’interfaccia sia, nel desktop, dal processo Rust.
 - **Niente segreti in chiaro.** Chiavi, token e passphrase non vengono mai scritti in archivio, backup, URL o log. La passphrase dell’archivio cifrato non viene salvata da nessuna parte.
 - **Cifratura dell’archivio sul drive**: AES-256-GCM con chiave derivata dalla passphrase (PBKDF2-SHA-256, 600.000 iterazioni), sul dispositivo e prima del caricamento.

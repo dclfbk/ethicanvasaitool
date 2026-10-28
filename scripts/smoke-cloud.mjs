@@ -113,7 +113,7 @@ async function device(browser){
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(origin);return {context,page,errors};
 }
-async function openSettings(page){await page.getByRole('button',{name:'Metodo e impostazioni'}).click();await page.getByRole('heading',{name:'Archivio sul tuo drive'}).waitFor();}
+async function openSettings(page,service='Google Drive'){await page.getByRole('button',{name:'Metodo e impostazioni'}).click();await page.getByRole('heading',{name:'Archivio sul tuo drive'}).waitFor();await page.getByRole('group',{name:'Servizio di archiviazione'}).getByRole('button',{name:service}).click();}
 const status=page=>page.locator('.cloud-sync .assist-status');
 
 let browser;
@@ -170,7 +170,7 @@ try{
  // Microsoft 365: PKCE sign-in, plain archive, download through the pre-authenticated link.
  await b.page.getByRole('button',{name:'OneDrive · Microsoft 365'}).click();
  await b.page.getByLabel('Cifra l’archivio con una passphrase prima di caricarlo').uncheck();
- await b.page.getByText('il fornitore del drive può leggere',{exact:false}).waitFor();
+ await b.page.getByText('il fornitore del drive possono leggere',{exact:false}).waitFor();
  await b.page.getByRole('button',{name:'Collega OneDrive · Microsoft 365'}).click();
  await b.page.getByText('persona@ente.example').waitFor();
  await b.page.getByRole('button',{name:'Salva sul drive'}).click();

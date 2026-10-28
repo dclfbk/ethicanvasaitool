@@ -48,7 +48,7 @@ try{
  await page.getByRole('button',{name:'leggi la guida'}).click();
  await page.getByRole('heading',{name:'Guida a EthiCanvas AI',level:1}).waitFor();
  const nav=page.getByRole('navigation',{name:'Capitoli della guida'});
- assert.equal(await nav.getByRole('button').count(),10);
+ assert.equal(await nav.getByRole('button').count(),11);
 
  // A link to another chapter opens it; images load from the bundle.
  await page.locator('.guide-article').getByRole('link',{name:'Primi passi'}).click();
@@ -79,5 +79,5 @@ try{
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
  assert.deepEqual(external,[],'the guide works offline');
  assert.deepEqual(errors,[]);
- console.log('PASS guide: ten chapters, links between chapters, screenshots, tables and code, pager, actions that open the application, remembered chapter, no external requests, mobile layout.');
+ console.log('PASS guide: eleven chapters, links between chapters, screenshots, tables and code, pager, actions that open the application, remembered chapter, no external requests, mobile layout.');
 }finally{await browser?.close();server.close();}

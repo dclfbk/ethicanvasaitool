@@ -70,7 +70,8 @@ Il workflow di release usa [src-tauri/tauri.release.conf.json](src-tauri/tauri.r
 - Assistente Gemini facoltativo: «Spiegami la domanda», «Aiutami a formulare una risposta», «Che cosa manca per rispondere?».
 - Versioni, revisioni e riesame: istantanee della valutazione, revisioni con ruolo ed esito, confronto parola per parola, ripristino, data del riesame con file per il calendario.
 - Esportazione del canvas in PDF, nello stile grafico dell'AI Ethics Canvas originale oppure come poster A3 con pagine di dettaglio, e rapporto in DOCX o ODT, con la sintesi delle conclusioni proposta da Gemini se l'assistente è attivo.
-- Archivio sul drive personale (Google Drive o OneDrive di Microsoft 365): salvataggio e ripristino con unione dei progetti e cifratura facoltativa.
+- Archivio in una cartella sincronizzata (Google Drive, OneDrive, Nextcloud… tramite il loro programma) o direttamente su Google Drive e OneDrive di Microsoft 365: salvataggio e ripristino con unione dei progetti e cifratura facoltativa.
+- Contributi delle figure coinvolte senza server: richiesta e risposta come file, importazione in bozza.
 - Casi a confronto: ricerca locale dei progetti simili nell'archivio e, con Gemini, analisi comparativa e precompilazione del questionario.
 
 ## Assistente Gemini (facoltativo)
@@ -134,9 +135,25 @@ Nella pagina **Vedi il risultato** di ogni progetto, il pannello **Esporta il pr
   - Le frasi che sembrano una classificazione AI Act o una dichiarazione di conformità vengono rimosse e mostrate all'utente.
   - La sintesi è una bozza modificabile: entra nel rapporto solo all'esportazione, con l'indicazione di modello e data. Non viene salvata nel progetto e non cambia completezza o stati.
 
+## Contributi delle figure coinvolte
+
+Dentro un progetto, **Contributi** prepara una richiesta per una figura da coinvolgere (DPO, fornitore, esperto) e importa la sua risposta. Lo scambio avviene con due file JSON, eventualmente cifrati con una passphrase (AES-256-GCM, come l'archivio), da mandare per email: non serve un server.
+
+- La richiesta contiene le domande scelte (di base quelle in attesa per quella figura), il contributo richiesto, la descrizione del progetto e le risposte già scritte, se selezionate. Note, allegati e figure indicate non vengono inclusi. L'app propone il testo dell'email.
+- Chi riceve apre l'app web, preme **Rispondi a una richiesta** e risponde senza un archivio: nulla resta salvato sul suo dispositivo. La risposta usa la stessa passphrase.
+- All'importazione l'app controlla che la risposta riguardi il progetto aperto e salva prima una versione. Per ogni domanda chi coordina sceglie se usare la proposta, aggiungendola in coda o sostituendo la risposta. Le risposte accettate tornano in bozza, e nelle note resta chi ha dato il contributo e quando.
+- Le richieste valgono per la stessa versione del questionario.
+
 ## Archivio sul drive personale
 
-In **Metodo e impostazioni → Archivio sul tuo drive** si salva una copia dell'archivio, allegati compresi, su Google Drive o su OneDrive di Microsoft 365, e la si ripristina su questo o su un altro dispositivo. Non c'è sincronizzazione automatica: il salvataggio e il ripristino partono solo da un clic.
+In **Metodo e impostazioni → Archivio sul tuo drive** si salva una copia dell'archivio, allegati compresi, e la si ripristina su questo o su un altro dispositivo. Non c'è sincronizzazione automatica: il salvataggio e il ripristino partono solo da un clic.
+
+- **Cartella sincronizzata** (predefinita, senza configurazione): una cartella che un programma di sincronizzazione già presente sul computer tiene aggiornata. L'app scrive solo il file `ethicanvas-archivio.json`.
+  - Sul desktop la cartella si sceglie con la finestra nativa (`tauri-plugin-dialog`) ed è ricordata dal processo Rust ([src-tauri/src/folder.rs](src-tauri/src/folder.rs)). L'interfaccia non passa mai un percorso, e la scrittura usa un file temporaneo poi rinominato.
+  - Nel browser usa la File System Access API (Chrome, Edge), con il riferimento alla cartella in IndexedDB.
+- **Google Drive o OneDrive con l'account**: disponibili solo se l'installazione è configurata con gli identificativi OAuth descritti sotto.
+
+Per entrambe le modalità valgono le regole seguenti.
 
 - **Dove finiscono i file**: un file `ethicanvas-archivio.json` nella cartella «EthiCanvas AI» del drive dell'utente. Su Google l'app usa l'ambito `drive.file` e vede solo i file che ha creato; su Microsoft usa `Files.ReadWrite` e `User.Read`, con soli account di lavoro o della PA (tenant `organizations`, oppure il tenant dell'ente).
 - **Ripristino**: unisce i progetti uno per uno e non elimina nulla. I progetti nuovi vengono aggiunti, quelli cambiati solo sul drive aggiornati. Se un progetto è cambiato in entrambi i posti dall'ultimo salvataggio da questo dispositivo, si conservano tutte e due le versioni, una con il nome «· copia … in conflitto». I progetti eliminati in locale ricompaiono se sono ancora nel backup.
@@ -195,6 +212,8 @@ Il salvataggio locale non è un backup. Esportare copie, soprattutto prima di ca
 - `src/canvasPdf.ts`: canvas in PDF come poster A3 con pagine di dettaglio.
 - `src/pdfText.ts`, `src/pdfAssets.ts`: testo, a capo e troncamento condivisi; font e loghi incorporati nei PDF.
 - `src/report.ts`, `src/documents.ts`, `src/zip.ts`, `src/ReportExportPanel.tsx`: rapporto, sintesi con Gemini, scrittura di DOCX e ODT.
+- `src/contributions.ts`, `src/contributionFiles.ts`, `src/ContributionsPanel.tsx`, `src/RespondPanel.tsx`: contributi delle figure coinvolte.
+- `src/cloud/folder.ts`, `src-tauri/src/folder.rs`: cartella sincronizzata nel browser e sul desktop.
 - `src/cloud/`: archivio sul drive (protocolli Google Drive e Microsoft Graph, accesso nel browser e su desktop, cifratura, unione al ripristino); `src/CloudSyncPanel.tsx` è l'interfaccia.
 - `src-tauri/src/cloud.rs`: accesso OAuth con redirect locale, portachiavi e chiamate HTTP lato desktop.
 - `src/knowledge.ts`, `src/KnowledgePanel.tsx`: ricerca locale dei casi simili, analisi comparativa e precompilazione.
@@ -220,7 +239,7 @@ cd src-tauri && cargo test            # test Rust
 cd src-tauri && cargo test -- --ignored  # prova reale del portachiavi del sistema
 ```
 
-I test non richiedono credenziali reali. I test unitari usano un fornitore e un trasporto simulati. `scripts/smoke-assistant.mjs` intercetta in Playwright tutte le chiamate verso `generativelanguage.googleapis.com` e risponde con un server simulato. Così verifica: assistente disattivato per impostazione predefinita, chiave di sessione, test di connessione, estrazione locale, anteprima del contesto, annullamento, errori di quota e chiave non valida, invio singolo con doppio clic, nessuna sovrascrittura, bozza con provenienza, risultato tardivo scartato, assenza della chiave da archivio, backup e console. `scripts/smoke-knowledge.mjs` fa lo stesso per i casi a confronto: ordinamento locale senza assistente, invio dei soli casi selezionati senza note e nomi di persone, domanda normativa mai precompilata, fonti non riconosciute segnalate, nuovo progetto con bozze e provenienza, risposte esistenti intatte. `scripts/smoke-cloud.mjs` simula accesso e API di Google e Microsoft con due dispositivi: salvataggio cifrato, ripristino con passphrase, avviso prima di sovrascrivere, PKCE con account di lavoro, download senza token, nessun token o passphrase salvati. `scripts/smoke-export.mjs` controlla i due PDF (con `pdfinfo` e `pdftotext`), DOCX e ODT, la sintesi Gemini simulata, la rimozione delle frasi sull'AI Act e l'esportazione del testo modificato. `scripts/smoke-history.mjs` prova versioni, revisione con condizioni, confronto, ripristino, riesame scaduto, file del calendario e backup in formato 4. `scripts/smoke-guide.mjs` apre la guida nell'app: capitoli, link, immagini, azioni e assenza di richieste esterne.
+I test non richiedono credenziali reali. I test unitari usano un fornitore e un trasporto simulati. `scripts/smoke-assistant.mjs` intercetta in Playwright tutte le chiamate verso `generativelanguage.googleapis.com` e risponde con un server simulato. Così verifica: assistente disattivato per impostazione predefinita, chiave di sessione, test di connessione, estrazione locale, anteprima del contesto, annullamento, errori di quota e chiave non valida, invio singolo con doppio clic, nessuna sovrascrittura, bozza con provenienza, risultato tardivo scartato, assenza della chiave da archivio, backup e console. `scripts/smoke-knowledge.mjs` fa lo stesso per i casi a confronto: ordinamento locale senza assistente, invio dei soli casi selezionati senza note e nomi di persone, domanda normativa mai precompilata, fonti non riconosciute segnalate, nuovo progetto con bozze e provenienza, risposte esistenti intatte. `scripts/smoke-cloud.mjs` simula accesso e API di Google e Microsoft con due dispositivi: salvataggio cifrato, ripristino con passphrase, avviso prima di sovrascrivere, PKCE con account di lavoro, download senza token, nessun token o passphrase salvati. `scripts/smoke-export.mjs` controlla i due PDF (con `pdfinfo` e `pdftotext`), DOCX e ODT, la sintesi Gemini simulata, la rimozione delle frasi sull'AI Act e l'esportazione del testo modificato. `scripts/smoke-folder.mjs` prova la cartella sincronizzata con due browser (scelta, salvataggio cifrato, ripristino, avviso prima di sovrascrivere, browser senza supporto). `scripts/smoke-contributions.mjs` prova richiesta, risposta senza archivio e importazione in bozza. `scripts/smoke-history.mjs` prova versioni, revisione con condizioni, confronto, ripristino, riesame scaduto, file del calendario e backup in formato 4. `scripts/smoke-guide.mjs` apre la guida nell'app: capitoli, link, immagini, azioni e assenza di richieste esterne.
 
 Per provare con una chiave vera basta `npm run dev`, poi configurare l'assistente nelle impostazioni.
 

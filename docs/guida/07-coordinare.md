@@ -21,7 +21,7 @@ Un modo di lavorare che funziona:
 1. Individua una figura moderatrice che guida la sessione.
 2. Crea il progetto prima dell’incontro, con nome, ente e descrizione.
 3. In riunione procedete sezione per sezione. Le domande a cui nessuno sa rispondere diventano richieste con «Serve un’altra figura»: invitate al tavolo chi serve, come il DPO, il fornitore o l’esperto legale.
-4. Dopo l’incontro, ognuno completa le risposte del proprio profilo. Con un solo dispositivo, le richieste di contributo indicano chi deve rispondere; con più dispositivi, usate l’archivio sul drive o la copia in un file per passarvi il progetto.
+4. Dopo l’incontro, ognuno completa le risposte del proprio profilo. Alle figure esterne al gruppo mandate una richiesta di contributo con le sole domande che le riguardano: vedi [Contributi delle figure coinvolte](08-contributi.md). Per passarvi l’intero progetto tra più computer usate la cartella sincronizzata o la copia in un file.
 5. Chiudete con il riepilogo: che cosa manca, chi se ne occupa, entro quando.
 
 > **Un dispositivo, un archivio.** L’app non ha un archivio condiviso in tempo reale. Se più persone modificano lo stesso progetto su computer diversi, al ripristino dal drive le versioni in conflitto vengono conservate entrambe: decidete chi tiene la versione di riferimento.
@@ -54,4 +54,4 @@ Il riepilogo e il rapporto aiutano a chiudere la valutazione, ma non la sostitui
 - registrate ogni revisione nell’app, con il ruolo di chi rivede e l’esito, e fissate la data del riesame: vedi [Versioni, revisioni e riesame](06-versioni.md);
 - conservate il rapporto esportato insieme alla documentazione del progetto, con la data.
 
-Per gli aspetti tecnici prosegui con [Installare e configurare](08-installare.md).
+Prosegui con [Contributi delle figure coinvolte](08-contributi.md).

@@ -28,11 +28,12 @@
  */
 
 // Provider-neutral contract for saving the archive to a personal cloud drive.
-export type CloudProviderId = 'google' | 'microsoft';
+export type CloudProviderId = 'folder' | 'google' | 'microsoft';
+export type OAuthProviderId = Exclude<CloudProviderId, 'folder'>;
 export type CloudErrorKind =
  | 'not-configured' | 'not-connected' | 'session-expired' | 'popup-blocked' | 'cancelled' | 'admin-consent'
  | 'permission' | 'quota' | 'rate-limit' | 'too-large' | 'not-found' | 'network' | 'timeout' | 'server'
- | 'bad-request' | 'bad-response' | 'credential-store';
+ | 'bad-request' | 'bad-response' | 'credential-store' | 'folder-access';
 
 export class CloudError extends Error {
  constructor(readonly kind: CloudErrorKind, detail?: string) { super(detail ?? kind); this.name = 'CloudError'; }
@@ -70,6 +71,7 @@ const googlePrefixes = ['https://www.googleapis.com/drive/v3/', 'https://www.goo
 const graphPrefix = 'https://graph.microsoft.com/v1.0/me';
 // Returns the normalised URL to send, or null when the request is not allowed.
 export function allowedCloudRequest(provider: CloudProviderId, request: CloudHttpRequest): string | null {
+ if (provider === 'folder') return null;
  let url: URL;
  try { url = new URL(request.url); } catch { return null; }
  if (!['GET', 'POST', 'PATCH', 'PUT'].includes(request.method) || url.protocol !== 'https:' || url.username || url.password || url.port) return null;

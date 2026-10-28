@@ -46,5 +46,6 @@ export const cloudErrorMessages: Record<CloudErrorKind, string> = {
  'server':'Il servizio è temporaneamente non disponibile. Riprova tra poco.',
  'bad-request':'Richiesta non accettata dal servizio.',
  'bad-response':'La risposta del servizio non è utilizzabile. Riprova.',
+ 'folder-access':'Non è stato possibile leggere o scrivere nella cartella. Verifica che esista ancora e che tu abbia i permessi, oppure scegline un’altra.',
  'credential-store':'Il portachiavi del sistema non è disponibile. Verifica che sia attivo (su Linux: GNOME Keyring o KWallet).',
 };
