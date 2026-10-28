@@ -38,4 +38,4 @@ export const storage = {
  async put(project:Project){const p=portableProject(project);if(isTauri()){await(await sql()).execute('INSERT INTO projects (id,payload) VALUES ($1,$2) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload',[p.id,JSON.stringify(p)]);}else await(await webDb()).put('projects',p);},
  async remove(id:string){if(isTauri())await(await sql()).execute('DELETE FROM projects WHERE id=$1',[id]);else await(await webDb()).delete('projects',id);}
 };
-export function download(name:string,data:string,mime='application/json'){const url=URL.createObjectURL(new Blob([data],{type:mime}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+export function download(name:string,data:string|Uint8Array<ArrayBuffer>,mime='application/json'){const url=URL.createObjectURL(new Blob([data],{type:mime}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}

@@ -30,6 +30,12 @@ The visual identity follows the AI Ethics Canvas PDF.
 
 - Barlow Condensed and Fira Sans (`src/assets/fonts/`) are licensed under the
   SIL Open Font License 1.1; see the `OFL-*.txt` files in the same folder.
+  The files in `src/assets/fonts/pdf/` are TrueType copies of the same
+  families (Barlow Condensed Regular and Fira Sans Bold come from the canvas
+  font package at https://github.com/dclfbk/canvasaiethics), subset to Latin
+  characters for embedding in exported PDFs; they remain under the OFL 1.1.
+- The "stile originale" PDF export reproduces the graphic layout of the AI
+  Ethics Canvas (CC BY-SA 4.0) and carries its attribution on every page.
 - The logos in `src/assets/logos/` belong to their respective owners. `fbk.png`
   comes from https://www.fbk.eu; `pat.png` and `canvas-funding.png` are taken
   from the AI Ethics Canvas PDF. Owners: European Union NextGenerationEU,

@@ -29,6 +29,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod cloud;
 mod gemini;
 
 fn main() {
@@ -37,12 +38,18 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(gemini::PendingRequests::default())
+        .manage(cloud::CloudTokens::default())
         .invoke_handler(tauri::generate_handler![
             gemini::gemini_key_set,
             gemini::gemini_key_status,
             gemini::gemini_key_delete,
             gemini::gemini_request,
-            gemini::gemini_cancel
+            gemini::gemini_cancel,
+            cloud::cloud_configured,
+            cloud::cloud_status,
+            cloud::cloud_connect,
+            cloud::cloud_disconnect,
+            cloud::cloud_request
         ])
         .run(tauri::generate_context!())
         .expect("Failed to start EthiCanvas AI");

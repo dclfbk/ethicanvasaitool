@@ -26,8 +26,14 @@ on this repository.
 - User-facing UI text and questionnaire content stay in Italian. Keep UI text
   out of the application logic: compare keys, map them to labels for display.
 
+## User guide
+
+- The user guide lives in `docs/guida/*.md` (Italian) and is also shown in the app. When you change the interface, update the chapters that describe it.
+- Interface labels quoted between «» in the guide must exist verbatim in `src/`; `src/guide.test.ts` enforces it. Regenerate the screenshots with `npm run guide:screenshots` when the screens they show change.
+
 ## LLM integrations
 
 - Providers implement `LlmProvider` in `src/llm/provider.ts`; keep UI, storage and evaluation rules independent from them.
 - Never put API keys in source, bundle, URLs, logs, storage or backups. Browser keys stay in memory; desktop keys stay in the OS keychain and are read only by the Rust side.
+- Cloud archive tokens follow the same rule: browser tokens stay in memory, desktop refresh tokens stay in the OS keychain and are used only by the Rust side; passphrases are never stored. Endpoint allowlists in `src/cloud/provider.ts` and `src-tauri/src/cloud.rs` must stay identical.
 - Assistant output is a draft: never overwrite an answer automatically and never let it change evaluation results or produce AI Act classifications.

@@ -44,7 +44,7 @@ export type SourceKind = 'declared' | 'documented';
 export interface ContextItem { id: string; label: string; text: string; source?: SourceKind; }
 
 // Closing tags inside user material would let it escape its block, so they are neutralised.
-const fence = (s: string) => s.replace(/<\/(contesto|documento|risposta|progetto|domanda)/gi, '<\\/$1');
+export const fence = (s: string) => s.replace(/<\/(contesto|documento|risposta|progetto|domanda)/gi, '<\\/$1');
 
 export function buildContext(project: Project, question: Question, selection: ContextSelection): ContextItem[] {
  const section = sections.find(s => s.id === question.section)!;
