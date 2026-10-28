@@ -29,6 +29,7 @@ Su Linux servono anche `libwebkit2gtk-4.1-dev`, `librsvg2-dev` e `libdbus-1-dev`
 
 - [.github/workflows/ci.yml](.github/workflows/ci.yml): a ogni push su `main` e a ogni pull request esegue test, build, test browser e test Rust.
 - [.github/workflows/release.yml](.github/workflows/release.yml): crea i pacchetti **Linux** (deb, rpm, AppImage) e **Windows** (msi, exe) con `tauri-action`. Parte con un tag `v*` (ad esempio `git tag v0.2.0 && git push --tags`) oppure a mano dalla scheda Actions; i pacchetti vengono allegati a una release in bozza, da controllare prima della pubblicazione. Non sono firmati: Windows SmartScreen mostrerà un avviso.
+- [.github/workflows/pages.yml](.github/workflows/pages.yml): a ogni push su `main` pubblica la versione web su GitHub Pages, all'indirizzo <https://dclfbk.github.io/ethicanvasaitool/>. I dati restano nel browser di chi la usa (IndexedDB): il sito non ha un server né un archivio condiviso.
 
 ### Aggiornamenti dell'app desktop
 
