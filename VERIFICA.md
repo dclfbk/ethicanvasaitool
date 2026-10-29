@@ -1,6 +1,6 @@
 # Verifica della versione alpha con checklist normativa
 
-Data: 29 ottobre 2026. Versione: 0.3.0-alpha.2.
+Data: 29 ottobre 2026. Versione: 0.3.0-alpha.3.
 
 - Test unitari (Vitest): 114 superati in 12 file. Coprono:
   - modello e backup (formati da 1 a 6, migrazione, nessuna credenziale nei backup e nelle preferenze);
