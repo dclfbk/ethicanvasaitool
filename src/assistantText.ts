@@ -50,3 +50,34 @@ export const llmErrorMessages: Record<LlmErrorKind, string> = {
  'cancelled':'Richiesta annullata.',
  'credential-store':'Il portachiavi del sistema non è disponibile. Verifica che sia attivo (su Linux: GNOME Keyring o KWallet).',
 };
+
+// Wording that depends on where the data go. Gemini keeps its original labels.
+export interface ProviderTexts {
+ group: string; send: string; analyze: string; synthesise: string; generate: string; configure: string;
+ busy: string; proposal: string; subject: string; destination: (model: string) => string; errors: Record<LlmErrorKind, string>;
+}
+export const geminiTexts: ProviderTexts = {
+ group: 'Assistente Gemini', send: 'Invia a Gemini', analyze: 'Analizza con Gemini', synthesise: 'Genera la sintesi delle conclusioni con Gemini', generate: 'Genera la sintesi',
+ configure: 'Configura Gemini', busy: 'Gemini sta', proposal: 'Proposta di Gemini', subject: 'Gemini',
+ destination: m => `a Google tramite la Gemini API, modello ${m}`, errors: llmErrorMessages,
+};
+const host = (url: string) => { try { return new URL(url).host; } catch { return url; } };
+export function localTexts(url: string): ProviderTexts {
+ return {
+  group: 'Assistente', send: 'Invia al modello locale', analyze: 'Analizza con il modello locale', synthesise: 'Genera la sintesi delle conclusioni con il modello locale', generate: 'Genera la sintesi',
+  configure: 'Configura il modello locale', busy: 'Il modello locale sta', proposal: 'Proposta del modello locale', subject: 'Il modello locale',
+  destination: m => `al modello ${m || 'non indicato'} del server ${host(url)}, e a nessun altro servizio`,
+  errors: {...llmErrorMessages,
+   'not-configured': 'Indica l’indirizzo del server e il modello in Metodo e impostazioni.',
+   'invalid-key': 'Il server ha rifiutato la chiave di accesso. Controllala in Metodo e impostazioni.',
+   'permission': 'Il server non consente questa richiesta. Verifica i permessi con chi lo gestisce.',
+   'quota': 'Il server ha raggiunto un limite di utilizzo. Riprova più tardi.',
+   'payment': 'Il server ha rifiutato la richiesta. Verifica con chi lo gestisce.',
+   'model-unavailable': 'Il modello indicato non è disponibile sul server. Sceglilo dall’elenco in Metodo e impostazioni.',
+   'timeout': 'Il modello non ha risposto in tempo. Riduci il contesto inviato o usa un modello più piccolo.',
+   'network': 'Impossibile raggiungere il server del modello. Verifica che sia avviato e che l’indirizzo sia corretto. Nel browser il server deve accettare le richieste da questo sito: per Ollama, con la variabile OLLAMA_ORIGINS.',
+   'server': 'Il server del modello ha restituito un errore. Verifica che il modello sia installato e che ci sia memoria sufficiente.',
+   'bad-response': 'La risposta del modello non è utilizzabile: alcuni modelli piccoli non rispettano il formato richiesto. Riprova o usa un modello più grande.',
+   'credential-store': 'Il portachiavi del sistema non è disponibile. Verifica che sia attivo (su Linux: GNOME Keyring o KWallet).'},
+ };
+}

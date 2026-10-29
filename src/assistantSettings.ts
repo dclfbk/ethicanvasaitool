@@ -28,20 +28,30 @@
  */
 
 import { defaultGeminiModel, geminiModels } from './llm/gemini';
+import { normaliseLocalUrl, type LocalProtocol } from './llm/local';
 
-// Non-secret preferences only. The API key is handled by a CredentialStore and never stored here.
-export interface AssistantSettings { enabled: boolean; model: string; }
+// Non-secret preferences only. API keys are handled by a CredentialStore and never stored here.
+export type AssistantProviderId = 'gemini' | 'local';
+export interface LocalSettings { protocol: LocalProtocol; url: string; model: string; }
+export interface AssistantSettings { enabled: boolean; provider: AssistantProviderId; model: string; local: LocalSettings; }
 const storageKey = 'canvas-pa.assistant';
-export const defaultAssistantSettings: AssistantSettings = {enabled: false, model: defaultGeminiModel};
+export const defaultLocalSettings: LocalSettings = {protocol: 'ollama', url: 'http://localhost:11434/', model: ''};
+export const defaultAssistantSettings: AssistantSettings = {enabled: false, provider: 'gemini', model: defaultGeminiModel, local: defaultLocalSettings};
 
+function readLocal(v: unknown): LocalSettings {
+ const l = (v && typeof v === 'object' ? v : {}) as Partial<LocalSettings>;
+ return {protocol: l.protocol === 'openai' ? 'openai' : 'ollama', url: typeof l.url === 'string' && normaliseLocalUrl(l.url) || defaultLocalSettings.url,
+  model: typeof l.model === 'string' && l.model.length <= 200 ? l.model : ''};
+}
 export function loadAssistantSettings(): AssistantSettings {
  try {
   const v = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
   if (!v || typeof v !== 'object') return defaultAssistantSettings;
-  return {enabled: v.enabled === true, model: geminiModels.some(m => m.id === v.model) ? v.model : defaultGeminiModel};
+  return {enabled: v.enabled === true, provider: v.provider === 'local' ? 'local' : 'gemini', model: geminiModels.some(m => m.id === v.model) ? v.model : defaultGeminiModel, local: readLocal(v.local)};
  } catch { return defaultAssistantSettings; }
 }
 export function saveAssistantSettings(s: AssistantSettings) {
- try { localStorage.setItem(storageKey, JSON.stringify({enabled: s.enabled, model: s.model})); } catch { /* preferences are optional */ }
+ const local = readLocal(s.local);
+ try { localStorage.setItem(storageKey, JSON.stringify({enabled: s.enabled, provider: s.provider === 'local' ? 'local' : 'gemini', model: s.model, local: {protocol: local.protocol, url: local.url, model: local.model}})); } catch { /* preferences are optional */ }
 }
 export function clearAssistantSettings() { try { localStorage.removeItem(storageKey); } catch { /* nothing stored */ } }
