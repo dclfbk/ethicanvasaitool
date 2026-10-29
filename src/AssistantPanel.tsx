@@ -33,6 +33,7 @@ import {applyProposal,buildContext,buildRequest,defaultSelection,maxContextChars
 import type {AssistantSettings} from './assistantSettings';
 import {assistActionLabels} from './assistantText';
 import {AssistantWaiting} from './AssistantWaiting';
+import type {GenerateProgress} from './llm/provider';
 import type {LlmRuntime} from './llm';
 import {LlmError} from './llm/provider';
 import {questions,type Answer,type AssistAction,type Project,type Question} from './model';
@@ -43,6 +44,7 @@ type Phase={name:'idle'}|{name:'select';action:AssistAction}|{name:'loading';act
 // Mounted with a key per project and question: switching either unmounts it and aborts any request in flight.
 export default function AssistantPanel({project,question,settings,runtime,onApply,onAddNote,onOpenSettings}:{project:Project;question:Question;settings:AssistantSettings;runtime:LlmRuntime;onApply:(answer:Answer)=>void;onAddNote:(text:string)=>void;onOpenSettings:()=>void}){
  const [phase,setPhase]=useState<Phase>({name:'idle'}),[selection,setSelection]=useState<ContextSelection>(()=>defaultSelection(project,question)),[draft,setDraft]=useState(''),[hasKey,setHasKey]=useState<boolean|null>(null);
+ const [progress,setProgress]=useState<GenerateProgress>();
  const controller=useRef<AbortController|null>(null),inFlight=useRef(false);
  useEffect(()=>()=>controller.current?.abort(),[]);
  const answer=project.answers[question.id];
@@ -52,8 +54,8 @@ export default function AssistantPanel({project,question,settings,runtime,onAppl
  const toggle=(list:'answerIds'|'referenceIds',id:string)=>setSelection(s=>({...s,[list]:s[list].includes(id)?s[list].filter(x=>x!==id):[...s[list],id]}));
  async function send(a:AssistAction){
   if(inFlight.current||tooLarge)return;inFlight.current=true;
-  const c=new AbortController();controller.current=c;setPhase({name:'loading',action:a});
-  try{const res=await runtime.provider.generate(runtime.model,request,c.signal);if(c.signal.aborted)return;const result=parseAssistResult(res.text,items);setDraft(a==='draft'?proposalText(result):'');setPhase({name:'result',action:a,result,model:res.model,at:new Date().toISOString()});}
+  const c=new AbortController();controller.current=c;setProgress(undefined);setPhase({name:'loading',action:a});
+  try{const res=await runtime.provider.generate(runtime.model,request,c.signal,p=>{if(!c.signal.aborted)setProgress(p);});if(c.signal.aborted)return;const result=parseAssistResult(res.text,items);setDraft(a==='draft'?proposalText(result):'');setPhase({name:'result',action:a,result,model:res.model,at:new Date().toISOString()});}
   catch(e){if(c.signal.aborted&&!(e instanceof LlmError&&e.kind==='timeout'))setPhase({name:'select',action:a});else setPhase({name:'error',action:a,message:e instanceof LlmError?runtime.texts.errors[e.kind]:runtime.texts.errors['bad-response']});}
   finally{inFlight.current=false;if(controller.current===c)controller.current=null;}
  }
@@ -81,7 +83,7 @@ export default function AssistantPanel({project,question,settings,runtime,onAppl
    <p className="notice">I dati selezionati saranno inviati {runtime.texts.destination(runtime.model)}. La risposta sarà una proposta da verificare: non viene inserita senza la tua conferma.</p>
    {runtime.requiresKey&&hasKey===false?<div className="button-row"><span>Manca la chiave API.</span><button className="secondary" onClick={onOpenSettings}>{runtime.texts.configure}</button></div>:<button className="primary" disabled={tooLarge||hasKey===null} onClick={()=>void send(phase.action)}><Send size={16}/>{runtime.texts.send}</button>}
   </div>}
-  {phase.name==='loading'&&<AssistantWaiting runtime={runtime} activity={'elaborando: '+assistActionLabels[phase.action].toLowerCase()} onCancel={()=>controller.current?.abort()}/>}
+  {phase.name==='loading'&&<AssistantWaiting runtime={runtime} activity={'elaborando: '+assistActionLabels[phase.action].toLowerCase()} progress={progress} onCancel={()=>controller.current?.abort()}/>}
   {phase.name==='error'&&<div className="assistant-box"><p role="alert" className="assist-status error">{phase.message}</p><p>La tua risposta non è stata modificata. Puoi continuare il percorso anche senza assistente.</p><div className="button-row"><button className="secondary" onClick={()=>setPhase({name:'select',action:phase.action})}>Riprova</button><button className="text-button" onClick={()=>setPhase({name:'idle'})}>Chiudi</button></div></div>}
   {phase.name==='result'&&<div className="assistant-box">
    <div className="assistant-head"><b>{assistActionLabels[phase.action]}</b><button className="icon-button" aria-label="Chiudi assistente" onClick={()=>setPhase({name:'idle'})}><X size={15}/></button></div>

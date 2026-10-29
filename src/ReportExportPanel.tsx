@@ -33,6 +33,7 @@ import {maxContextChars} from './assistant';
 import type {AssistantSettings} from './assistantSettings';
 import {toDocx,toOdt} from './documents';
 import {AssistantWaiting} from './AssistantWaiting';
+import type {GenerateProgress} from './llm/provider';
 import type {LlmRuntime} from './llm';
 import {LlmError} from './llm/provider';
 import {sections,type Project,type Section} from './model';
@@ -47,6 +48,7 @@ const parts:[Exclude<keyof ReportDraft,'summary'|'sections'|'model'|'at'>,string
 export default function ReportExportPanel({project,settings,runtime,onOpenSettings,onError}:{project:Project;settings:AssistantSettings;runtime:LlmRuntime;onOpenSettings:()=>void;onError:(message:string)=>void}){
  const [includeAnswers,setIncludeAnswers]=useState(true),[busy,setBusy]=useState(false),[phase,setPhase]=useState<Phase>({name:'idle'});
  const [selection,setSelection]=useState<ReportSelection>({notes:false,referenceIds:[]}),[draft,setDraft]=useState<ReportDraft|null>(null),[removed,setRemoved]=useState<string[]>([]),[hasKey,setHasKey]=useState<boolean|null>(null);
+ const [progress,setProgress]=useState<GenerateProgress>();
  const controller=useRef<AbortController|null>(null);
  useEffect(()=>()=>controller.current?.abort(),[]);
  const items=buildReportContext(project,selection),request=buildReportRequest(items),tooLarge=reportTooLarge(request);
@@ -69,9 +71,9 @@ export default function ReportExportPanel({project,settings,runtime,onOpenSettin
  function choose(){setPhase({name:'select'});runtime.credentials.has().then(setHasKey).catch(()=>setHasKey(false));}
  async function send(){
   if(phase.name==='loading'||tooLarge)return;
-  const c=new AbortController();controller.current=c;setPhase({name:'loading'});
+  const c=new AbortController();controller.current=c;setProgress(undefined);setPhase({name:'loading'});
   try{
-   const res=await runtime.provider.generate(runtime.model,request,c.signal);if(c.signal.aborted)return;
+   const res=await runtime.provider.generate(runtime.model,request,c.signal,p=>{if(!c.signal.aborted)setProgress(p);});if(c.signal.aborted)return;
    const result=parseReportResult(res.text,items);
    setDraft(toDraft(result,items,res.model,new Date().toISOString(),runtime.texts.subject));setRemoved(result.removed);setPhase({name:'idle'});
   }catch(e){if(c.signal.aborted&&!(e instanceof LlmError&&e.kind==='timeout'))setPhase({name:'select'});else setPhase({name:'error',message:e instanceof LlmError?runtime.texts.errors[e.kind]:runtime.texts.errors['bad-response']});}
@@ -103,7 +105,7 @@ export default function ReportExportPanel({project,settings,runtime,onOpenSettin
     <p className="notice">I dati saranno inviati {runtime.texts.destination(runtime.model)}. La sintesi sarà una bozza modificabile: entra nel rapporto solo quando lo esporti.</p>
     {runtime.requiresKey&&hasKey===false?<div className="button-row"><span>Manca la chiave API.</span><button className="secondary" onClick={onOpenSettings}>{runtime.texts.configure}</button></div>:<button className="primary" disabled={tooLarge||hasKey===null} onClick={()=>void send()}><Send size={16}/>Genera la sintesi</button>}
    </div>}
-   {phase.name==='loading'&&<AssistantWaiting runtime={runtime} activity="scrivendo la sintesi" onCancel={()=>controller.current?.abort()}/>}
+   {phase.name==='loading'&&<AssistantWaiting runtime={runtime} activity="scrivendo la sintesi" progress={progress} onCancel={()=>controller.current?.abort()}/>}
    {phase.name==='error'&&<div className="assistant-box"><p role="alert" className="assist-status error">{phase.message}</p><div className="button-row"><button className="secondary" onClick={()=>setPhase({name:'select'})}>Riprova</button><button className="text-button" onClick={()=>setPhase({name:'idle'})}>Chiudi</button></div></div>}
    {draft&&<div className="assistant-box">
     <div className="assistant-head"><b>Sintesi delle conclusioni · bozza</b><button className="text-button danger" onClick={()=>{setDraft(null);setRemoved([]);}}>Scarta la sintesi</button></div>

@@ -45,7 +45,7 @@ function sample(name:string,secret:string):Project{
  return p;
 }
 // Simulated provider: records what it receives and answers with a fixed JSON payload.
-function mockProvider(reply:object|Error){const calls:GenerateRequest[]=[];const provider:LlmProvider={id:'mock',label:'Mock',models:[{id:'mock-1',label:'Mock'}],timeoutMs:1000,async testConnection(){},async generate(model,request){calls.push(request);if(reply instanceof Error)throw reply;return {text:JSON.stringify(reply),model};}};return {provider,calls};}
+function mockProvider(reply:object|Error){const calls:GenerateRequest[]=[];const provider:LlmProvider={id:'mock',label:'Mock',models:[{id:'mock-1',label:'Mock'}],timeoutMs:1000,streams:false,async testConnection(){},async generate(model,request){calls.push(request);if(reply instanceof Error)throw reply;return {text:JSON.stringify(reply),model};}};return {provider,calls};}
 
 describe('Assistant context',()=>{
  it('asks every prompt for correct Italian accents and apostrophes',()=>{

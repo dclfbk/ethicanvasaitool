@@ -40,15 +40,18 @@ export class LlmError extends Error {
 export interface LlmModel { id: string; label: string; recommended?: boolean; }
 export interface GenerateRequest { system: string; input: string; schema: Record<string, unknown>; maxOutputTokens?: number; }
 export interface GenerateResult { text: string; model: string; }
+// What a streaming provider reports while it works: the summary of the model's reasoning so far and how much of the answer arrived.
+export interface GenerateProgress { phase: 'thinking' | 'writing'; thoughts: string; outputChars: number; }
 
 export interface LlmProvider {
  readonly id: string;
  readonly label: string;
  readonly models: LlmModel[];
- // How long a request may run before it fails with 'timeout'.
+ // How long a request may run before it fails with 'timeout'. When streams is true it is the time allowed without any news.
  readonly timeoutMs: number;
+ readonly streams: boolean;
  testConnection(model: string, signal?: AbortSignal): Promise<void>;
- generate(model: string, request: GenerateRequest, signal?: AbortSignal): Promise<GenerateResult>;
+ generate(model: string, request: GenerateRequest, signal?: AbortSignal, onProgress?: (progress: GenerateProgress) => void): Promise<GenerateResult>;
 }
 
 // Where the API key lives: 'session' keeps it in page memory only, 'system' in the operating system keychain.

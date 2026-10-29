@@ -28,9 +28,9 @@
  */
 
 import {afterEach,describe,expect,it,vi} from 'vitest';
-import {classifyGeminiError,createGeminiProvider,type GeminiHttpRequest,type GeminiTransport} from './gemini';
-import {browserGeminiTransport,sessionCredentialStore} from './geminiBrowser';
-import {LlmError} from './provider';
+import {classifyGeminiError,createGeminiProvider,geminiStreamReader,type GeminiHttpRequest,type GeminiTransport} from './gemini';
+import {browserGeminiTransport,readServerSentEvents,sessionCredentialStore} from './geminiBrowser';
+import {LlmError,type GenerateProgress} from './provider';
 
 const request={system:'s',input:'i',schema:{type:'object'}};
 const ok=(body:unknown):GeminiTransport=>({send:async()=>({status:200,body})});
@@ -98,5 +98,65 @@ describe('Browser session key',()=>{
   expect(init.credentials).toBe('omit');
   await sessionCredentialStore.clear();
   expect(await sessionCredentialStore.has()).toBe(false);
+ });
+});
+
+// Events as documented at https://ai.google.dev/gemini-api/docs/streaming.
+const streamed=[
+ {event_type:'interaction.created',interaction:{id:'i1',status:'in_progress'}},
+ {event_type:'step.start',index:0,step:{type:'thought'}},
+ {event_type:'step.delta',index:0,delta:{type:'thought_summary',content:{type:'text',text:'Leggo la domanda.'}}},
+ {event_type:'step.delta',index:0,delta:{type:'thought_signature',signature:'sig'}},
+ {event_type:'step.stop',index:0},
+ {event_type:'step.start',index:1,step:{type:'model_output'}},
+ {event_type:'step.delta',index:1,delta:{type:'text',text:'{"a":'}},
+ {event_type:'step.delta',index:1,delta:{type:'text',text:'1}'}},
+ {event_type:'step.stop',index:1},
+ {event_type:'something.new'},
+ {event_type:'interaction.completed',interaction:{id:'i1',status:'completed'}},
+];
+const sse=(events:unknown[])=>events.map(e=>`event: ${(e as {event_type:string}).event_type}\ndata: ${JSON.stringify(e)}\n\n`).join('')+'event: done\ndata: [DONE]\n\n';
+const bodyOf=(text:string,size=7)=>new ReadableStream<Uint8Array>({start(c){const bytes=new TextEncoder().encode(text);for(let i=0;i<bytes.length;i+=size)c.enqueue(bytes.slice(i,i+size));c.close();}});
+
+describe('Gemini streaming',()=>{
+ it('rebuilds the answer and reports the reasoning summary, then the answer as it arrives',()=>{
+  const seen:GenerateProgress[]=[];const r=geminiStreamReader(p=>seen.push({...p}));
+  for(const e of streamed)r.onEvent(e);
+  expect(r.result()).toBe('{"a":1}');
+  expect(seen[0]).toEqual({phase:'thinking',thoughts:'',outputChars:0});
+  expect(seen).toContainEqual({phase:'thinking',thoughts:'Leggo la domanda.',outputChars:0});
+  expect(seen.at(-1)).toEqual({phase:'writing',thoughts:'Leggo la domanda.',outputChars:7});
+ });
+ it('turns an error event or an unfinished interaction into an assistant error',()=>{
+  const r=geminiStreamReader();
+  expect(()=>r.onEvent({event_type:'error',error:{code:429,message:'quota exceeded for the day'}})).toThrow(LlmError);
+  try{geminiStreamReader().onEvent({event_type:'error',error:{code:503,message:'overloaded'}});}catch(e){expect((e as LlmError).kind).toBe('server');}
+  const unfinished=geminiStreamReader();unfinished.onEvent({event_type:'interaction.completed',interaction:{status:'failed'}});
+  expect(()=>unfinished.result()).toThrow(LlmError);
+  expect(()=>geminiStreamReader().result()).toThrow(LlmError);
+ });
+ it('splits server-sent events even when chunks cut lines and characters in half',async()=>{
+  const events:unknown[]=[];
+  await readServerSentEvents(bodyOf(sse([{event_type:'step.delta',index:0,delta:{type:'text',text:'perché è così'}}]),3),e=>events.push(e));
+  expect(events).toEqual([{event_type:'step.delta',index:0,delta:{type:'text',text:'perché è così'}}]);
+ });
+ it('streams with reasoning summaries when the transport supports it and restarts the timer on every event',async()=>{
+  vi.useFakeTimers();
+  try{
+   const sent:GeminiHttpRequest[]=[];
+   const transport:GeminiTransport={send:async()=>{throw new Error('not used');},async stream(r,signal,onEvent){sent.push(r);for(const e of streamed){await vi.advanceTimersByTimeAsync(60);if(signal.aborted)throw new DOMException('aborted','AbortError');onEvent(e);}return {status:200,body:undefined};}};
+   const provider=createGeminiProvider(transport,{timeoutMs:100});
+   expect(provider.streams).toBe(true);
+   const progress:GenerateProgress[]=[];
+   const res=await provider.generate('gemini-3.6-flash',request,undefined,p=>progress.push(p));
+   expect(res.text).toBe('{"a":1}');expect(progress.length).toBeGreaterThan(2);
+   expect(sent[0].body).toMatchObject({stream:true,store:false,generation_config:{thinking_summaries:'auto',max_output_tokens:4096}});
+  }finally{vi.useRealTimers();}
+ });
+ it('keeps the plain request where the transport cannot stream',async()=>{
+  const sent:GeminiHttpRequest[]=[];const provider=createGeminiProvider({send:async r=>{sent.push(r);return {status:200,body:{status:'completed',output_text:'{}'}};}});
+  expect(provider.streams).toBe(false);
+  await provider.generate('gemini-3.6-flash',request,undefined,()=>{throw new Error('no progress expected');});
+  expect(sent[0].body).not.toHaveProperty('stream');
  });
 });
