@@ -25,6 +25,8 @@ npm run build
 
 Pubblica il contenuto di `dist/` su qualunque hosting statico. Il workflow `.github/workflows/pages.yml` lo fa su GitHub Pages a ogni push su `main`.
 
+La versione web si può installare come app e funziona senza connessione dopo la prima apertura. La build genera `manifest.webmanifest` e un service worker (`sw.js`) che conserva nel browser i soli file dell’applicazione; le richieste verso altri indirizzi (Gemini, drive, modello locale) non passano dalla cache. Serve HTTPS, oppure `localhost` per le prove. A ogni pubblicazione la copia offline viene sostituita alla prima apertura in linea. Pubblica sempre tutto il contenuto di `dist/` insieme, senza cache lato server lunghe su `sw.js` e `index.html`.
+
 Serve Node.js 22.12 o successivo (oppure 20.19 o successivo). Se `npm install` fallisce con l’errore `Cannot read properties of null (reading 'edgesOut')`, usa un npm recente: `npx npm@11 install`.
 
 > **Licenza AGPL.** Se l’ente pubblica una versione modificata come servizio in rete, deve rendere disponibile agli utenti il codice sorgente corrispondente (art. 13 AGPL).

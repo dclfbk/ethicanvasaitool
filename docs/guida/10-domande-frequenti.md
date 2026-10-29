@@ -12,6 +12,10 @@ Con una cartella sincronizzata, con una copia in un file («Esporta una copia» 
 
 No, sono separati. Per passare i progetti dall’uno all’altro usa la copia in un file o il drive.
 
+## Posso usare l’app senza connessione?
+
+Sì. Dopo la prima apertura la versione web resta disponibile anche senza rete, con i tuoi progetti e la guida. Dal menu del browser puoi anche installarla come app (*Installa* o *Aggiungi alla schermata Home*). Senza connessione non funzionano l’assistente Gemini, l’archivio sul drive e un modello locale che si trova su un altro computer. Quando torni in linea, alla riapertura l’app si aggiorna da sola all’ultima versione pubblicata.
+
 ## Perché la percentuale non sale anche se ho scritto la risposta?
 
 Contano come completate solo le risposte in stato «Risposta confermata» o «Non applicabile · motiva nella risposta» con una motivazione. Le bozze e le richieste in attesa restano da completare. Vedi [Compilare il percorso](02-compilare.md).
