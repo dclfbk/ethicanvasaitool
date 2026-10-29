@@ -7,7 +7,7 @@ Questo capitolo è per chi installa l’applicazione per l’ente o la gestisce:
 | | Web | Desktop |
 |---|---|---|
 | Dove sono i dati | nel browser (IndexedDB), legati al sito e al profilo | in un database SQLite locale |
-| Chiave Gemini | solo in memoria, per la scheda aperta | nel portachiavi del sistema operativo |
+| Chiave Gemini | in memoria, per la scheda aperta; se l’utente lo sceglie, nel gestore delle password del browser | nel portachiavi del sistema operativo |
 | Accesso al drive | token in memoria, da ripetere a ogni sessione | refresh token nel portachiavi |
 | Chiamate esterne | dal browser, direttamente ai servizi | dal processo Rust, verso endpoint fissi |
 | Aggiornamenti | li pubblica chi gestisce il sito | automatici, con firma verificata |
@@ -25,6 +25,8 @@ npm run build
 
 Pubblica il contenuto di `dist/` su qualunque hosting statico. Il workflow `.github/workflows/pages.yml` lo fa su GitHub Pages a ogni push su `main`.
 
+La versione web si può installare come app e funziona senza connessione dopo la prima apertura. La build genera `manifest.webmanifest` e un service worker (`sw.js`) che conserva nel browser i soli file dell’applicazione; le richieste verso altri indirizzi (Gemini, drive, modello locale) non passano dalla cache. Serve HTTPS, oppure `localhost` per le prove. A ogni pubblicazione la copia offline viene sostituita alla prima apertura in linea. Pubblica sempre tutto il contenuto di `dist/` insieme, senza cache lato server lunghe su `sw.js` e `index.html`.
+
 Serve Node.js 22.12 o successivo (oppure 20.19 o successivo). Se `npm install` fallisce con l’errore `Cannot read properties of null (reading 'edgesOut')`, usa un npm recente: `npx npm@11 install`.
 
 > **Licenza AGPL.** Se l’ente pubblica una versione modificata come servizio in rete, deve rendere disponibile agli utenti il codice sorgente corrispondente (art. 13 AGPL).
@@ -38,7 +40,7 @@ npm ci
 npm run tauri build
 ```
 
-Il workflow `.github/workflows/release.yml` produce i pacchetti Linux (deb, rpm, AppImage) e Windows (msi, exe) a ogni tag `v*`, in una release in bozza da controllare. I pacchetti non sono firmati con un certificato di codice: Windows SmartScreen mostra un avviso.
+Il workflow `.github/workflows/release.yml` produce i pacchetti Linux (deb, rpm, AppImage), Windows (msi, exe) e macOS (dmg, un’unica app per i Mac con processore Apple e Intel) a ogni tag `v*`, in una release in bozza da controllare. I pacchetti Windows non sono firmati con un certificato di codice: Windows SmartScreen mostra un avviso. I pacchetti macOS vengono firmati e notarizzati solo se l’ente ha un account Apple Developer e ne ha inserito i dati nei secret del repository (vedi il README); altrimenti macOS blocca l’app al primo avvio e va aperta con il tasto destro e il comando *Apri*.
 
 ### Aggiornamenti
 
