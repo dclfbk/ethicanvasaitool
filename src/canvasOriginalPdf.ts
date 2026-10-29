@@ -29,15 +29,17 @@
 
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
-import { accepted, evaluate, questionnaireVersion, questions, sections, statusLabels, type Profile, type Project, type Question } from './model';
-import { pdfFonts, pdfLogos } from './pdfAssets';
+import { evaluate, questionnaireVersion, questions, sections, statusLabels, type Profile, type Project, type Question } from './model';
+import { pdfCanvasTemplate, pdfFonts, pdfLogos } from './pdfAssets';
 import { dateLabel, hex, ink, stateOf, truncate, Writer as TextWriter } from './pdfText';
-import { answerStateLabels, historyLines, regulatoryNote, selfAssessmentNote } from './report';
-import { outcomeLabels } from './historyText';
+import { answerStateLabels, regulatoryNote, selfAssessmentNote } from './report';
+import { placements, templatePageCount, templatePages, withoutCell, type Box } from './canvasTemplate';
 
-// Canvas export in the graphic style of the original AI Ethics Canvas (A4 landscape, Canva template):
-// cover with legend, one page per section with sticky notes coloured by profile, then continuation pages.
-// Positions and sizes are taken from the original PDF, measured in points from the top-left corner.
+// Canvas export on the pages of the original AI Ethics Canvas (A4 landscape, Canva template, CC BY-SA 4.0): the
+// template pages are copied as they are and the answers are written in the free space of their cells (canvasTemplate.ts).
+// The use case, which has no page in the original, gets one in the same style after the glossary; answers that do not
+// fit, and those without a cell, continue in final pages, followed by notes and references.
+// Positions and sizes are measured in points from the top-left corner.
 const W = 841.92, H = 595.5;
 const navy = hex('#23295d'), blue = hex('#489dd7'), grey = rgb(0.42, 0.43, 0.48), white = rgb(1, 1, 1);
 const profileHex: Record<Profile, string> = {scientist: '#7ed957', engineer: '#0cc0df', user: '#ffde59'};
@@ -177,42 +179,76 @@ function drawChunks(c: Canvas, pages: PDFPage[], chunks: Chunk[]) {
  }
 }
 
-function cover(c: Canvas, page: PDFPage) {
- const {fonts, project} = c, r = evaluate(project);
- c.header(page, {});
- c.note(page, 18, 55, 172, 108, ['scientist', 'engineer', 'user']);
- c.centered(page, 'Caso d’uso', 104, 88, fonts.regular, 11);
- c.centered(page, 'è necessaria l’AI per realizzare questo obiettivo?', 104, 130, fonts.regular, 6.8);
- c.centered(page, 'Canvas: AI per la PA', 471, 108, fonts.display, 54, navy);
- c.centered(page, 'Una guida per l’adozione etica di strumenti AI a sostegno della PA', 471, 140, fonts.regular, 14.5, navy);
- page.drawRectangle({x: 200, y: T(159), width: 542, height: 2, color: blue});
- // Project block where the original shows the page thumbnails.
- let y = 196;
- c.text(page, 'IL PROGETTO', 40, y, fonts.display, 11, blue); y += 30;
- for (const l of c.w.lines(project.name, fonts.display, 28, 500).slice(0, 2)) { c.text(page, l, 40, y, fonts.display, 28, navy); y += 30; }
- c.text(page, `${project.organization || 'Ente non indicato'} · ${dateLabel(c.now)}`, 40, y - 6, fonts.regular, 10); y += 14;
- c.text(page, `${statusLabels[r.status]} · ${r.percent}% · ${r.done.length} di ${questions.length} risposte completate`, 40, y, fonts.bold, 10); y += 18;
- for (const l of c.w.lines(project.description, fonts.regular, 9.5, 500).slice(0, 6)) { c.text(page, l, 40, y, fonts.regular, 9.5); y += 13; }
- y += 10;
- sections.forEach((s, i) => {
-  const qs = questions.filter(q => q.section === s.id), done = qs.filter(q => accepted(project.answers[q.id])).length, col = i % 3, row = Math.floor(i / 3), x = 40 + col * 170, yy = y + row * 30;
-  // Numbered like the section pages; the use case is not numbered in the original either.
-  if (i) { page.drawCircle({x: x + 9, y: T(yy - 4), size: 9, borderColor: ink, borderWidth: 1}); c.centered(page, String(i), x + 9, yy, fonts.bold, 9); }
-  else c.note(page, x, yy - 13, 18, 18, ['scientist', 'engineer', 'user']);
-  c.text(page, s.name, x + 24, yy - 1, fonts.display, 12);
-  c.text(page, `${done} di ${qs.length}`, x + 24, yy + 10, fonts.regular, 8, grey);
- });
- y += 70;
- const h = historyLines(project, c.now);
- if (h.last || h.plan.length) {
-  const review = h.last ? `Ultima revisione: ${dateLabel(new Date(h.last.at))} · ${h.last.role} · ${outcomeLabels[h.last.outcome]}.` : 'Nessuna revisione registrata.';
-  for (const l of c.w.lines([review, h.plan[0] ?? ''].join(' ').trim(), fonts.bold, 9, 500)) { c.text(page, l, 40, y, fonts.bold, 9); y += 12; }
-  y += 6;
+// Answers written in the cells of the template, in a size close to the printed labels of the canvas.
+const cellSize = 7.8, cellLead = 9.2, cellPad = 3, statusSize = 6.8;
+interface Token { word: string; paragraph: boolean; }
+const tokensOf = (text: string): Token[] => text.split('\n').flatMap((p, i) => p.split(/ +/).filter(Boolean).map((word, j) => ({word, paragraph: i > 0 && j === 0})));
+
+// Fills up to max lines of the given width from tokens[start]; a new paragraph starts a new line. Returns the next token.
+function take(tokens: Token[], start: number, width: number, max: number, measure: (s: string) => number) {
+ const lines: string[] = [];
+ let current = '', i = start;
+ while (i < tokens.length && lines.length < max) {
+  const t = tokens[i];
+  if (t.paragraph && current && i > start) { lines.push(current); current = ''; if (lines.length === max) break; }
+  const candidate = current ? current + ' ' + t.word : t.word;
+  if (measure(candidate) <= width) { current = candidate; i++; continue; }
+  if (current) { lines.push(current); current = ''; continue; }
+  // A word longer than the cell is split character by character.
+  let n = t.word.length - 1; while (n > 1 && measure(t.word.slice(0, n)) > width) n--;
+  lines.push(t.word.slice(0, n)); tokens[i] = {word: t.word.slice(n), paragraph: false};
  }
- for (const l of c.w.lines(selfAssessmentNote + ' ' + regulatoryNote, fonts.italic, 7.5, 500)) { c.text(page, l, 40, y, fonts.italic, 7.5, grey); y += 10; }
- // Legend, as on the original cover.
- c.text(page, 'Legenda', 612, 425, fonts.display, 40, navy);
- (['scientist', 'engineer', 'user'] as Profile[]).forEach((p, i) => { shape(page, p, 578, 449 + i * 38, 10, 1.6); c.text(page, profileLabels[p], 612, 457 + i * 38, fonts.regular, 22, hex(profileHex[p])); });
+ if (current && lines.length < max) lines.push(current);
+ return {lines, next: i};
+}
+
+// The state of an answer that is not simply complete, and whether it contains text proposed by the AI.
+function statusOf(c: Canvas, q: Question) {
+ const a = c.project.answers[q.id], state = stateOf(a), parts: string[] = [];
+ if (state !== 'answered' && state !== 'missing') parts.push(answerStateLabels[state] + (state === 'waiting' && a?.request.trim() ? ': ' + a.request.trim() : ''));
+ if (a?.aiProvenance?.length) parts.push('testo proposto dall’AI, da verificare');
+ return parts.join(' · ').toUpperCase();
+}
+
+interface CellText { x: number; baseline: number; text: string; font: PDFFont; size: number; }
+// Lays an answer out in its cells. When it does not fit, the last line is kept for the page where it continues.
+function layoutCells(c: Canvas, q: Question, boxes: Box[], continuesAt?: number) {
+ const {fonts} = c, a = c.project.answers[q.id], out: CellText[] = [];
+ const measure = (s: string) => fonts.condensed.widthOfTextAtSize(s, cellSize);
+ const value = c.w.text(fonts.condensed, a?.value.trim() ?? '');
+ const status = statusOf(c, q);
+ if (!value && !status) return {cells: out, overflow: false};
+ const inner = boxes.map(([x0, y0, x1, y1]) => ({x: x0 + cellPad, top: y0 + cellPad, width: x1 - x0 - 2 * cellPad, lines: Math.max(0, Math.floor((y1 - y0 - 2 * cellPad - 2) / cellLead))}));
+ const run = (reserve: boolean) => {
+  const tokens = tokensOf(value), cells: CellText[] = [];
+  let next = 0, used = 0;
+  inner.forEach((b, bi) => {
+   let room = b.lines, row = 0;
+   if (bi === 0 && status) for (const l of truncate(c.w.lines(status, fonts.display, statusSize, b.width), 2, b.width, s => fonts.display.widthOfTextAtSize(s, statusSize), '…')) {
+    if (row >= room) break; cells.push({x: b.x, baseline: b.top + 7 + row * cellLead, text: l, font: fonts.display, size: statusSize}); row++;
+   }
+   if (reserve && bi === inner.length - 1) room--;
+   const r = take(tokens, next, b.width, Math.max(0, room - row), measure);
+   r.lines.forEach(l => { cells.push({x: b.x, baseline: b.top + 7 + row * cellLead, text: l, font: fonts.condensed, size: cellSize}); row++; });
+   next = r.next; used = bi;
+  });
+  return {cells, rest: next < tokens.length, last: inner[used]};
+ };
+ let r = run(false);
+ if (!r.rest) return {cells: r.cells, overflow: false};
+ r = run(true);
+ const last = inner[inner.length - 1];
+ if (last && continuesAt) r.cells.push({x: last.x, baseline: last.top + 7 + (last.lines - 1) * cellLead, text: `… segue a pag. ${continuesAt}`, font: fonts.italic, size: 6.8});
+ return {cells: r.cells, overflow: true};
+}
+
+// Project line on the cover of the template, between the subtitle and the page thumbnails; the self-assessment note
+// goes in the free band above the licence.
+function coverOverlay(c: Canvas, page: PDFPage) {
+ const {fonts, project} = c, r = evaluate(project);
+ const line = [project.name, project.organization || 'Ente non indicato', dateLabel(c.now), `${statusLabels[r.status]} · ${r.percent}%`].join(' · ');
+ c.centered(page, c.w.lines(line, fonts.bold, 9.5, 760)[0], W / 2, 175, fonts.bold, 9.5, navy);
+ c.w.lines(selfAssessmentNote, fonts.italic, 7, 490).slice(0, 2).forEach((l, i) => c.text(page, l, 48, 564 + i * 9, fonts.italic, 7, grey));
 }
 
 function extrasLines(c: Canvas, q: Question): Chunk['lines'] {
@@ -233,30 +269,58 @@ export async function canvasOriginalPdf(project: Project, now = new Date()): Pro
  const fonts: Fonts = {regular: await embed(f.regular), bold: await embed(f.bold), italic: await embed(f.italic), display: await embed(f.display), condensed: await embed(f.condensed)};
  const logos: Logos = {funding: await doc.embedPng(l.funding), pat: await doc.embedPng(l.pat), fbk: await doc.embedPng(l.fbk)};
  const c = new Canvas(new TextWriter(doc, fonts), logos, project, now);
+ const template = await PDFDocument.load(pdfCanvasTemplate());
+ if (template.getPageCount() !== templatePageCount) throw new Error('unexpected canvas template');
 
  // Plan first: which answers continue, and on which page each continuation lands.
- const bySection = sections.map(s => ({s, qs: questions.filter(q => q.section === s.id)}));
- const sectionPages = 1 + bySection.length;
- const long = bySection.flatMap(({qs}) => overflowing(c, qs));
+ // Pages: cover, instructions, glossary, use case (drawn), the five section pages, then the final pages.
+ const useCase = questions.filter(q => q.section === sections[0].id);
+ const useCasePage = templatePages.glossary + 1, firstFinal = templatePageCount + 1;
+ const toTemplate = (page: number) => page < useCasePage ? page : page + 1;
+ const placed = questions.filter(q => placements[q.id]);
+ const long = [...overflowing(c, useCase), ...placed.filter(q => layoutCells(c, q, placements[q.id].boxes).overflow)];
+ const shown = questions.filter(q => long.includes(q) || withoutCell.includes(q.id) && stateOf(project.answers[q.id]) !== 'missing');
  const fullWidth = area.right - area.left - 24;
- const continued = flow(c, long.map(q => ({q, lines: c.w.lines(project.answers[q.id].value.trim(), fonts.condensed, answerSize, fullWidth).map(text => ({text, font: fonts.condensed, size: answerSize, lead: answerLead}))})), sectionPages);
- const continuationPages = continued.length ? continued[continued.length - 1].page - sectionPages + 1 : 0;
+ const fullLines = (q: Question) => {
+  const status = statusOf(c, q), value = project.answers[q.id]?.value.trim() ?? '';
+  return [...(status ? c.w.lines(status, fonts.display, 9, fullWidth).map(text => ({text, font: fonts.display, size: 9, lead: 12})) : []),
+   ...c.w.lines(value, fonts.condensed, answerSize, fullWidth).map(text => ({text, font: fonts.condensed, size: answerSize, lead: answerLead}))];
+ };
+ const continued = flow(c, shown.map(q => ({q, lines: fullLines(q)})), firstFinal);
+ const continuationPages = continued.length ? continued[continued.length - 1].page - firstFinal + 1 : 0;
  const extras = questions.map(q => ({q, lines: extrasLines(c, q)})).filter(x => x.lines.length);
- const extraChunks = flow(c, extras, sectionPages + continuationPages);
- const extraPages = extraChunks.length ? extraChunks[extraChunks.length - 1].page - sectionPages - continuationPages + 1 : 0;
+ const extraChunks = flow(c, extras, firstFinal + continuationPages);
+ const extraPages = extraChunks.length ? extraChunks[extraChunks.length - 1].page - firstFinal - continuationPages + 1 : 0;
  const overflowPage = new Map<string, number>();
  for (const ch of continued) if (!overflowPage.has(ch.q.id)) overflowPage.set(ch.q.id, ch.page + 1);
 
  const pages: PDFPage[] = [];
- const add = () => { const p = doc.addPage([W, H]); pages.push(p); return p; };
- cover(c, add());
- bySection.forEach(({s, qs}, i) => { const p = add(); c.header(p, {number: i || undefined, kicker: 'Canvas: AI per la PA', title: s.name, lead: s.subtitle}); sectionPage(c, p, qs, overflowPage); });
- for (let i = 0; i < continuationPages; i++) c.header(add(), {kicker: 'Canvas: AI per la PA', title: 'Risposte complete', lead: 'Il seguito delle risposte che non entrano nei riquadri'});
+ const copied = await doc.copyPages(template, template.getPageIndices());
+ copied.forEach((p, i) => {
+  if (i === useCasePage) {
+   const p = doc.addPage([W, H]); pages.push(p);
+   c.header(p, {kicker: 'Canvas: AI per la PA', title: sections[0].name, lead: sections[0].subtitle});
+   sectionPage(c, p, useCase, overflowPage);
+   for (const [k, l] of c.w.lines(regulatoryNote, fonts.italic, 6.5, area.right - area.left).slice(0, 1).entries()) c.text(p, l, area.left, 581 + k * 8, fonts.italic, 6.5, grey);
+  }
+  doc.addPage(p); pages.push(p);
+ });
+ coverOverlay(c, pages[templatePages.cover]);
+ for (const q of placed) {
+  const {page, boxes} = placements[q.id];
+  for (const t of layoutCells(c, q, boxes, overflowPage.get(q.id)).cells) c.text(pages[toTemplate(page)], t.text, t.x, t.baseline, t.font, t.size);
+ }
+ for (let i = 0; i < continuationPages; i++) c.header(add(), {kicker: 'Canvas: AI per la PA', title: 'Risposte complete', lead: 'Le risposte che non entrano nei riquadri del canvas e quelle senza un riquadro'});
  drawChunks(c, pages, continued);
  for (let i = 0; i < extraPages; i++) c.header(add(), {kicker: 'Canvas: AI per la PA', title: 'Note e riferimenti', lead: 'Figure da coinvolgere, contributi richiesti, note, riferimenti e testo proposto dall’AI'});
  drawChunks(c, pages, extraChunks);
- pages.forEach((p, i) => c.footer(p, i + 1, pages.length));
+ // The template pages already carry the licence: they only get the page number.
+ pages.forEach((p, i) => {
+  if (i !== useCasePage && i < firstFinal) { const label = `pagina ${i + 1} di ${pages.length}`; c.text(p, label, 797 - fonts.regular.widthOfTextAtSize(label, 6.5), 588, fonts.regular, 6.5, grey); }
+  else c.footer(p, i + 1, pages.length);
+ });
 
+ function add() { const p = doc.addPage([W, H]); pages.push(p); return p; }
  doc.setTitle('AI Ethics Canvas · ' + project.name); doc.setAuthor(project.organization || 'EthiCanvas AI'); doc.setSubject(selfAssessmentNote);
  doc.setCreator('EthiCanvas AI'); doc.setProducer('EthiCanvas AI (pdf-lib)'); doc.setLanguage('it-IT'); doc.setCreationDate(now); doc.setModificationDate(now);
  return new Uint8Array(await doc.save());

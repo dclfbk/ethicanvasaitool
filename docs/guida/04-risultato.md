@@ -21,7 +21,7 @@ Con «Torna al percorso» riprendi la compilazione.
 
 Nel riquadro «Esporta il progetto» scegli uno dei due formati:
 
-- «Canvas in PDF · stile originale»: le pagine A4 orizzontali dell’AI Ethics Canvas, con i riquadri colorati per profilo. Le risposte lunghe proseguono nelle pagine «Risposte complete» e un’ultima pagina raccoglie note, contributi e riferimenti;
+- «Canvas in PDF · stile originale»: il canvas originale, con copertina, istruzioni, glossario e le cinque pagine di sezione, e le tue risposte scritte nei riquadri a cui si riferiscono. Il caso d’uso, che nell’originale ha solo il riquadro in copertina, ha una pagina nello stesso stile. Le risposte che non entrano nei riquadri, e quelle che nel canvas non hanno un riquadro («Chi rischia di rimanere fuori?» e «Quando sarà necessario tornare su questa valutazione?»), proseguono nelle pagine «Risposte complete»; un’ultima pagina raccoglie note, contributi e riferimenti;
 - «Canvas in PDF · poster e dettaglio»: un poster A3 con le sei sezioni, da appendere o proiettare, seguito da tutte le risposte per intero.
 
 ![Il riquadro delle esportazioni](img/esporta.png)

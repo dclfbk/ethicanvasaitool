@@ -76,8 +76,12 @@ try{
  assert.match(originalInfo,/Page size:\s+841\.92 x 595\.5/);
  const coverText=execFileSync('pdftotext',['-f','1','-l','1',original,'-']).toString();
  assert.ok(coverText.includes('Canvas: AI per la PA')&&coverText.includes('Legenda')&&coverText.includes('licensed under CC BY-SA 4.0'));
- const dataText=execFileSync('pdftotext',['-f','3','-l','3',original,'-']).toString();
- assert.ok(dataText.includes('Dati')&&dataText.includes('Documenti pubblici del servizio'));
+ // Pages of the original canvas, the use case after the glossary, then the five sections with the answers in their cells.
+ assert.match(originalInfo,/Pages:\s+(9|1\d)\b/);
+ const pdfPage=n=>execFileSync('pdftotext',['-f',String(n),'-l',String(n),original,'-']).toString().replace(/\s+/g,' ');
+ assert.ok(pdfPage(3).includes('Glossario'));assert.ok(pdfPage(4).includes('Caso d’uso'));
+ const dataText=pdfPage(5);
+ assert.ok(dataText.includes('ATTORI COINVOLTI NELLA RACCOLTA DATI')&&dataText.includes('Documenti pubblici del servizio'));
  wait=page.waitForEvent('download');await page.getByRole('button',{name:'Canvas in PDF · poster e dettaglio'}).click();
  const pdf=await save(await wait,'canvas.pdf');
  const info=execFileSync('pdfinfo',[pdf]).toString();

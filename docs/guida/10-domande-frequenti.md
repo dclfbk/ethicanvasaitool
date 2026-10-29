@@ -67,7 +67,7 @@ Lo stesso progetto è stato modificato sia su questo dispositivo sia altrove dop
 
 ## Il PDF taglia le mie risposte
 
-Nel formato in stile originale i riquadri hanno uno spazio fisso: il testo che non entra prosegue nelle pagine «Risposte complete», con il numero di pagina indicato nel riquadro. Il formato poster riporta tutte le risposte per intero nelle pagine di dettaglio.
+Nel formato in stile originale le risposte vanno nei riquadri del canvas, che hanno uno spazio fisso: il testo che non entra prosegue nelle pagine «Risposte complete», con il numero di pagina indicato nel riquadro. Il formato poster riporta tutte le risposte per intero nelle pagine di dettaglio.
 
 ## L’app dice se il mio sistema è ad alto rischio per l’AI Act?
 
