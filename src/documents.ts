@@ -92,7 +92,7 @@ export function toOdt(blocks: DocBlock[], meta: DocMeta): Uint8Array<ArrayBuffer
  return zip([
   {name: 'mimetype', data: 'application/vnd.oasis.opendocument.text'},
   {name: 'META-INF/manifest.xml', data: `${head}<manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.3"><manifest:file-entry manifest:full-path="/" manifest:version="1.3" manifest:media-type="application/vnd.oasis.opendocument.text"/><manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="styles.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="meta.xml" manifest:media-type="text/xml"/></manifest:manifest>`},
-  {name: 'meta.xml', data: `${head}<office:document-meta ${ns}><office:meta><dc:title>${xml(meta.title)}</dc:title><meta:initial-creator>${xml(meta.author)}</meta:initial-creator><dc:language>${meta.language}</dc:language><meta:creation-date>${meta.created}</meta:creation-date><meta:generator>EthiCanvas AI</meta:generator></office:meta></office:document-meta>`},
+  {name: 'meta.xml', data: `${head}<office:document-meta ${ns}><office:meta><dc:title>${xml(meta.title)}</dc:title><meta:initial-creator>${xml(meta.author)}</meta:initial-creator><dc:language>${meta.language}</dc:language><meta:creation-date>${meta.created}</meta:creation-date><meta:generator>EthiCanvasAI</meta:generator></office:meta></office:document-meta>`},
   {name: 'styles.xml', data: styles},
   {name: 'content.xml', data: `${head}<office:document-content ${ns}><office:body><office:text>${body}</office:text></office:body></office:document-content>`},
  ]);

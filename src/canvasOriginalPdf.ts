@@ -301,7 +301,7 @@ export async function canvasOriginalPdf(project: Project, now = new Date()): Pro
  });
 
  function add() { const p = doc.addPage([W, H]); pages.push(p); return p; }
- doc.setTitle('AI Ethics Canvas · ' + project.name); doc.setAuthor(project.organization || 'EthiCanvas AI'); doc.setSubject(selfAssessmentNote);
- doc.setCreator('EthiCanvas AI'); doc.setProducer('EthiCanvas AI (pdf-lib)'); doc.setLanguage('it-IT'); doc.setCreationDate(now); doc.setModificationDate(now);
+ doc.setTitle('AI Ethics Canvas · ' + project.name); doc.setAuthor(project.organization || 'EthiCanvasAI'); doc.setSubject(selfAssessmentNote);
+ doc.setCreator('EthiCanvasAI'); doc.setProducer('EthiCanvasAI (pdf-lib)'); doc.setLanguage('it-IT'); doc.setCreationDate(now); doc.setModificationDate(now);
  return new Uint8Array(await doc.save());
 }

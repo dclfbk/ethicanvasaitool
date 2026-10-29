@@ -1,4 +1,4 @@
-# EthiCanvas AI
+# EthiCanvasAI
 
 Applicazione React + TypeScript con archivio locale e contenitore Tauri 2. L'assistente Gemini è facoltativo: senza configurarlo l'applicazione funziona interamente in locale.
 
@@ -8,6 +8,7 @@ La guida per chi compila, chi coordina e chi installa è in [docs/guida](docs/gu
 
 - Le etichette dell'interfaccia citate tra «» devono esistere nel codice: [src/guide.test.ts](src/guide.test.ts) lo verifica insieme a link, ancore e immagini. Se si rinomina un pulsante, il test segnala il capitolo da aggiornare.
 - Gli screenshot in `docs/guida/img` si rigenerano dall'app con dati di esempio: `npm run guide:screenshots`.
+- Le icone dell'app per tutte le piattaforme (desktop, mobile, PWA) si generano da `src-tauri/icons/app-icon.svg`: `npm run icons`.
 
 ## Avvio web
 

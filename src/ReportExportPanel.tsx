@@ -65,7 +65,7 @@ export default function ReportExportPanel({project,settings,runtime,onOpenSettin
   finally{setBusy(false);}
  }
  function report(format:'docx'|'odt'){
-  const blocks=buildReportBlocks(project,draft,{includeAnswers}),meta={title:'Rapporto di valutazione · '+project.name,author:project.organization||'EthiCanvas AI',language:'it-IT',created:new Date().toISOString()};
+  const blocks=buildReportBlocks(project,draft,{includeAnswers}),meta={title:'Rapporto di valutazione · '+project.name,author:project.organization||'EthiCanvasAI',language:'it-IT',created:new Date().toISOString()};
   download(`${name}-rapporto.${format}`,format==='docx'?toDocx(blocks,meta):toOdt(blocks,meta),format==='docx'?docxMime:odtMime);
  }
  function choose(){setPhase({name:'select'});runtime.credentials.has().then(setHasKey).catch(()=>setHasKey(false));}

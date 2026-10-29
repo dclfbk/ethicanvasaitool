@@ -109,7 +109,7 @@ function poster(w: Writer, logos: Logos, project: Project, now: Date) {
  drawNote(page, m + 84 + 3 * 118, ly - 9, 16, 16, ['scientist', 'engineer', 'user']);
  text(w, page, 'Colori misti: tutti insieme', m + 84 + 3 * 118 + 22, ly + 3, fonts.semibold, 10);
  const notesX = m + 84 + 3 * 118 + 190, notesW = W - m - notesX;
- [selfAssessmentNote + ' Le risposte abbreviate proseguono nelle pagine di dettaglio.', `${canvasAttribution} Generato con EthiCanvas AI · questionario ${questionnaireVersion}.`]
+ [selfAssessmentNote + ' Le risposte abbreviate proseguono nelle pagine di dettaglio.', `${canvasAttribution} Generato con EthiCanvasAI · questionario ${questionnaireVersion}.`]
   .flatMap(n => w.lines(n, fonts.regular, 7.2, notesW)).slice(0, 5).forEach((l, i) => text(w, page, l, notesX, ly - 6 + i * 9.5, fonts.regular, 7.2, grey));
 }
 
@@ -220,7 +220,7 @@ export async function canvasPdf(project: Project, now = new Date()): Promise<Uin
  details(w, project);
  const pages = doc.getPages();
  pages.forEach((p, i) => footer(w, p, project, i + 1, pages.length));
- doc.setTitle('AI Ethics Canvas · ' + project.name); doc.setAuthor(project.organization || 'EthiCanvas AI'); doc.setSubject(selfAssessmentNote);
- doc.setCreator('EthiCanvas AI'); doc.setProducer('EthiCanvas AI (pdf-lib)'); doc.setLanguage('it-IT'); doc.setCreationDate(now); doc.setModificationDate(now);
+ doc.setTitle('AI Ethics Canvas · ' + project.name); doc.setAuthor(project.organization || 'EthiCanvasAI'); doc.setSubject(selfAssessmentNote);
+ doc.setCreator('EthiCanvasAI'); doc.setProducer('EthiCanvasAI (pdf-lib)'); doc.setLanguage('it-IT'); doc.setCreationDate(now); doc.setModificationDate(now);
  return new Uint8Array(await doc.save());
 }

@@ -212,7 +212,7 @@ export function buildReportBlocks(project: Project, draft: ReportDraft | null, o
    }
   }
  }
- blocks.push({type: 'note', text: canvasAttribution + ' Documento generato con EthiCanvas AI, software libero AGPL-3.0-or-later.'});
+ blocks.push({type: 'note', text: canvasAttribution + ' Documento generato con EthiCanvasAI, software libero AGPL-3.0-or-later.'});
  return blocks;
 }
 

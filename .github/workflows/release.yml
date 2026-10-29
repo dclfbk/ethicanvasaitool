@@ -105,7 +105,7 @@ jobs:
           # Builds the signed update artifacts and attaches latest.json to the release.
           args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}-build', github.run_number) }}
-          releaseName: EthiCanvas AI ${{ github.ref_type == 'tag' && github.ref_name || format('build {0}', github.run_number) }}
+          releaseName: EthiCanvasAI ${{ github.ref_type == 'tag' && github.ref_name || format('build {0}', github.run_number) }}
           releaseBody: Desktop packages for Linux (deb, rpm, AppImage), Windows (msi, exe) and macOS (universal dmg and app). Windows packages are not code-signed; macOS packages are signed and notarised only when the Apple secrets are configured. Updates are signed with the updater key.
           releaseDraft: true
           prerelease: ${{ github.ref_type != 'tag' }}
