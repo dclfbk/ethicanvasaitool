@@ -212,7 +212,7 @@ La sezione **Casi a confronto** usa come knowledge base i progetti dell'archivio
 
 È un MVP, non una implementazione integrale di ogni quesito del PDF. Le domande sono adattamenti tematici con origine indicata. Sono incluse estensioni su chatbot, inclusione e riesame. I ruoli sono suggerimenti, non la riproduzione delle attribuzioni grafiche originali.
 
-Non sono implementati classificazione normativa AI Act, revisione formale, cronologia completa delle valutazioni, estrazione del testo da PDF, Word o immagini, sincronizzazione automatica tra dispositivi, PWA offline, crittografia dell'archivio locale, integrazioni Ollama e Microsoft Copilot o un proxy per la chiave Gemini. Il rapporto non costituisce una certificazione. La presenza di evidenze non equivale a verifica della loro validità.
+Non sono implementati classificazione normativa AI Act, revisione formale, estrazione del testo da PDF, Word o immagini, sincronizzazione automatica tra dispositivi, PWA offline, crittografia dell'archivio locale, integrazione Microsoft Copilot o un proxy per la chiave Gemini. Il rapporto non costituisce una certificazione. La presenza di evidenze non equivale a verifica della loro validità.
 
 Il salvataggio locale non è un backup. Esportare copie, soprattutto prima di cancellare dati del browser o cambiare dispositivo. Gli allegati sono incorporati per portabilità; per archivi estesi sarà opportuno separarli in un file store con transazioni e controlli di integrità. La versione desktop e quella web hanno archivi separati.
 
@@ -248,7 +248,7 @@ Il salvataggio locale non è un backup. Esportare copie, soprattutto prima di ca
 
 1. Validare e completare il questionario rispetto al canvas, provare con funzionari e tecnici; definire criteri di revisione e approfondimento AI Act.
 2. ~~Gemini~~: implementato in questa versione.
-3. Ollama: connessione opzionale a un modello locale.
+3. ~~Ollama~~: implementato come modello locale (Ollama o server compatibile OpenAI).
 4. Microsoft Copilot: integrazione futura distinta da GitHub Copilot.
 
 ## Verifica
