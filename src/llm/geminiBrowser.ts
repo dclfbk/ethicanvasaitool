@@ -60,9 +60,10 @@ async function readBody(response: Response): Promise<unknown> {
 }
 
 // Splits a server-sent event stream into the JSON payloads of its data lines; "[DONE]" and unparsable data are skipped.
+// Under load Google may answer 200 and then send a bare JSON error outside the SSE format: such lines are passed on at the end.
 export async function readServerSentEvents(body: ReadableStream<Uint8Array>, onEvent: (event: unknown) => void) {
  const reader = body.getReader(), decoder = new TextDecoder();
- let buffer = '', data: string[] = [];
+ let buffer = '', data: string[] = [], bare = '';
  const dispatch = () => {
   const payload = data.join('\n').trim();data = [];
   if (!payload || payload === '[DONE]') return;
@@ -78,8 +79,14 @@ export async function readServerSentEvents(body: ReadableStream<Uint8Array>, onE
    const line = buffer.slice(0, end).replace(/\r$/, '');buffer = buffer.slice(end + 1);
    if (line === '') dispatch();
    else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''));
+   else if (!/^(:|event:|id:|retry:)/.test(line)) bare += line + '\n';
   }
-  if (done) { if (buffer.startsWith('data:')) data.push(buffer.slice(5).replace(/^ /, '')); dispatch(); return; }
+  if (done) {
+   if (buffer.startsWith('data:')) data.push(buffer.slice(5).replace(/^ /, '')); else bare += buffer;
+   dispatch();
+   if (bare.trim()) { data = [bare]; dispatch(); }
+   return;
+  }
  }
 }
 

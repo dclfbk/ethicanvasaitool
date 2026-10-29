@@ -61,6 +61,8 @@ describe('Gemini adapter',()=>{
   expect(classifyGeminiError(402,{error:{code:'payment_required'}})).toBe('payment');
   expect(classifyGeminiError(503,{})).toBe('server');
   expect(classifyGeminiError(504,{})).toBe('timeout');
+  expect(classifyGeminiError(429,{error:{code:'too_many_requests',message:'Rate limit exceeded for model gemini-3.6-flash (limit: 20 requests per day on Free Tier). Please retry in 16h13m21s'}})).toBe('quota');
+  expect(classifyGeminiError(429,{error:{code:'too_many_requests',message:'Rate limit exceeded: 10 requests per minute'}})).toBe('rate-limit');
   expect(classifyGeminiError(400,{error:{code:'safety'}})).toBe('blocked');
  });
  it('reports invalid keys, missing models and quota on generate',async()=>{
@@ -139,6 +141,12 @@ describe('Gemini streaming',()=>{
   const events:unknown[]=[];
   await readServerSentEvents(bodyOf(sse([{event_type:'step.delta',index:0,delta:{type:'text',text:'perché è così'}}]),3),e=>events.push(e));
   expect(events).toEqual([{event_type:'step.delta',index:0,delta:{type:'text',text:'perché è così'}}]);
+ });
+ it('reads a bare JSON error sent after a 200 stream starts, as Google does under load',async()=>{
+  const events:unknown[]=[];
+  await readServerSentEvents(bodyOf(': keep-alive\n\n{"error":{"message":"high demand","code":"service_unavailable"}}',5),e=>events.push(e));
+  expect(events).toEqual([{error:{message:'high demand',code:'service_unavailable'}}]);
+  try{geminiStreamReader().onEvent(events[0]);throw new Error('expected an error');}catch(e){expect((e as LlmError).kind).toBe('server');}
  });
  it('streams with reasoning summaries when the transport supports it and restarts the timer on every event',async()=>{
   vi.useFakeTimers();

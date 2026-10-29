@@ -72,7 +72,8 @@ export function classifyGeminiError(status: number, body: unknown): LlmErrorKind
  if (status === 402 || code === 'payment_required') return 'payment';
  if (status === 403) return 'permission';
  if (status === 404) return 'model-unavailable';
- if (status === 429) return code === 'quota_exceeded' || /quota|exhausted/.test(text) && !/per.?minute/.test(text) ? 'quota' : 'rate-limit';
+ // A daily limit (free tier: requests per day) is a quota: waiting a few seconds does not help.
+ if (status === 429) return code === 'quota_exceeded' || /quota|exhausted|per.?day|daily/.test(text) && !/per.?minute/.test(text) ? 'quota' : 'rate-limit';
  if (status === 408 || status === 504) return 'timeout';
  if (status >= 500) return 'server';
  if (status === 400 && /model/.test(text) && /not (found|supported)/.test(text)) return 'model-unavailable';
@@ -106,7 +107,7 @@ export function geminiStreamReader(onProgress?: (progress: GenerateProgress) => 
     if (e.delta?.type === 'thought_summary' && e.delta.content?.text) { thoughts += e.delta.content.text; report('thinking'); }
     else if (e.delta?.type === 'text' && stepTypes.get(index) !== 'thought' && e.delta.text) { output += e.delta.text; report('writing'); }
    } else if (e.event_type === 'interaction.completed') status = e.interaction?.status ?? 'completed';
-   else if (e.event_type === 'error') {
+   else if (e.event_type === 'error' || !e.event_type && e.error) {
     const code = e.error?.code;
     throw new LlmError(classifyGeminiError(typeof code === 'number' ? code : 500, {error: e.error}), 'stream error');
    }
