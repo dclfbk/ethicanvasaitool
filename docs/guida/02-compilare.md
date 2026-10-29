@@ -12,6 +12,8 @@ Ogni domanda ha tre elementi:
 - **la figura indicata**, cioè chi di solito sa rispondere (ad esempio il referente del servizio o il DPO);
 - **i colori e le forme** del profilo: verde con il quadrato per AI scientist, ciano con il cerchio per AI engineer, giallo con il triangolo per AI user. I colori sfumati indicano domande da affrontare insieme.
 
+Nella colonna «Il tuo percorso» ogni sezione ha un bollo. Quando hai completato tutti i passi di una sezione, il bollo si colora e mostra il segno di spunta.
+
 ## Rispondere
 
 1. Scrivi la risposta con parole tue nel campo sotto la domanda.

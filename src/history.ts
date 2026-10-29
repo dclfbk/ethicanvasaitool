@@ -156,6 +156,6 @@ export function reviewCalendar(p: Project, summary: string, description: string,
  const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
  // Lines longer than 75 octets are folded, as the format requires.
  const fold = (line: string) => { const out: string[] = []; let rest = line; while (new TextEncoder().encode(rest).length > 75) { let n = 74; while (new TextEncoder().encode(rest.slice(0, n)).length > 74) n--; out.push(rest.slice(0, n)); rest = ' ' + rest.slice(n); } out.push(rest); return out.join('\r\n'); };
- return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//FBK//EthiCanvas AI//IT', 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT', `UID:review-${p.id}@ethicanvas`, `DTSTAMP:${stamp}`,
+ return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//FBK//EthiCanvasAI//IT', 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT', `UID:review-${p.id}@ethicanvas`, `DTSTAMP:${stamp}`,
   `DTSTART;VALUE=DATE:${day}`, `DTEND;VALUE=DATE:${next.toISOString().slice(0, 10).replace(/-/g, '')}`, `SUMMARY:${esc(summary)}`, `DESCRIPTION:${esc(description)}`, 'END:VEVENT', 'END:VCALENDAR'].map(fold).join('\r\n') + '\r\n';
 }

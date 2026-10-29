@@ -1,10 +1,10 @@
 {
  "$schema":"https://schema.tauri.app/config/2",
- "productName":"EthiCanvas AI",
+ "productName":"EthiCanvasAI",
  "version":"0.3.0-alpha.3",
  "identifier":"eu.fbk.dcl.canvaspa",
  "build":{"beforeDevCommand":"npm run dev","devUrl":"http://localhost:1420","beforeBuildCommand":"npm run build","frontendDist":"../dist"},
- "app":{"windows":[{"title":"EthiCanvas AI","width":1280,"height":860,"minWidth":360,"minHeight":600}],"security":{"csp":"default-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'"}},
- "bundle":{"active":true,"publisher":"FBK - Fondazione Bruno Kessler","copyright":"Copyright (C) 2026 FBK - Fondazione Bruno Kessler, Trento","license":"AGPL-3.0-or-later","targets":"all","icon":["icons/32x32.png","icons/128x128.png","icons/128x128@2x.png","icons/icon.icns","icons/icon.ico"]},
+ "app":{"windows":[{"title":"EthiCanvasAI","width":1280,"height":860,"minWidth":360,"minHeight":600}],"security":{"csp":"default-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'"}},
+ "bundle":{"active":true,"publisher":"FBK - Fondazione Bruno Kessler","copyright":"Copyright (C) 2026 FBK - Fondazione Bruno Kessler, Trento","license":"AGPL-3.0-or-later","targets":"all","windows":{"wix":{"upgradeCode":"19f0f878-33f8-527c-9902-4365e2d39114"}},"icon":["icons/32x32.png","icons/128x128.png","icons/128x128@2x.png","icons/icon.icns","icons/icon.ico"]},
  "plugins":{"updater":{"pubkey":"dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDA2QjE4ODc1OEZBNTk2NzYKUldSMmxxV1BkWWl4QnRpM05McmNpUzdZdStUYTFsMTZkZmp5UzBrM0lKanhsQS9kWjdUOXE4QUQK","endpoints":["https://github.com/dclfbk/ethicanvasaitool/releases/latest/download/latest.json"],"windows":{"installMode":"passive"}}}
 }

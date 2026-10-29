@@ -42,6 +42,9 @@ const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css'
 const server=createServer(async(req,res)=>{try{const path=join(process.cwd(),'dist',req.url==='/'?'index.html':decodeURIComponent(req.url.split('?')[0]));res.setHeader('Content-Type',mime[extname(path)]||'application/octet-stream');res.end(await readFile(path));}catch{res.statusCode=404;res.end();}});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const cors={'access-control-allow-origin':'*','access-control-allow-headers':'content-type,x-goog-api-key','access-control-allow-methods':'GET,POST'};
+// The browser asks for a streamed interaction: the answer is sent back as server-sent events, after a reasoning summary.
+const streamed=text=>[{event_type:'interaction.created',interaction:{status:'in_progress'}},{event_type:'step.start',index:0,step:{type:'thought'}},{event_type:'step.delta',index:0,delta:{type:'thought_summary',content:{type:'text',text:'Ragionamento simulato.'}}},{event_type:'step.stop',index:0},{event_type:'step.start',index:1,step:{type:'model_output'}},{event_type:'step.delta',index:1,delta:{type:'text',text}},{event_type:'step.stop',index:1},{event_type:'interaction.completed',interaction:{status:'completed'}}].map(e=>`event: ${e.event_type}\ndata: ${JSON.stringify(e)}\n\n`).join('')+'event: done\ndata: [DONE]\n\n';
+const streamedReply=(r,text)=>{const sent=JSON.parse(r.postData()||'{}');if(sent.stream!==true||sent.generation_config?.thinking_summaries!=='auto')throw new Error('the browser must stream with reasoning summaries');return {status:200,headers:cors,contentType:'text/event-stream',body:streamed(text)};};
 const synthesis={executive_summary:'Il servizio informativo è descritto con chiarezza. Secondo l’AI Act è un sistema a rischio limitato. Mancano ancora le misure sulla privacy.',
  sections:[{section_id:'scope',conclusions:[{text:'Lo scopo è informare senza decidere',sources:['A:autonomy']}],open_points:[]}],
  strengths:[{text:'Limiti dichiarati',sources:['A:autonomy']}],risks:[{text:'Dati personali nei messaggi',sources:['A:nope']}],
@@ -56,7 +59,7 @@ try{
  await context.route('https://generativelanguage.googleapis.com/**',async route=>{
   const r=route.request();if(r.method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
   if(r.method()==='POST')posts.push(r.postData());
-  return route.fulfill({status:200,headers:cors,contentType:'application/json',body:JSON.stringify({status:'completed',steps:[{type:'model_output',content:[{type:'text',text:JSON.stringify(synthesis)}]}]})});
+  return route.fulfill(streamedReply(r,JSON.stringify(synthesis)));
  });
  await page.goto('http://127.0.0.1:'+server.address().port);
  await page.getByRole('button',{name:/Apri l’esempio/}).click();
@@ -73,8 +76,12 @@ try{
  assert.match(originalInfo,/Page size:\s+841\.92 x 595\.5/);
  const coverText=execFileSync('pdftotext',['-f','1','-l','1',original,'-']).toString();
  assert.ok(coverText.includes('Canvas: AI per la PA')&&coverText.includes('Legenda')&&coverText.includes('licensed under CC BY-SA 4.0'));
- const dataText=execFileSync('pdftotext',['-f','3','-l','3',original,'-']).toString();
- assert.ok(dataText.includes('Dati')&&dataText.includes('Documenti pubblici del servizio'));
+ // Pages of the original canvas, the use case after the glossary, then the five sections with the answers in their cells.
+ assert.match(originalInfo,/Pages:\s+(9|1\d)\b/);
+ const pdfPage=n=>execFileSync('pdftotext',['-f',String(n),'-l',String(n),original,'-']).toString().replace(/\s+/g,' ');
+ assert.ok(pdfPage(3).includes('Glossario'));assert.ok(pdfPage(4).includes('Caso d’uso'));
+ const dataText=pdfPage(5);
+ assert.ok(dataText.includes('ATTORI COINVOLTI NELLA RACCOLTA DATI')&&dataText.includes('Documenti pubblici del servizio'));
  wait=page.waitForEvent('download');await page.getByRole('button',{name:'Canvas in PDF · poster e dettaglio'}).click();
  const pdf=await save(await wait,'canvas.pdf');
  const info=execFileSync('pdfinfo',[pdf]).toString();

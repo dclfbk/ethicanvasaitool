@@ -40,6 +40,9 @@ const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css'
 const server=createServer(async(req,res)=>{try{const path=join(process.cwd(),'dist',req.url==='/'?'index.html':decodeURIComponent(req.url.split('?')[0]));res.setHeader('Content-Type',mime[extname(path)]||'application/octet-stream');res.end(await readFile(path));}catch{res.statusCode=404;res.end();}});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const cors={'access-control-allow-origin':'*','access-control-allow-headers':'content-type,x-goog-api-key','access-control-allow-methods':'GET,POST'};
+// The browser asks for a streamed interaction: the answer is sent back as server-sent events, after a reasoning summary.
+const streamed=text=>[{event_type:'interaction.created',interaction:{status:'in_progress'}},{event_type:'step.start',index:0,step:{type:'thought'}},{event_type:'step.delta',index:0,delta:{type:'thought_summary',content:{type:'text',text:'Ragionamento simulato.'}}},{event_type:'step.stop',index:0},{event_type:'step.start',index:1,step:{type:'model_output'}},{event_type:'step.delta',index:1,delta:{type:'text',text}},{event_type:'step.stop',index:1},{event_type:'interaction.completed',interaction:{status:'completed'}}].map(e=>`event: ${e.event_type}\ndata: ${JSON.stringify(e)}\n\n`).join('')+'event: done\ndata: [DONE]\n\n';
+const streamedReply=(r,text)=>{const sent=JSON.parse(r.postData()||'{}');if(sent.stream!==true||sent.generation_config?.thinking_summaries!=='auto')throw new Error('the browser must stream with reasoning summaries');return {status:200,headers:cors,contentType:'text/event-stream',body:streamed(text)};};
 const reply=json=>({status:'completed',steps:[{type:'model_output',content:[{type:'text',text:JSON.stringify(json)}]}]});
 const proposal={explanation:'Servono inventario e responsabilità.',draft_answer:'Bozza proposta: documenti pubblici e log tecnici.',statements:[{kind:'documentato',text:'Il file indica una fonte locale',sources:['R1']},{kind:'documentato',text:'Articolo inventato',sources:['R9']}],missing_information:['Periodo di conservazione dei log'],people_to_involve:[{role:'DPO',reason:'dati nei messaggi'}],caveats:[]};
 let mode='ok',seen=[];
@@ -52,11 +55,11 @@ try{
  await context.route('https://generativelanguage.googleapis.com/**',async route=>{
   const r=route.request();if(r.method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
   seen.push({url:r.url(),headers:r.headers(),body:r.postData()});
-  if(r.url().endsWith('/models/gemini-3.8-flash'))return route.fulfill({status:200,headers:cors,contentType:'application/json',body:'{"name":"models/gemini-3.8-flash"}'});
+  if(r.url().endsWith('/models/gemini-3.6-flash'))return route.fulfill({status:200,headers:cors,contentType:'application/json',body:'{"name":"models/gemini-3.6-flash"}'});
   if(mode==='slow'){await new Promise(x=>setTimeout(x,2500));}
   if(mode==='quota')return route.fulfill({status:429,headers:cors,contentType:'application/json',body:JSON.stringify({error:{code:'quota_exceeded',message:'daily quota'}})});
   if(mode==='badkey')return route.fulfill({status:400,headers:cors,contentType:'application/json',body:JSON.stringify([{error:{code:400,details:[{reason:'API_KEY_INVALID'}]}}])});
-  return route.fulfill({status:200,headers:cors,contentType:'application/json',body:JSON.stringify(reply(proposal))}).catch(()=>{});
+  return route.fulfill(streamedReply(r,JSON.stringify(proposal))).catch(()=>{});
  });
  await page.goto('http://127.0.0.1:'+server.address().port);
  await page.getByRole('button',{name:/Apri l’esempio/}).click();
@@ -70,6 +73,7 @@ try{
  await page.getByRole('button',{name:'Metodo e impostazioni'}).click();
  await page.getByLabel('Attiva l’assistente durante la compilazione').check();
  await page.getByLabel('Chiave API Gemini').fill(KEY);
+ assert.equal(await page.getByLabel('Chiave API Gemini').getAttribute('autocomplete'),'current-password','the browser password manager may offer to remember the key');
  await page.getByRole('button',{name:'Usa per questa sessione'}).click();
  await page.getByText('Chiave presente solo in memoria',{exact:false}).waitFor();
  await page.getByRole('button',{name:'Verifica connessione'}).click();
@@ -126,11 +130,11 @@ try{
  await page.getByRole('button',{name:'Aggiungi in coda come bozza'}).click();
  assert.equal(await page.locator('#answer').inputValue(),'Testo scritto a mano\n\nBozza proposta, rivista dall’utente.');
  assert.equal(await page.getByLabel('Stato della risposta').inputValue(),'draft');
- await page.getByText('Contiene testo proposto da gemini-3.8-flash',{exact:false}).waitFor();
+ await page.getByText('Contiene testo proposto da gemini-3.6-flash',{exact:false}).waitFor();
 
  // What actually went to the simulated Google endpoint.
  const last=JSON.parse(posts.at(-1).body);
- assert.equal(last.store,false);assert.equal(last.model,'gemini-3.8-flash');
+ assert.equal(last.store,false);assert.equal(last.model,'gemini-3.6-flash');
  assert.ok(!posts.at(-1).body.includes('base64'),'attachments are never sent as files');
  for(const s of seen){assert.ok(!s.url.includes(KEY));assert.equal(s.headers['x-goog-api-key'],KEY);}
 

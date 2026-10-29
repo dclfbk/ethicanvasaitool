@@ -40,6 +40,9 @@ const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css'
 const server=createServer(async(req,res)=>{try{const path=join(process.cwd(),'dist',req.url==='/'?'index.html':decodeURIComponent(req.url.split('?')[0]));res.setHeader('Content-Type',mime[extname(path)]||'application/octet-stream');res.end(await readFile(path));}catch{res.statusCode=404;res.end();}});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const cors={'access-control-allow-origin':'*','access-control-allow-headers':'content-type,x-goog-api-key','access-control-allow-methods':'GET,POST'};
+// The browser asks for a streamed interaction: the answer is sent back as server-sent events, after a reasoning summary.
+const streamed=text=>[{event_type:'interaction.created',interaction:{status:'in_progress'}},{event_type:'step.start',index:0,step:{type:'thought'}},{event_type:'step.delta',index:0,delta:{type:'thought_summary',content:{type:'text',text:'Ragionamento simulato.'}}},{event_type:'step.stop',index:0},{event_type:'step.start',index:1,step:{type:'model_output'}},{event_type:'step.delta',index:1,delta:{type:'text',text}},{event_type:'step.stop',index:1},{event_type:'interaction.completed',interaction:{status:'completed'}}].map(e=>`event: ${e.event_type}\ndata: ${JSON.stringify(e)}\n\n`).join('')+'event: done\ndata: [DONE]\n\n';
+const streamedReply=(r,text)=>{const sent=JSON.parse(r.postData()||'{}');if(sent.stream!==true||sent.generation_config?.thinking_summaries!=='auto')throw new Error('the browser must stream with reasoning summaries');return {status:200,headers:cors,contentType:'text/event-stream',body:streamed(text)};};
 const reply=json=>({status:'completed',steps:[{type:'model_output',content:[{type:'text',text:JSON.stringify(json)}]}]});
 const result={summary:'Lo scenario è vicino al chatbot dei tributi.',user_question_answer:'Il caso C1 prevede un avviso sui dati personali.',
  comparisons:[{case:'C1',similarities:['Chatbot rivolto ai cittadini'],differences:['Servizi anagrafici invece dei tributi'],reusable:['Avviso sui dati personali nei messaggi']}],
@@ -63,7 +66,7 @@ try{
  await context.route('https://generativelanguage.googleapis.com/**',async route=>{
   const r=route.request();if(r.method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
   if(r.method()==='POST')posts.push(r.postData());
-  return route.fulfill({status:200,headers:cors,contentType:'application/json',body:JSON.stringify(reply(result))});
+  return route.fulfill(streamedReply(r,JSON.stringify(result)));
  });
  await page.goto('http://127.0.0.1:'+server.address().port);
  await page.locator('input[type=file]').first().setInputFiles('/tmp/canvas-qa/knowledge-archive.json');

@@ -1,0 +1,9 @@
+ai-ethics-canvas-aixpa.pdf
+
+"Canvas: AI per la PA" - AI Ethics Canvas, version 1.1 (09/04/2024)
+Canvas AI Ethics (c) 2024 by Provincia Autonoma di Trento e Fondazione Bruno Kessler
+Licensed under Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+https://creativecommons.org/licenses/by-sa/4.0/
+
+The file is used unchanged as the background of the "Canvas in PDF - stile originale"
+export; the answers are written over its free cells (see src/canvasTemplate.ts).

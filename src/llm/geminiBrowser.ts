@@ -27,7 +27,7 @@
  * source code to users who interact with the software over a network.
  */
 
-import { geminiBaseUrl, type GeminiTransport } from './gemini';
+import { geminiBaseUrl, type GeminiHttpRequest, type GeminiTransport } from './gemini';
 import { LlmError, type CredentialStore } from './provider';
 
 // The key is held in this module only: it is never written to storage and disappears when the page is closed or reloaded.
@@ -40,24 +40,69 @@ export const sessionCredentialStore: CredentialStore = {
  async clear() { sessionKey = null; },
 };
 
+async function open(request: GeminiHttpRequest, signal: AbortSignal): Promise<Response> {
+ if (!sessionKey) throw new LlmError('not-configured');
+ try {
+  return await fetch(geminiBaseUrl + request.path, {
+   method: request.method,
+   headers: {'x-goog-api-key': sessionKey, ...(request.body ? {'Content-Type': 'application/json'} : {})},
+   body: request.body ? JSON.stringify(request.body) : undefined,
+   signal, credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
+  });
+ } catch (e) {
+  if (signal.aborted) throw e;
+  throw new LlmError(navigator.onLine === false ? 'offline' : 'network');
+ }
+}
+async function readBody(response: Response): Promise<unknown> {
+ const text = await response.text();
+ try { return JSON.parse(text); } catch { return text; }
+}
+
+// Splits a server-sent event stream into the JSON payloads of its data lines; "[DONE]" and unparsable data are skipped.
+// Under load Google may answer 200 and then send a bare JSON error outside the SSE format: such lines are passed on at the end.
+export async function readServerSentEvents(body: ReadableStream<Uint8Array>, onEvent: (event: unknown) => void) {
+ const reader = body.getReader(), decoder = new TextDecoder();
+ let buffer = '', data: string[] = [], bare = '';
+ const dispatch = () => {
+  const payload = data.join('\n').trim();data = [];
+  if (!payload || payload === '[DONE]') return;
+  let event: unknown;
+  try { event = JSON.parse(payload); } catch { return; }
+  onEvent(event);
+ };
+ for (;;) {
+  const {value, done} = await reader.read();
+  buffer += decoder.decode(value, {stream: !done});
+  let end: number;
+  while ((end = buffer.indexOf('\n')) >= 0) {
+   const line = buffer.slice(0, end).replace(/\r$/, '');buffer = buffer.slice(end + 1);
+   if (line === '') dispatch();
+   else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''));
+   else if (!/^(:|event:|id:|retry:)/.test(line)) bare += line + '\n';
+  }
+  if (done) {
+   if (buffer.startsWith('data:')) data.push(buffer.slice(5).replace(/^ /, '')); else bare += buffer;
+   dispatch();
+   if (bare.trim()) { data = [bare]; dispatch(); }
+   return;
+  }
+ }
+}
+
 export const browserGeminiTransport: GeminiTransport = {
  async send(request, signal) {
-  if (!sessionKey) throw new LlmError('not-configured');
-  let response: Response;
-  try {
-   response = await fetch(geminiBaseUrl + request.path, {
-    method: request.method,
-    headers: {'x-goog-api-key': sessionKey, ...(request.body ? {'Content-Type': 'application/json'} : {})},
-    body: request.body ? JSON.stringify(request.body) : undefined,
-    signal, credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
-   });
-  } catch (e) {
-   if (signal.aborted) throw e;
+  const response = await open(request, signal);
+  return {status: response.status, body: await readBody(response)};
+ },
+ async stream(request, signal, onEvent) {
+  const response = await open(request, signal);
+  if (!response.ok || !response.body) return {status: response.status, body: await readBody(response)};
+  try { await readServerSentEvents(response.body, onEvent); }
+  catch (e) {
+   if (signal.aborted || e instanceof LlmError) throw e;
    throw new LlmError(navigator.onLine === false ? 'offline' : 'network');
   }
-  const text = await response.text();
-  let body: unknown = text;
-  try { body = JSON.parse(text); } catch { /* keep raw text */ }
-  return {status: response.status, body};
+  return {status: response.status, body: undefined};
  },
 };

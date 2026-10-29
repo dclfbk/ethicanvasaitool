@@ -15,7 +15,7 @@ Ti serve una **chiave API Gemini**, creata in Google AI Studio. Un abbonamento a
 
 [Vai alle impostazioni](#app-settings)
 
-Nella versione web la chiave resta solo nella scheda aperta e si perde ricaricando la pagina. Nella versione desktop è conservata nel portachiavi del sistema operativo. Con «Elimina chiave e configurazione» cancelli chiave e preferenze.
+Nella versione web l’app tiene la chiave solo nella scheda aperta e la dimentica quando ricarichi la pagina. Per non doverla incollare ogni volta, puoi farla ricordare al gestore delle password del browser: dopo «Usa per questa sessione» il browser ti propone di salvarla. La volta successiva premi «Usa la chiave salvata nel browser» (in Chrome, Edge e negli altri browser basati su Chromium) oppure scegli la chiave dal suggerimento che compare nel campo. Fallo solo sul tuo computer personale, mai su un computer condiviso. Nella versione desktop la chiave è conservata nel portachiavi del sistema operativo. Con «Elimina chiave e configurazione» cancelli chiave e preferenze.
 
 ## Usare un modello locale
 
@@ -50,6 +50,10 @@ Prima di ogni richiesta decidi tu che cosa parte. La domanda corrente è sempre 
 ![La scelta del contesto da inviare](img/assistente.png)
 
 Apri «Anteprima esatta del testo inviato» per leggere parola per parola che cosa riceverà Google. Poi premi «Invia a Gemini». Se ci ripensi, «Annulla richiesta» la interrompe.
+
+Durante l’attesa una barra in movimento indica che la richiesta è in corso. Nella versione web, con Gemini, vedi anche che cosa sta facendo: prima «Il ragionamento, in sintesi», un riassunto dei passaggi che Gemini segue, che compare man mano; poi la scrittura della risposta, con i caratteri ricevuti. Il riassunto serve solo a seguire il lavoro: non viene salvato e non entra nella proposta. La richiesta si interrompe se per 90 secondi non arriva nulla.
+
+Nella versione desktop e con un modello locale vedi da quanti secondi aspetti e l’attesa massima: 90 secondi per Gemini, 5 minuti per un modello locale. Una risposta può richiedere anche più di un minuto, soprattutto nelle ore di traffico. Se succede spesso, scegli un modello più veloce in «Metodo e impostazioni».
 
 > **Attenzione.** Non inviare dati personali, dati riservati o documenti interni dell’ente. Gli allegati non vengono mai inviati come file e i collegamenti non vengono aperti.
 
