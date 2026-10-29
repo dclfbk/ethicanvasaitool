@@ -1122,7 +1122,7 @@ dependencies = [
 
 [[package]]
 name = "ethicanvasaitool"
-version = "0.2.0"
+version = "0.3.0-alpha.3"
 dependencies = [
  "base64 0.22.1",
  "keyring",

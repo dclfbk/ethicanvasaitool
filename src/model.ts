@@ -28,6 +28,8 @@
  */
 
 import { questions, questionnaireVersion } from './questionnaire';
+import type { RegulatoryValue } from './regulatoryChecklist';
+export type { RegulatoryValue } from './regulatoryChecklist';
 export { sections, questions, questionnaireVersion, type Section, type Question, type Profile } from './questionnaire';
 export type AnswerState = 'draft' | 'answered' | 'waiting' | 'na';
 export type AssistAction = 'explain' | 'draft' | 'gaps';
@@ -38,7 +40,7 @@ export interface Answer { value: string; state: AnswerState; note: string; perso
 export interface Reference { id: string; questionId: string; kind: 'document' | 'law' | 'dataset' | 'expert' | 'test'; title: string; url: string; note: string; fileName?: string; mime?: string; data?: string; excerpt?: string; }
 // Versions are immutable snapshots of the assessment. Attachments are not copied into them, to keep the archive small.
 export type SnapshotReference = Omit<Reference, 'data'>;
-export interface ProjectSnapshot { name: string; description: string; organization: string; answers: Record<string, Answer>; references: SnapshotReference[]; }
+export interface ProjectSnapshot { name: string; description: string; organization: string; answers: Record<string, Answer>; references: SnapshotReference[]; regulatory?: RegulatoryAssessment; }
 export type VersionReason = 'milestone' | 'review' | 'change' | 'restore' | 'prefill' | 'contribution' | 'other';
 export interface ProjectVersion { id: string; label: string; reason: VersionReason; note: string; createdAt: string; snapshot: ProjectSnapshot; }
 // A review records a human reading of one version; it never changes completeness or answer states.
@@ -47,7 +49,13 @@ export interface Review { id: string; at: string; role: string; name: string; ou
 export type ReviewTrigger = 'model' | 'data' | 'purpose' | 'incident' | 'regulation' | 'other';
 // nextAt is a calendar date (YYYY-MM-DD) or empty when no review is planned.
 export interface ReviewPlan { nextAt: string; owner: string; triggers: ReviewTrigger[]; note: string; }
-export interface Project { id: string; name: string; description: string; organization: string; createdAt: string; updatedAt: string; paused: boolean; demo: boolean; currentQuestion: number; questionnaireVersion: string; answers: Record<string, Answer>; references: Reference[]; versions?: ProjectVersion[]; reviews?: Review[]; reviewPlan?: ReviewPlan; }
+// Regulatory framing filled in by a legal expert on the checklist in regulatoryChecklist.ts. The application
+// never derives a category from it; conclusions are the expert's own words, registered with role and date.
+// An empty value means the item is not examined yet, so a note can be written before choosing an answer.
+export interface RegulatoryAnswer { value: RegulatoryValue | ''; note: string; }
+export interface RegulatoryExpert { role: string; name: string; at: string; }
+export interface RegulatoryAssessment { checklist: string; answers: Record<string, RegulatoryAnswer>; conclusions: string; sources: string; updatedAt: string; expert?: RegulatoryExpert; }
+export interface Project { id: string; name: string; description: string; organization: string; createdAt: string; updatedAt: string; paused: boolean; demo: boolean; currentQuestion: number; questionnaireVersion: string; answers: Record<string, Answer>; references: Reference[]; versions?: ProjectVersion[]; reviews?: Review[]; reviewPlan?: ReviewPlan; regulatory?: RegulatoryAssessment; }
 export type EvaluationStatus = 'complete' | 'preliminary' | 'draft';
 export const statusLabels: Record<EvaluationStatus, string> = {complete:'Compilazione completa',preliminary:'Valutazione preliminare',draft:'Bozza'};
 export function accepted(a?: Answer) { return !!a && (a.state === 'answered' || a.state === 'na') && !!a.value.trim(); }
@@ -60,11 +68,18 @@ export function evaluate(p: Project) {
 }
 export function createProject(name: string, description: string, organization: string): Project { const now=new Date().toISOString(); return {id:crypto.randomUUID(),name,description,organization,createdAt:now,updatedAt:now,paused:false,demo:false,currentQuestion:0,questionnaireVersion,answers:{},references:[]}; }
 export function demoProject() { const p=createProject('Un assistente per la Pubblica Amministrazione','Un chatbot pubblico che aiuta a trovare informazioni sui contributi erogati dalla Pubblica Amministrazione. Non consulta pratiche personali e non decide sull’ammissibilità.','Pubblica Amministrazione · caso dimostrativo'); p.demo=true; for (const id of ['purpose','audience','type','autonomy']) { const q=questions.find(q=>q.id===id)!;p.answers[id]={value:q.suggestions[0],state:'answered',note:'Esempio illustrativo: da adattare al progetto reale.',person:'',request:'',updatedAt:p.createdAt}; } p.currentQuestion=4;return p; }
-export function validateProject(v: unknown): v is Project { if(!v||typeof v!=='object')return false; const p=v as Project; return validHistory(p)&&typeof p.id==='string'&&typeof p.name==='string'&&!!p.name.trim()&&typeof p.description==='string'&&typeof p.organization==='string'&&typeof p.createdAt==='string'&&typeof p.updatedAt==='string'&&typeof p.paused==='boolean'&&typeof p.demo==='boolean'&&Number.isInteger(p.currentQuestion)&&p.currentQuestion>=0&&p.currentQuestion<questions.length&&p.questionnaireVersion===questionnaireVersion&&!!p.answers&&typeof p.answers==='object'&&!Array.isArray(p.answers)&&validAnswers(p.answers)&&Array.isArray(p.references)&&p.references.every(validReference); }
+export function validateProject(v: unknown): v is Project { if(!v||typeof v!=='object')return false; const p=v as Project; return validHistory(p)&&validRegulatory(p.regulatory)&&typeof p.id==='string'&&typeof p.name==='string'&&!!p.name.trim()&&typeof p.description==='string'&&typeof p.organization==='string'&&typeof p.createdAt==='string'&&typeof p.updatedAt==='string'&&typeof p.paused==='boolean'&&typeof p.demo==='boolean'&&Number.isInteger(p.currentQuestion)&&p.currentQuestion>=0&&p.currentQuestion<questions.length&&p.questionnaireVersion===questionnaireVersion&&!!p.answers&&typeof p.answers==='object'&&!Array.isArray(p.answers)&&validAnswers(p.answers)&&Array.isArray(p.references)&&p.references.every(validReference); }
 const validAnswers=(answers:Record<string,Answer>)=>Object.values(answers).every(a=>a&&['draft','answered','waiting','na'].includes(a.state)&&['value','note','person','request','updatedAt'].every(k=>typeof a[k as keyof Answer]==='string')&&(a.aiProvenance===undefined||Array.isArray(a.aiProvenance)&&a.aiProvenance.every(validProvenance)));
 const validReference=(r:Reference)=>!!r&&['id','title','url','note','questionId'].every(k=>typeof r[k as keyof Reference]==='string')&&['document','law','dataset','expert','test'].includes(r.kind)&&(!r.data||/^data:[^;]*;base64,[A-Za-z0-9+/=]*$/.test(r.data))&&(r.excerpt===undefined||typeof r.excerpt==='string');
 const strings=(v:object,keys:string[])=>keys.every(k=>typeof (v as Record<string,unknown>)[k]==='string');
-function validSnapshot(s:ProjectSnapshot){return !!s&&typeof s==='object'&&strings(s,['name','description','organization'])&&!!s.answers&&typeof s.answers==='object'&&!Array.isArray(s.answers)&&validAnswers(s.answers)&&Array.isArray(s.references)&&s.references.every(r=>validReference(r)&&!('data' in r));}
+function validSnapshot(s:ProjectSnapshot){return !!s&&typeof s==='object'&&strings(s,['name','description','organization'])&&!!s.answers&&typeof s.answers==='object'&&!Array.isArray(s.answers)&&validAnswers(s.answers)&&Array.isArray(s.references)&&s.references.every(r=>validReference(r)&&!('data' in r))&&validRegulatory(s.regulatory);}
+function validRegulatory(r:RegulatoryAssessment|undefined){
+ if(r===undefined)return true;
+ return !!r&&typeof r==='object'&&strings(r,['checklist','conclusions','sources','updatedAt'])&&!!r.answers&&typeof r.answers==='object'&&!Array.isArray(r.answers)
+  // Ids missing from the current checklist are kept, so a revised checklist never makes older archives unreadable.
+  &&Object.values(r.answers).every(a=>!!a&&['','yes','no','unsure','na'].includes(a.value)&&typeof a.note==='string')
+  &&(r.expert===undefined||!!r.expert&&strings(r.expert,['role','name','at'])&&!!r.expert.role.trim());
+}
 function validHistory(p:Project){
  const versions=p.versions??[],ids=new Set(versions.map(v=>v.id));
  return (p.versions===undefined||Array.isArray(p.versions)&&versions.every(v=>!!v&&strings(v,['id','label','note','createdAt'])&&['milestone','review','change','restore','prefill','contribution','other'].includes(v.reason)&&validSnapshot(v.snapshot)))
@@ -75,8 +90,9 @@ function validProvenance(v: unknown) { const x=v as AiProvenance; return !!x&&ty
 
 // Backup format 1 predates AI provenance and reference excerpts; both fields are optional, so version 1 projects are valid as they are.
 // Format 3 adds the 'prefill' provenance action and its optional basedOn list, which format 2 readers would reject.
-// Format 4 adds versions, reviews and the review plan.
-export const backupFormatVersion = 4;
+// Format 4 adds versions, reviews and the review plan. Format 5 adds the regulatory framing checklist.
+// Format 6 allows checklist items that are not examined yet (empty value), which format 5 readers would reject.
+export const backupFormatVersion = 6;
 const answerKeys = ['value','state','note','person','request','updatedAt','aiProvenance'] as const;
 const referenceKeys = ['id','questionId','kind','title','url','note','fileName','mime','data','excerpt'] as const;
 const provenanceKeys = ['provider','model','action','mode','at','basedOn'] as const;
@@ -88,18 +104,20 @@ export function portableAnswers(source: Record<string, Answer>) {
  return answers;
 }
 const snapshotReferenceKeys = referenceKeys.filter((k): k is Exclude<typeof k, 'data'> => k !== 'data');
-export const portableSnapshot = (s: ProjectSnapshot): ProjectSnapshot => ({name: s.name, description: s.description, organization: s.organization, answers: portableAnswers(s.answers), references: s.references.map(r => pick(r, snapshotReferenceKeys) as SnapshotReference)});
+export const portableSnapshot = (s: ProjectSnapshot): ProjectSnapshot => ({name: s.name, description: s.description, organization: s.organization, answers: portableAnswers(s.answers), references: s.references.map(r => pick(r, snapshotReferenceKeys) as SnapshotReference), ...(s.regulatory?{regulatory:portableRegulatory(s.regulatory)}:{})});
 export function portableProject(p: Project): Project {
  const out: Project = {id:p.id,name:p.name,description:p.description,organization:p.organization,createdAt:p.createdAt,updatedAt:p.updatedAt,paused:p.paused,demo:p.demo,currentQuestion:p.currentQuestion,questionnaireVersion:p.questionnaireVersion,answers:portableAnswers(p.answers),references:p.references.map(r => pick(r, referenceKeys) as Reference)};
  if (p.versions) out.versions = p.versions.map(v => ({id: v.id, label: v.label, reason: v.reason, note: v.note, createdAt: v.createdAt, snapshot: portableSnapshot(v.snapshot)}));
  if (p.reviews) out.reviews = p.reviews.map(r => ({id: r.id, at: r.at, role: r.role, name: r.name, outcome: r.outcome, conditions: r.conditions, notes: r.notes, versionId: r.versionId}));
  if (p.reviewPlan) out.reviewPlan = {nextAt: p.reviewPlan.nextAt, owner: p.reviewPlan.owner, triggers: [...p.reviewPlan.triggers], note: p.reviewPlan.note};
+ if (p.regulatory) out.regulatory = portableRegulatory(p.regulatory);
  return out;
 }
+export function portableRegulatory(r: RegulatoryAssessment): RegulatoryAssessment { return {checklist:r.checklist,answers:Object.fromEntries(Object.entries(r.answers).map(([id,a])=>[id,{value:a.value,note:a.note}])),conclusions:r.conclusions,sources:r.sources,updatedAt:r.updatedAt,...(r.expert?{expert:{role:r.expert.role,name:r.expert.name,at:r.expert.at}}:{})}; }
 export function migrateProject(p: Project): Project { return portableProject(p); }
 export function createBackup(projects: Project[], exportedAt = new Date().toISOString()) { return {format:'canvas-pa',version:backupFormatVersion,exportedAt,projects:projects.map(portableProject)}; }
 export function readBackup(value: unknown): Project[] | null {
  const v = value as {format?: unknown; version?: unknown; projects?: unknown};
- if (!v || v.format !== 'canvas-pa' || ![1, 2, 3, 4].includes(v.version as number) || !Array.isArray(v.projects) || !v.projects.every(validateProject)) return null;
+ if (!v || v.format !== 'canvas-pa' || ![1, 2, 3, 4, 5, 6].includes(v.version as number) || !Array.isArray(v.projects) || !v.projects.every(validateProject)) return null;
  return (v.projects as Project[]).map(migrateProject);
 }

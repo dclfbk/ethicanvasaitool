@@ -1,11 +1,14 @@
-# Verifica della versione con assistente Gemini
+# Verifica della versione alpha con checklist normativa
 
-Data: 26 ottobre 2026.
+Data: 29 ottobre 2026. Versione: 0.3.0-alpha.3.
 
-- Test unitari (Vitest): 27 superati. Coprono modello e backup (formati 1 e 2, migrazione, nessuna credenziale nei backup e nelle preferenze), adattatore Gemini con trasporto simulato (richiesta `store: false`, test di connessione, chiave non valida, permessi, quota, limite di frequenza, modello non disponibile, timeout, annullamento, rete, risposta bloccata o incompleta, endpoint non ammessi), chiave di sessione del browser (solo intestazione, mai nell'URL), contesto autorizzato e separazione tra progetti e riferimenti, verifica delle citazioni, nessuna sovrascrittura, indipendenza della valutazione.
-- Build di produzione React/TypeScript: superata. La chiave non compare nel bundle.
-- Test browser Chromium `scripts/smoke.mjs`: superato, senza richieste esterne.
-- Test browser `scripts/smoke-assistant.mjs` con Gemini simulato: superato.
-- Rust: `cargo check` senza avvisi, 2 test superati. La prova reale del portachiavi (Secret Service, Linux) è superata.
-- Pacchetto desktop Linux (.deb): vedi sotto.
+- Test unitari (Vitest): 115 superati in 12 file. Coprono:
+  - modello e backup (formati da 1 a 6, migrazione, nessuna credenziale nei backup e nelle preferenze);
+  - adattatori Gemini e modello locale con trasporto simulato (errori, annullamento, endpoint non ammessi);
+  - contesto autorizzato, verifica delle citazioni, nessuna sovrascrittura, indipendenza della valutazione;
+  - checklist normativa (anche voci tolte da una checklist successiva), versioni e revisioni, contributi, casi a confronto, quadro dell'ente, esportazioni, archivio sul drive;
+  - etichette della guida presenti nell'interfaccia.
+- Build di produzione React/TypeScript: superata. Nel bundle non compaiono chiavi API.
+- Test browser Chromium: superati tutti gli 11 script di `npm run test:smoke` (base, assistente, modello locale, casi a confronto, archivio sul drive, cartella sincronizzata, esportazioni, guida, versioni, contributi, quadro dell'ente), senza richieste esterne.
+- Rust: `cargo check` senza avvisi, 9 test superati; 1 test ignorato (prova reale del portachiavi, da lanciare con `cargo test -- --ignored`).
 - Non verificati: chiamate a Google con una chiave reale, interfaccia desktop in esecuzione, pacchetti Windows e macOS (previsti tramite GitHub Actions).

@@ -1,6 +1,6 @@
-# Guida a EthiCanvas AI
+# Guida a EthiCanvasAI
 
-EthiCanvas AI accompagna un gruppo di lavoro della Pubblica Amministrazione lungo l’AI Ethics Canvas: venti domande, divise in sei sezioni, che aiutano a capire se e come adottare uno strumento di intelligenza artificiale in modo etico. Il risultato è una valutazione documentata, da condividere e rivedere nel tempo.
+EthiCanvasAI accompagna un gruppo di lavoro della Pubblica Amministrazione lungo l’AI Ethics Canvas: venti domande, divise in sei sezioni, che aiutano a capire se e come adottare uno strumento di intelligenza artificiale in modo etico. Il risultato è una valutazione documentata, da condividere e rivedere nel tempo.
 
 L’applicazione funziona nel browser o come programma desktop. Progetti, risposte e allegati restano sul tuo dispositivo: non serve un account e nessun dato parte senza una tua azione.
 
@@ -22,7 +22,7 @@ Apri l’app, premi «Rispondi a una richiesta» e segui [Rispondere a una richi
 
 ## Per chi coordina la valutazione
 
-6. [Versioni, revisioni e riesame](06-versioni.md): salvare le tappe, registrare chi rivede, confrontare, pianificare il riesame.
+6. [Versioni, revisioni e riesame](06-versioni.md): salvare le tappe, registrare chi rivede, esaminare l’inquadramento normativo, confrontare e pianificare il riesame.
 7. [Coordinare una valutazione](07-coordinare.md): organizzare il lavoro con i profili, usare i casi già valutati, il quadro dell’ente, rivedere i risultati.
 8. [Contributi delle figure coinvolte](08-contributi.md): chiedere risposte a DPO, fornitori ed esperti e importarle, senza server.
 

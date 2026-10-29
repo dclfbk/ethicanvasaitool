@@ -54,18 +54,20 @@ export const llmErrorMessages: Record<LlmErrorKind, string> = {
 // Wording that depends on where the data go. Gemini keeps its original labels.
 export interface ProviderTexts {
  group: string; send: string; analyze: string; synthesise: string; generate: string; configure: string;
- busy: string; proposal: string; subject: string; destination: (model: string) => string; errors: Record<LlmErrorKind, string>;
+ busy: string; slow: string; proposal: string; subject: string; destination: (model: string) => string; errors: Record<LlmErrorKind, string>;
 }
 export const geminiTexts: ProviderTexts = {
  group: 'Assistente Gemini', send: 'Invia a Gemini', analyze: 'Analizza con Gemini', synthesise: 'Genera la sintesi delle conclusioni con Gemini', generate: 'Genera la sintesi',
- configure: 'Configura Gemini', busy: 'Gemini sta', proposal: 'Proposta di Gemini', subject: 'Gemini',
+ configure: 'Configura Gemini', busy: 'Gemini sta',
+ slow: 'Nessun problema: la richiesta è ancora in corso. Nelle ore di traffico Gemini può impiegare più di un minuto; se capita spesso, scegli un modello più veloce in Metodo e impostazioni.', proposal: 'Proposta di Gemini', subject: 'Gemini',
  destination: m => `a Google tramite la Gemini API, modello ${m}`, errors: llmErrorMessages,
 };
 const host = (url: string) => { try { return new URL(url).host; } catch { return url; } };
 export function localTexts(url: string): ProviderTexts {
  return {
   group: 'Assistente', send: 'Invia al modello locale', analyze: 'Analizza con il modello locale', synthesise: 'Genera la sintesi delle conclusioni con il modello locale', generate: 'Genera la sintesi',
-  configure: 'Configura il modello locale', busy: 'Il modello locale sta', proposal: 'Proposta del modello locale', subject: 'Il modello locale',
+  configure: 'Configura il modello locale', busy: 'Il modello locale sta',
+  slow: 'Il modello sta ancora lavorando: con modelli grandi o computer poco potenti può servire qualche minuto.', proposal: 'Proposta del modello locale', subject: 'Il modello locale',
   destination: m => `al modello ${m || 'non indicato'} del server ${host(url)}, e a nessun altro servizio`,
   errors: {...llmErrorMessages,
    'not-configured': 'Indica l’indirizzo del server e il modello in Metodo e impostazioni.',

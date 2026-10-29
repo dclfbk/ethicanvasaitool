@@ -39,7 +39,11 @@ import condensed from './assets/fonts/pdf/BarlowCondensed-Regular.ttf?inline';
 import funding from './assets/logos/canvas-funding.png?inline';
 import pat from './assets/logos/pat.png?inline';
 import fbk from './assets/logos/fbk.png?inline';
+// The original AI Ethics Canvas (© Provincia Autonoma di Trento and Fondazione Bruno Kessler, CC BY-SA 4.0), used as the
+// background of the canvas export.
+import canvasTemplate from './assets/canvas/ai-ethics-canvas-aixpa.pdf?inline';
 
 function bytes(dataUrl: string) { const s = atob(dataUrl.slice(dataUrl.indexOf(',') + 1)), out = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i); return out; }
 export const pdfFonts = () => ({regular: bytes(regular), semibold: bytes(semibold), bold: bytes(bold), italic: bytes(italic), display: bytes(display), condensed: bytes(condensed)});
 export const pdfLogos = () => ({funding: bytes(funding), pat: bytes(pat), fbk: bytes(fbk)});
+export const pdfCanvasTemplate = () => bytes(canvasTemplate);

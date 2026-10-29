@@ -69,5 +69,5 @@ fn main() {
             local_llm::local_llm_cancel
         ])
         .run(tauri::generate_context!())
-        .expect("Failed to start EthiCanvas AI");
+        .expect("Failed to start EthiCanvasAI");
 }
