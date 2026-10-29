@@ -52,7 +52,7 @@ Una risposta è più solida se rimanda a un documento: un regolamento, un invent
 3. Nell’«Estratto testuale (facoltativo)» incolla il passaggio che sostiene la risposta.
 4. Premi «Aggiungi riferimento».
 
-Per i file di testo (TXT, MD, CSV, JSON) puoi ricavare l’estratto anche dopo, con «Estrai testo dal file (in locale)». Per PDF e Word incolla a mano il passaggio pertinente.
+Per i file di testo (TXT, MD, CSV, JSON), Word (DOCX), OpenDocument (ODT) e PDF puoi ricavare l’estratto anche dopo, con «Estrai testo dal file (in locale)»: il testo viene letto sul dispositivo e non viene inviato a nessuno. Conserva poi solo il passaggio pertinente. Un PDF ottenuto da una scansione non contiene testo selezionabile e un file protetto da password non si può leggere: in questi casi, e per le immagini, incolla a mano il passaggio.
 
 > **Perché l’estratto conta.** L’assistente può usare come fonte solo l’estratto: non apre i collegamenti e non legge gli allegati.
 

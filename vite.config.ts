@@ -29,4 +29,7 @@
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-export default defineConfig({ plugins: [react()], base: './', server: { port: 1420, strictPort: true }, clearScreen: false });
+// The PDF.js worker ships as .mjs; it is emitted as .js so that every web server sends it with a JavaScript MIME type,
+// which module workers require.
+export default defineConfig({ plugins: [react()], base: './', server: { port: 1420, strictPort: true }, clearScreen: false,
+ build: { rollupOptions: { output: { assetFileNames: asset => asset.names?.[0]?.endsWith('.mjs') ? 'assets/[name]-[hash].js' : 'assets/[name]-[hash][extname]' } } } });
