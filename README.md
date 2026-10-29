@@ -116,7 +116,7 @@ Dentro un progetto, **Versioni e revisioni** apre la cronologia della valutazion
 
 - **Versioni**: istantanee immutabili di nome, descrizione, risposte, note e riferimenti. Gli allegati non vengono copiati: restano titolo, collegamento ed estratto. L'app salva una versione da sola prima di un ripristino e prima della precompilazione dai casi a confronto.
 - **Revisioni**: ruolo (obbligatorio) e nome (facoltativo) di chi rivede, esito («Valutazione condivisa», «Condivisa con condizioni», «Da rivedere»), condizioni e osservazioni. Ogni revisione salva la versione a cui si riferisce. Non cambia completezza né stati: non è una validazione. Le risposte modificate dopo l'ultima revisione sono segnalate sotto la domanda.
-- **Confronto** tra due versioni, o con lo stato attuale: per ogni domanda, parole aggiunte e tolte, cambi di stato, riferimenti aggiunti e tolti.
+- **Confronto** tra due versioni, o con lo stato attuale: per ogni domanda, parole aggiunte e tolte, cambi di stato, riferimenti aggiunti e tolti; per l’inquadramento normativo, risposte e note della checklist, conclusioni, fonti e registrazione dell’esperto.
 - **Ripristino** di una versione, dopo aver salvato lo stato attuale.
 - **Riesame**: data, responsabile, eventi che lo anticipano e note. Le schede dell'archivio segnalano i riesami vicini o scaduti; «Aggiungi al calendario» scarica un evento iCalendar (`.ics`).
 - Il riepilogo mostra l'ultima revisione e il prossimo riesame. Il rapporto DOCX/ODT e il PDF poster riportano lo storico completo; il PDF in stile originale lo riassume in copertina.

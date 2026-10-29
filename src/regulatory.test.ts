@@ -28,7 +28,7 @@
  */
 
 import {describe,expect,it} from 'vitest';
-import {addVersion,restoreVersion} from './history';
+import {addVersion,diffSnapshots,restoreVersion,snapshotOf} from './history';
 import {createBackup,createProject,evaluate,readBackup,validateProject} from './model';
 import {conclusionsToAnswer,registerExpert,regulatoryStatus,setAnswer,setText} from './regulatory';
 import {buildReportBlocks,regulatoryAssessmentLines} from './report';
@@ -117,5 +117,18 @@ describe('Regulatory framing',()=>{
   const restored=restoreVersion(project,before.version.id,'Ripristino','2026-10-28T11:00:00.000Z');
   expect(restored.regulatory).toBeUndefined();
   expect(restored.versions?.at(-1)?.snapshot.regulatory?.answers['ai-system'].value).toBe('yes');
+ });
+ it('compares checklist answers, notes, conclusions and the expert registration between versions',()=>{
+  const before=setAnswer(setAnswer(createProject('Progetto di prova','',''),'ai-system',{value:'unsure',note:'Da capire'}),'removed-item',{value:'yes',note:''});
+  let after=setAnswer(before,'ai-system',{value:'yes',note:'Confermato'});
+  after=setAnswer(after,'removed-item',{value:''});
+  after=setText(after,{conclusions:'Conclusione.'});
+  after=registerExpert(after,{role:'Esperto legale',name:''},'Registrato','2026-10-28T10:00:00.000Z');
+  const d=diffSnapshots(snapshotOf(before),snapshotOf(after)).regulatory;
+  expect(d.items.map(i=>[i.id,i.valueBefore,i.valueAfter])).toEqual([['ai-system','unsure','yes'],['removed-item','yes','']]);
+  expect(d.items[0].note).toEqual([{kind:'removed',text:'Da capire'},{kind:'added',text:'Confermato'}]);
+  expect(d.texts.map(x=>x.field)).toEqual(['conclusions']);
+  expect(d.expert).toMatchObject({before:undefined,after:{role:'Esperto legale'}});
+  expect(diffSnapshots(snapshotOf(after),snapshotOf(after)).regulatory).toEqual({items:[],texts:[]});
  });
 });

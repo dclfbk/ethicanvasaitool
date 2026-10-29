@@ -84,6 +84,11 @@ try{
  await page.getByText('1 domanda cambiata',{exact:false}).waitFor();
  assert.equal((await page.locator('.diff ins').first().textContent()).trim(),'e log delle conversazioni');
  await page.locator('.history').screenshot({path:join(dir,'history.png')});
+ // A checklist answer given after the version appears in the comparison.
+ await page.getByRole('button',{name:'Inquadramento normativo',exact:true}).click();
+ await page.getByLabel(/^Risposta:/).first().selectOption('yes');
+ await page.getByRole('button',{name:'Chiudi inquadramento'}).click();
+ await page.locator('.diff-regulatory').getByText('Risposta: Da esaminare → Sì').waitFor();
 
  // An answer edited after the review is flagged on the question.
  await page.getByRole('button',{name:'Torna al percorso'}).click();
@@ -121,5 +126,5 @@ try{
  await page.getByRole('button',{name:'Versioni e revisioni'}).click();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
  assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
- console.log('PASS history: review plan with overdue status and calendar file, versions, review with conditions, word comparison, changed-after-review flag, restore with automatic version, report, PDF, archive badge, backup format 6 without attachments in versions, mobile layout.');
+ console.log('PASS history: review plan with overdue status and calendar file, versions, review with conditions, word comparison, checklist comparison, changed-after-review flag, restore with automatic version, report, PDF, archive badge, backup format 6 without attachments in versions, mobile layout.');
 }finally{await browser?.close();server.close();}

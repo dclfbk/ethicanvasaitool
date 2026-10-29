@@ -57,6 +57,7 @@ Se una nuova versione della checklist toglie un punto a cui avevi già risposto,
 1. Nella «Cronologia» premi «Confronta» accanto a una versione: viene confrontata con lo stato attuale.
 2. Nel riquadro «Confronto» puoi scegliere qualunque coppia di versioni.
 3. Per ogni domanda cambiata vedi le parole aggiunte, in verde, e quelle tolte, in rosso, insieme ai cambi di stato e ai riferimenti aggiunti o tolti.
+4. Se è cambiato l’inquadramento normativo, la parte «Inquadramento normativo» elenca i punti della checklist con la risposta prima e dopo, le note modificate, le conclusioni, le fonti e la registrazione dell’esperto.
 
 Con «Mostra anche le domande invariate» vedi tutto il questionario.
 

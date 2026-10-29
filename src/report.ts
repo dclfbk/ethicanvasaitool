@@ -45,7 +45,7 @@ export const selfAssessmentNote = 'Questo documento registra un’autovalutazion
 export const regulatoryNote = 'L’applicazione non determina la categoria di rischio ai sensi dell’AI Act né la conformità normativa. L’inquadramento va esaminato con un esperto legale.';
 const maxAnswerChars = 3_000;
 const clip = (s: string, max: number) => s.length > max ? s.slice(0, max) + ' […]' : s;
-const regulatoryValueLabels = {'': 'Da esaminare', yes: 'Sì', no: 'No', unsure: 'Da verificare', na: 'Non pertinente'};
+export const regulatoryValueLabels = {'': 'Da esaminare', yes: 'Sì', no: 'No', unsure: 'Da verificare', na: 'Non pertinente'};
 const regulatoryItemLine = (text: string, answer: RegulatoryAnswer | undefined, reference: string) => `${text} — ${regulatoryValueLabels[answer?.value ?? '']}${answer?.note ? ' · ' + answer.note : ''}${reference ? ` (${reference})` : ''}`;
 // Answers to items removed from the checklist stay in the record, listed apart.
 const obsoleteLines = (project: Project) => regulatoryStatus(project).obsolete.map(({id, answer}) => regulatoryItemLine(`Voce non più presente nella checklist (${id})`, answer, ''));
