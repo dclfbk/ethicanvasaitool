@@ -48,6 +48,7 @@ fn main() {
             gemini::gemini_key_status,
             gemini::gemini_key_delete,
             gemini::gemini_request,
+            gemini::gemini_stream,
             gemini::gemini_cancel,
             cloud::cloud_configured,
             cloud::cloud_status,

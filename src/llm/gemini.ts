@@ -90,6 +90,37 @@ function outputText(body: unknown): string {
  return text;
 }
 
+// Splits a server-sent event stream, fed in pieces of any size, into the JSON payloads of its data lines; "[DONE]" and
+// unparsable data are skipped. Under load Google may answer 200 and then send a bare JSON error outside the SSE format:
+// such lines are passed on at the end. Shared by the browser and the desktop transports.
+export function serverSentEventParser(onEvent: (event: unknown) => void) {
+ let buffer = '', data: string[] = [], bare = '';
+ const dispatch = () => {
+  const payload = data.join('\n').trim(); data = [];
+  if (!payload || payload === '[DONE]') return;
+  let event: unknown;
+  try { event = JSON.parse(payload); } catch { return; }
+  onEvent(event);
+ };
+ const line = (l: string) => {
+  if (l === '') dispatch();
+  else if (l.startsWith('data:')) data.push(l.slice(5).replace(/^ /, ''));
+  else if (!/^(:|event:|id:|retry:)/.test(l)) bare += l + '\n';
+ };
+ return {
+  push(text: string) {
+   buffer += text;
+   let end: number;
+   while ((end = buffer.indexOf('\n')) >= 0) { line(buffer.slice(0, end).replace(/\r$/, '')); buffer = buffer.slice(end + 1); }
+  },
+  end() {
+   if (buffer.startsWith('data:')) data.push(buffer.slice(5).replace(/^ /, '')); else bare += buffer;
+   buffer = ''; dispatch();
+   if (bare.trim()) { data = [bare]; bare = ''; dispatch(); }
+  },
+ };
+}
+
 // Rebuilds the answer from the events of a streamed interaction and reports progress. Unknown events are skipped.
 // See https://ai.google.dev/gemini-api/docs/streaming: step.start/step.delta/step.stop, interaction.completed, error.
 export function geminiStreamReader(onProgress?: (progress: GenerateProgress) => void) {
