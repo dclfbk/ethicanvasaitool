@@ -22,7 +22,7 @@ Apri l’app, premi «Rispondi a una richiesta» e segui [Rispondere a una richi
 
 ## Per chi coordina la valutazione
 
-6. [Versioni, revisioni e riesame](06-versioni.md): salvare le tappe, registrare chi rivede, confrontare, pianificare il riesame.
+6. [Versioni, revisioni e riesame](06-versioni.md): salvare le tappe, registrare chi rivede, esaminare l’inquadramento normativo, confrontare e pianificare il riesame.
 7. [Coordinare una valutazione](07-coordinare.md): organizzare il lavoro con i profili, usare i casi già valutati, il quadro dell’ente, rivedere i risultati.
 8. [Contributi delle figure coinvolte](08-contributi.md): chiedere risposte a DPO, fornitori ed esperti e importarle, senza server.
 

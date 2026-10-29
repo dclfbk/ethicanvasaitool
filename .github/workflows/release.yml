@@ -29,6 +29,7 @@
 # Builds the desktop packages for Linux, Windows and macOS (one universal app for Apple silicon and Intel).
 # Push a tag such as v0.2.0, or start it by hand from the Actions tab:
 # the packages are attached to a draft release to review before publishing.
+# Alpha versions omit RPM and MSI because those formats reject SemVer prereleases.
 # macOS packages are signed and notarised only when the Apple secrets below are set; otherwise they are built unsigned.
 name: Desktop release
 
@@ -48,10 +49,13 @@ jobs:
         include:
           - platform: ubuntu-22.04
             args: ''
+            alpha_bundles: deb,appimage
           - platform: windows-latest
             args: ''
+            alpha_bundles: nsis
           - platform: macos-latest
             args: --target universal-apple-darwin
+            alpha_bundles: app,dmg
     runs-on: ${{ matrix.platform }}
     env:
       # Secrets cannot be tested in "if": this flag says whether the Developer ID certificate is available.
@@ -75,6 +79,11 @@ jobs:
           workspaces: src-tauri
       - run: npm ci
       - run: npm test
+      - name: Detect prerelease package version
+        id: package-version
+        shell: bash
+        run: |
+          node -e "console.log('is_prerelease=' + require('./src-tauri/tauri.conf.json').version.includes('-'))" >> "$GITHUB_OUTPUT"
       # Developer ID signing and notarisation (Apple Developer Program). Exported only when set, because an empty
       # certificate makes the bundler fail instead of skipping the signature.
       - name: Enable Apple signing and notarisation
@@ -103,9 +112,15 @@ jobs:
           CANVAS_MS_TENANT: ${{ vars.MS_TENANT }}
         with:
           # Builds the signed update artifacts and attaches latest.json to the release.
-          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
+          args: >-
+            ${{ matrix.args }}
+            --config src-tauri/tauri.release.conf.json
+            ${{ steps.package-version.outputs.is_prerelease == 'true' && format('--bundles {0}', matrix.alpha_bundles) || '' }}
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}-build', github.run_number) }}
           releaseName: EthiCanvasAI ${{ github.ref_type == 'tag' && github.ref_name || format('build {0}', github.run_number) }}
-          releaseBody: Desktop packages for Linux (deb, rpm, AppImage), Windows (msi, exe) and macOS (universal dmg and app). Windows packages are not code-signed; macOS packages are signed and notarised only when the Apple secrets are configured. Updates are signed with the updater key.
+          releaseBody: >-
+            ${{ steps.package-version.outputs.is_prerelease == 'true' &&
+            'Pre-release alpha: versione sperimentale e instabile, da usare solo per la revisione e non per attività operative o dati reali. Pacchetti: Linux (.deb, AppImage), Windows (.exe) e macOS (.dmg, universal); RPM e MSI sono esclusi per incompatibilità con le versioni prerelease. I pacchetti macOS sono firmati solo se sono configurati i secret Apple.' ||
+            'Desktop packages for Linux (deb, rpm, AppImage), Windows (msi, exe) and macOS (universal dmg and app). Windows packages are not code-signed; macOS packages are signed and notarised only when the Apple secrets are configured. Updates are signed with the updater key.' }}
           releaseDraft: true
-          prerelease: ${{ github.ref_type != 'tag' }}
+          prerelease: ${{ github.ref_type != 'tag' || contains(github.ref_name, '-') }}

@@ -1,6 +1,6 @@
 # EthiCanvasAI — Notice
 
-EthiCanvasAI, version 0.3.0
+EthiCanvasAI, version 0.3.0-alpha.3
 Copyright (C) 2026 FBK - Fondazione Bruno Kessler, Trento, Italy
 Author: Maurizio Napolitano <napo@fbk.eu>
 

@@ -2,6 +2,8 @@
 
 Questo capitolo è per chi installa l’applicazione per l’ente o la gestisce: servizi informatici, responsabili della sicurezza, chi prepara le build.
 
+> **Versione alpha — instabile.** È una versione in prova e può contenere errori o perdere dati. Non usarla per attività operative né con dati reali, personali o riservati. Conserva copie di sicurezza. La checklist normativa è una bozza e richiede la verifica di un esperto legale.
+
 ## Versione web o desktop
 
 | | Web | Desktop |

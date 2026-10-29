@@ -138,6 +138,14 @@ try{
  await page.evaluate(()=>window.scrollTo(0,0));
  await shot(page,'risultato');
  await shot(page.locator('.report-export'),'esporta');
+ await page.getByRole('button',{name:'Inquadramento normativo',exact:true}).click();
+ await page.getByLabel(/^Risposta:/).first().selectOption('yes');
+ await page.getByLabel('Conclusioni').fill('Da verificare con il servizio e con il fornitore prima di definire l’uso previsto.');
+ await page.getByLabel('Fonti e riferimenti').fill('Regolamento (UE) 2024/1689, da approfondire.');
+ await page.getByLabel('Ruolo dell’esperto legale').fill('Esperto legale');
+ await page.locator('[role="dialog"] > div').evaluate(el=>el.scrollTop=0);
+ await shot(page,'inquadramento-normativo');
+ await page.getByRole('button',{name:'Chiudi inquadramento'}).click();
 
  await page.getByRole('button',{name:'Quadro dell’ente'}).click();
  await page.getByLabel('Includi gli esempi dimostrativi').check();

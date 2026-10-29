@@ -2,6 +2,8 @@
 
 Applicazione React + TypeScript con archivio locale e contenitore Tauri 2. L'assistente Gemini è facoltativo: senza configurarlo l'applicazione funziona interamente in locale.
 
+> **Versione alpha — instabile.** Questa versione è in prova, può contenere errori, perdere dati o cambiare senza preavviso. Non usarla per attività operative né con dati reali, personali o riservati. Esporta copie di sicurezza dei progetti che vuoi conservare.
+
 ## Guida
 
 La guida per chi compila, chi coordina e chi installa è in [docs/guida](docs/guida/00-indice.md) ed è consultabile anche nell'app, dalla voce **Guida** del menu, senza connessione. Il testo è scritto in Markdown, che l'app legge al momento della build con un piccolo lettore interno ([src/guideMarkdown.ts](src/guideMarkdown.ts)), senza HTML dal testo. I link `#app-…` aprono le funzioni dell'app.
@@ -36,14 +38,14 @@ Su Linux servono anche `libwebkit2gtk-4.1-dev`, `librsvg2-dev` e `libdbus-1-dev`
 ### Build automatiche su GitHub
 
 - [.github/workflows/ci.yml](.github/workflows/ci.yml): a ogni push su `main` e a ogni pull request esegue test, build, test browser e test Rust.
-- [.github/workflows/release.yml](.github/workflows/release.yml): crea i pacchetti **Linux** (deb, rpm, AppImage), **Windows** (msi, exe) e **macOS** (dmg e app *universal*, per Apple silicon e Intel) con `tauri-action`. Parte con un tag `v*` (ad esempio `git tag v0.2.0 && git push --tags`) oppure a mano dalla scheda Actions; i pacchetti vengono allegati a una release in bozza, da controllare prima della pubblicazione. I pacchetti Windows non sono firmati: SmartScreen mostrerà un avviso. Quelli macOS vengono firmati e notarizzati se nel repository ci sono i secret `APPLE_CERTIFICATE` (certificato Developer ID in base64), `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD` (password per app) e `APPLE_TEAM_ID`; senza, sono costruiti non firmati e macOS li blocca al primo avvio.
+- [.github/workflows/release.yml](.github/workflows/release.yml): crea i pacchetti con `tauri-action`. Le release stabili includono **Linux** (deb, rpm, AppImage), **Windows** (msi, exe) e **macOS** (dmg e app *universal*, per Apple silicon e Intel); le pre-release alpha includono **Linux** (deb, AppImage), **Windows** (exe) e **macOS** (dmg), perché RPM e MSI non accettano questi identificativi SemVer. Parte con un tag `v*` oppure a mano dalla scheda Actions; i pacchetti vengono allegati a una release in bozza, da controllare prima della pubblicazione. I tag con suffisso, come `v0.3.0-alpha.2`, producono una pre-release. I pacchetti Windows non sono firmati: SmartScreen mostrerà un avviso. Quelli macOS vengono firmati e notarizzati se nel repository ci sono i secret `APPLE_CERTIFICATE` (certificato Developer ID in base64), `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD` (password per app) e `APPLE_TEAM_ID`; senza, sono costruiti non firmati e macOS li blocca al primo avvio.
 - [.github/workflows/pages.yml](.github/workflows/pages.yml): a ogni push su `main` pubblica la versione web su GitHub Pages, all'indirizzo <https://dclfbk.github.io/ethicanvasaitool/>. I dati restano nel browser di chi la usa (IndexedDB): il sito non ha un server né un archivio condiviso.
 
 ### Aggiornamenti dell'app desktop
 
 All'avvio l'app desktop controlla `https://github.com/dclfbk/ethicanvasaitool/releases/latest/download/latest.json`. Se trova una versione più recente chiede all'utente se installarla: scarica il pacchetto, ne verifica la firma, lo installa e riavvia. Il controllo si può disattivare in *Metodo e impostazioni*. La versione web non fa questo controllo: la aggiorna chi gestisce il server.
 
-Il numero di versione va aggiornato in [package.json](package.json), [src-tauri/Cargo.toml](src-tauri/Cargo.toml) e [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json) e deve corrispondere al tag (`v0.2.0` → `0.2.0`). Solo le release pubblicate, non le bozze né le pre-release, vengono proposte agli utenti.
+Il numero di versione va aggiornato in [package.json](package.json), [src-tauri/Cargo.toml](src-tauri/Cargo.toml), [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json) e nei relativi lockfile e deve corrispondere al tag (`v0.3.0-alpha.2` → `0.3.0-alpha.2`). Solo le release stabili pubblicate, non le bozze né le pre-release, vengono proposte agli utenti dall’aggiornamento automatico.
 
 Configurazione da fare una volta, prima della prima release:
 
@@ -66,10 +68,11 @@ Il workflow di release usa [src-tauri/tauri.release.conf.json](src-tauri/tauri.r
 - Riferimenti per domanda: documenti, leggi, dataset, esperti e verifiche.
 - Allegati locali fino a 10 MB ciascuno, inclusi nel database in formato data URL.
 - Riepilogo parziale o completo con lacune, figure da coinvolgere e profilo descrittivo dichiarato.
-- Rapporto Markdown e backup JSON completo di allegati. L'importazione crea copie senza sovrascrivere progetti esistenti (massimo 100 MB per pacchetto). Sono accettati i backup della versione 0.1 (formato 1), quelli con l'assistente (formato 2), quelli con la provenienza delle risposte precompilate dai casi a confronto (formato 3) e quelli attuali (formato 4, che aggiunge versioni, revisioni e piano di riesame).
+- Rapporto Markdown e backup JSON completo di allegati. L'importazione crea copie senza sovrascrivere progetti esistenti (massimo 100 MB per pacchetto). Sono accettati i backup della versione 0.1 (formato 1), quelli con l'assistente (formato 2), quelli con la provenienza delle risposte precompilate dai casi a confronto (formato 3), quelli con versioni, revisioni e piano di riesame (formato 4), quelli con l’inquadramento normativo (formato 5) e quelli correnti (formato 6, che ammette voci della checklist con una nota ma ancora da esaminare). Le risposte a voci tolte da una versione successiva della checklist restano leggibili e vengono mostrate a parte.
 - Estratti testuali per ogni riferimento, incollati a mano o estratti in locale dai file TXT, MD, CSV e JSON.
 - Assistente facoltativo con Gemini oppure con un modello locale (Ollama o server compatibile OpenAI): «Spiegami la domanda», «Aiutami a formulare una risposta», «Che cosa manca per rispondere?».
 - Versioni, revisioni e riesame: istantanee della valutazione, revisioni con ruolo ed esito, confronto parola per parola, ripristino, data del riesame con file per il calendario.
+- Checklist normativa di supporto, conclusioni e fonti dell’esperto, incluse in versioni ed esportazioni. È una bozza da verificare: non assegna categorie di rischio e non determina la conformità.
 - Esportazione del canvas in PDF, nello stile grafico dell'AI Ethics Canvas originale oppure come poster A3 con pagine di dettaglio, e rapporto in DOCX o ODT, con la sintesi delle conclusioni proposta da Gemini se l'assistente è attivo.
 - Archivio in una cartella sincronizzata (Google Drive, OneDrive, Nextcloud… tramite il loro programma) o direttamente su Google Drive e OneDrive di Microsoft 365: salvataggio e ripristino con unione dei progetti e cifratura facoltativa.
 - Quadro dell'ente: stato dei progetti, riesami scaduti e vicini, contributi in attesa per figura, completamento per sezione, lacune ricorrenti, esportazione CSV.
@@ -114,7 +117,7 @@ Dentro un progetto, **Versioni e revisioni** apre la cronologia della valutazion
 
 - **Versioni**: istantanee immutabili di nome, descrizione, risposte, note e riferimenti. Gli allegati non vengono copiati: restano titolo, collegamento ed estratto. L'app salva una versione da sola prima di un ripristino e prima della precompilazione dai casi a confronto.
 - **Revisioni**: ruolo (obbligatorio) e nome (facoltativo) di chi rivede, esito («Valutazione condivisa», «Condivisa con condizioni», «Da rivedere»), condizioni e osservazioni. Ogni revisione salva la versione a cui si riferisce. Non cambia completezza né stati: non è una validazione. Le risposte modificate dopo l'ultima revisione sono segnalate sotto la domanda.
-- **Confronto** tra due versioni, o con lo stato attuale: per ogni domanda, parole aggiunte e tolte, cambi di stato, riferimenti aggiunti e tolti.
+- **Confronto** tra due versioni, o con lo stato attuale: per ogni domanda, parole aggiunte e tolte, cambi di stato, riferimenti aggiunti e tolti; per l’inquadramento normativo, risposte e note della checklist, conclusioni, fonti e registrazione dell’esperto.
 - **Ripristino** di una versione, dopo aver salvato lo stato attuale.
 - **Riesame**: data, responsabile, eventi che lo anticipano e note. Le schede dell'archivio segnalano i riesami vicini o scaduti; «Aggiungi al calendario» scarica un evento iCalendar (`.ics`).
 - Il riepilogo mostra l'ultima revisione e il prossimo riesame. Il rapporto DOCX/ODT e il PDF poster riportano lo storico completo; il PDF in stile originale lo riassume in copertina.
@@ -210,7 +213,7 @@ La sezione **Casi a confronto** usa come knowledge base i progetti dell'archivio
 
 È un MVP, non una implementazione integrale di ogni quesito del PDF. Le domande sono adattamenti tematici con origine indicata. Sono incluse estensioni su chatbot, inclusione e riesame. I ruoli sono suggerimenti, non la riproduzione delle attribuzioni grafiche originali.
 
-Non sono implementati classificazione normativa AI Act, revisione formale, cronologia completa delle valutazioni, estrazione del testo da PDF, Word o immagini, sincronizzazione automatica tra dispositivi, crittografia dell'archivio locale, integrazioni Ollama e Microsoft Copilot o un proxy per la chiave Gemini. Il rapporto non costituisce una certificazione. La presenza di evidenze non equivale a verifica della loro validità.
+Non sono implementati classificazione normativa AI Act, revisione formale, estrazione del testo da PDF, Word o immagini, sincronizzazione automatica tra dispositivi, crittografia dell'archivio locale, integrazione Microsoft Copilot o un proxy per la chiave Gemini. Il rapporto non costituisce una certificazione. La presenza di evidenze non equivale a verifica della loro validità.
 
 Il salvataggio locale non è un backup. Esportare copie, soprattutto prima di cancellare dati del browser o cambiare dispositivo. Gli allegati sono incorporati per portabilità; per archivi estesi sarà opportuno separarli in un file store con transazioni e controlli di integrità. La versione desktop e quella web hanno archivi separati.
 
@@ -246,7 +249,7 @@ Il salvataggio locale non è un backup. Esportare copie, soprattutto prima di ca
 
 1. Validare e completare il questionario rispetto al canvas, provare con funzionari e tecnici; definire criteri di revisione e approfondimento AI Act.
 2. ~~Gemini~~: implementato in questa versione.
-3. Ollama: connessione opzionale a un modello locale.
+3. ~~Ollama~~: implementato come modello locale (Ollama o server compatibile OpenAI).
 4. Microsoft Copilot: integrazione futura distinta da GitHub Copilot.
 
 ## Verifica

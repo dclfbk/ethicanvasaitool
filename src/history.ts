@@ -27,16 +27,19 @@
  * source code to users who interact with the software over a network.
  */
 
-import { portableAnswers, questions, type AnswerState, type Project, type ProjectSnapshot, type ProjectVersion, type Review, type ReviewOutcome, type ReviewPlan, type VersionReason } from './model';
+import { portableAnswers, portableRegulatory, questions, type AnswerState, type Project, type RegulatoryAnswer, type RegulatoryExpert, type ProjectSnapshot, type ProjectVersion, type Review, type ReviewOutcome, type ReviewPlan, type VersionReason } from './model';
+import { checklist, checklistIds } from './regulatoryChecklist';
 
 // Versions, reviews and the review plan of a project. Every function returns a new project and never
 // changes completeness or answer states: a review is information about the assessment, not a validation.
 
 export function snapshotOf(p: Project): ProjectSnapshot {
- return {name: p.name, description: p.description, organization: p.organization, answers: portableAnswers(p.answers), references: p.references.map(({data: _attachment, ...r}) => r)};
+ return {name: p.name, description: p.description, organization: p.organization, answers: portableAnswers(p.answers), references: p.references.map(({data: _attachment, ...r}) => r), ...(p.regulatory?{regulatory:portableRegulatory(p.regulatory)}:{})};
 }
 // Snapshots are read like projects, for example to compute the completeness of an old version.
-export const asProject = (p: Project, s: ProjectSnapshot): Project => ({...p, name: s.name, description: s.description, organization: s.organization, answers: s.answers, references: s.references});
+// A snapshot without regulatory framing predates it, so the current framing is not carried over.
+const withRegulatory = <T extends Project>({regulatory: _current, ...p}: T, s: ProjectSnapshot): Project => ({...p, ...(s.regulatory ? {regulatory: s.regulatory} : {})});
+export const asProject = (p: Project, s: ProjectSnapshot): Project => withRegulatory({...p, name: s.name, description: s.description, organization: s.organization, answers: s.answers, references: s.references}, s);
 
 export function addVersion(p: Project, v: {label: string; reason: VersionReason; note?: string}, now = new Date().toISOString()): {project: Project; version: ProjectVersion} {
  const version: ProjectVersion = {id: crypto.randomUUID(), label: v.label.trim(), reason: v.reason, note: (v.note ?? '').trim(), createdAt: now, snapshot: snapshotOf(p)};
@@ -58,8 +61,8 @@ export function restoreVersion(p: Project, versionId: string, label: string, now
  const {project} = addVersion(p, {label, reason: 'restore'}, now);
  const files = new Map(p.references.filter(r => r.data).map(r => [r.id, r.data]));
  const s = target.snapshot;
- return {...project, name: s.name, description: s.description, organization: s.organization, updatedAt: now, answers: portableAnswers(s.answers),
-  references: s.references.map(r => files.has(r.id) ? {...r, data: files.get(r.id)} : r)};
+ return withRegulatory({...project, name: s.name, description: s.description, organization: s.organization, updatedAt: now, answers: portableAnswers(s.answers),
+  references: s.references.map(r => files.has(r.id) ? {...r, data: files.get(r.id)} : r)}, s);
 }
 
 export const lastReview = (p: Project) => (p.reviews ?? []).reduce<Review | undefined>((last, r) => !last || r.at > last.at ? r : last, undefined);
@@ -115,10 +118,25 @@ function grouped(parts: DiffPart[]): DiffPart[] {
 
 export type ChangeKind = 'same' | 'added' | 'removed' | 'changed';
 export interface QuestionChange { questionId: string; kind: ChangeKind; stateBefore?: AnswerState; stateAfter?: AnswerState; text: DiffPart[]; referencesAdded: string[]; referencesRemoved: string[]; }
-export interface SnapshotDiff { fields: {field: 'name' | 'description' | 'organization'; text: DiffPart[]}[]; questions: QuestionChange[]; }
+// Regulatory changes list only the checklist items whose answer or note changed, in checklist order,
+// followed by items no longer in the checklist; expert is set when the registration of the framing changed.
+export interface RegulatoryItemChange { id: string; valueBefore: RegulatoryAnswer['value']; valueAfter: RegulatoryAnswer['value']; note: DiffPart[]; }
+export interface RegulatoryDiff { items: RegulatoryItemChange[]; texts: {field: 'conclusions' | 'sources'; text: DiffPart[]}[]; expert?: {before?: RegulatoryExpert; after?: RegulatoryExpert}; }
+export interface SnapshotDiff { fields: {field: 'name' | 'description' | 'organization'; text: DiffPart[]}[]; questions: QuestionChange[]; regulatory: RegulatoryDiff; }
+function diffRegulatory(before: ProjectSnapshot, after: ProjectSnapshot): RegulatoryDiff {
+ const a = before.regulatory, b = after.regulatory, known = checklist.map(i => i.id);
+ const ids = [...known, ...new Set([...Object.keys(a?.answers ?? {}), ...Object.keys(b?.answers ?? {})].filter(id => !checklistIds.has(id)))];
+ const items = ids.flatMap(id => {
+  const x = a?.answers[id], y = b?.answers[id], valueBefore = x?.value ?? '', valueAfter = y?.value ?? '', na = x?.note.trim() ?? '', nb = y?.note.trim() ?? '';
+  return valueBefore !== valueAfter || na !== nb ? [{id, valueBefore, valueAfter, note: wordDiff(na, nb)}] : [];
+ });
+ const texts = (['conclusions', 'sources'] as const).flatMap(field => { const x = a?.[field].trim() ?? '', y = b?.[field].trim() ?? ''; return x !== y ? [{field, text: wordDiff(x, y)}] : []; });
+ const eb = a?.expert, ea = b?.expert, same = eb?.role === ea?.role && eb?.name === ea?.name && eb?.at === ea?.at;
+ return {items, texts, ...(same ? {} : {expert: {before: eb, after: ea}})};
+}
 export function diffSnapshots(before: ProjectSnapshot, after: ProjectSnapshot): SnapshotDiff {
  const fields = (['name', 'description', 'organization'] as const).filter(f => before[f] !== after[f]).map(field => ({field, text: wordDiff(before[field], after[field])}));
- return {fields, questions: questions.map(q => {
+ return {fields, regulatory: diffRegulatory(before, after), questions: questions.map(q => {
   const a = before.answers[q.id], b = after.answers[q.id], va = a?.value.trim() ?? '', vb = b?.value.trim() ?? '';
   const titles = (s: ProjectSnapshot) => new Map(s.references.filter(r => r.questionId === q.id).map(r => [r.id, r.title]));
   const ra = titles(before), rb = titles(after);
