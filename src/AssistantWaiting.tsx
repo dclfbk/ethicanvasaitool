@@ -28,7 +28,6 @@
  */
 
 import {useEffect,useRef,useState} from 'react';
-import {Square} from 'lucide-react';
 import type {LlmRuntime} from './llm';
 import type {GenerateProgress} from './llm/provider';
 
@@ -54,6 +53,6 @@ export function AssistantWaiting({runtime,activity,progress,onCancel}:{runtime:L
   <p className="wait-detail">{detail}</p>
   {progress?.thoughts&&<div className="wait-thoughts"><h4>Il ragionamento, in sintesi</h4><p ref={thoughts}>{withBold(progress.thoughts)}</p><small>Riassunto fornito da {runtime.texts.subject} mentre lavora: non viene salvato.</small></div>}
   {!progress&&seconds>=slowAfterSeconds&&<p className="wait-detail">{runtime.texts.slow}</p>}
-  <button className="secondary" onClick={onCancel}><Square size={14}/>Annulla richiesta</button>
+  <button className="stop-button" onClick={onCancel}>Annulla richiesta</button>
  </div>;
 }
