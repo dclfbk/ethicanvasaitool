@@ -27,7 +27,7 @@
  * source code to users who interact with the software over a network.
  */
 
-import { geminiBaseUrl, type GeminiHttpRequest, type GeminiTransport } from './gemini';
+import { geminiBaseUrl, serverSentEventParser, type GeminiHttpRequest, type GeminiTransport } from './gemini';
 import { LlmError, type CredentialStore } from './provider';
 
 // The key is held in this module only: it is never written to storage and disappears when the page is closed or reloaded.
@@ -59,34 +59,13 @@ async function readBody(response: Response): Promise<unknown> {
  try { return JSON.parse(text); } catch { return text; }
 }
 
-// Splits a server-sent event stream into the JSON payloads of its data lines; "[DONE]" and unparsable data are skipped.
-// Under load Google may answer 200 and then send a bare JSON error outside the SSE format: such lines are passed on at the end.
+// Feeds the body of a streamed response to the server-sent event parser as it arrives.
 export async function readServerSentEvents(body: ReadableStream<Uint8Array>, onEvent: (event: unknown) => void) {
- const reader = body.getReader(), decoder = new TextDecoder();
- let buffer = '', data: string[] = [], bare = '';
- const dispatch = () => {
-  const payload = data.join('\n').trim();data = [];
-  if (!payload || payload === '[DONE]') return;
-  let event: unknown;
-  try { event = JSON.parse(payload); } catch { return; }
-  onEvent(event);
- };
+ const reader = body.getReader(), decoder = new TextDecoder(), parser = serverSentEventParser(onEvent);
  for (;;) {
   const {value, done} = await reader.read();
-  buffer += decoder.decode(value, {stream: !done});
-  let end: number;
-  while ((end = buffer.indexOf('\n')) >= 0) {
-   const line = buffer.slice(0, end).replace(/\r$/, '');buffer = buffer.slice(end + 1);
-   if (line === '') dispatch();
-   else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''));
-   else if (!/^(:|event:|id:|retry:)/.test(line)) bare += line + '\n';
-  }
-  if (done) {
-   if (buffer.startsWith('data:')) data.push(buffer.slice(5).replace(/^ /, '')); else bare += buffer;
-   dispatch();
-   if (bare.trim()) { data = [bare]; dispatch(); }
-   return;
-  }
+  parser.push(decoder.decode(value, {stream: !done}));
+  if (done) return parser.end();
  }
 }
 

@@ -31,12 +31,13 @@
 //!
 //! The API key is kept in the operating system keychain and attached here, so it never
 //! travels back to the web view. Only two fixed endpoints can be reached, and error
-//! strings never contain the key, the URL or the request body.
+//! strings never contain the key, the URL or the request body. Streamed interactions are
+//! passed to the web view line by line as they arrive, so it can show the model's reasoning.
 
 use std::{collections::HashMap, sync::Mutex, time::Duration};
 
 use serde::Serialize;
-use tauri::State;
+use tauri::{ipc::Channel, State};
 use tokio::sync::oneshot;
 
 const SERVICE: &str = "eu.fbk.dcl.canvaspa";
@@ -148,6 +149,69 @@ pub async fn gemini_request(
     result
 }
 
+// Takes the complete lines out of the buffer. A line ends at a newline byte, which never occurs inside a UTF-8
+// sequence, so every line decodes even when a network chunk cuts a character in half.
+fn take_lines(buffer: &mut Vec<u8>) -> Vec<String> {
+    let mut lines = Vec::new();
+    while let Some(end) = buffer.iter().position(|&b| b == b'\n') {
+        let line: Vec<u8> = buffer.drain(..=end).collect();
+        let line = &line[..line.len() - 1];
+        lines.push(String::from_utf8_lossy(line.strip_suffix(b"\r").unwrap_or(line)).into_owned());
+    }
+    lines
+}
+
+/// A streamed interaction ("stream": true). The server-sent events go to the web view line by line through
+/// `on_line`; a line never contains a newline, so a lone "\n" marks the end. A non-2xx answer is returned as
+/// for gemini_request.
+#[tauri::command]
+pub async fn gemini_stream(
+    pending: State<'_, PendingRequests>,
+    request_id: String,
+    body: serde_json::Value,
+    on_line: Channel<String>,
+) -> Result<GeminiResponse, String> {
+    if body.get("stream") != Some(&serde_json::Value::Bool(true)) {
+        return Err("bad-request".into());
+    }
+    let key = read_key()?;
+    // No total timeout, since a long answer keeps arriving; the web view gives up after 90 s without news.
+    let client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(30))
+        .read_timeout(Duration::from_secs(90))
+        .build()
+        .map_err(|_| "network".to_string())?;
+    let request = client.post(format!("{BASE_URL}interactions")).json(&body).header("x-goog-api-key", key);
+    let send = |line: String| on_line.send(line).map_err(|_| "network".to_string());
+
+    let (cancel, cancelled) = oneshot::channel();
+    pending.0.lock().map_err(|_| "network".to_string())?.insert(request_id.clone(), cancel);
+    let result = tokio::select! {
+        response = async {
+            let mut response = request.send().await.map_err(transport_error)?;
+            let status = response.status().as_u16();
+            if !response.status().is_success() {
+                let text = response.text().await.map_err(transport_error)?;
+                let body = serde_json::from_str(&text).unwrap_or(serde_json::Value::String(text));
+                return Ok(GeminiResponse { status, body });
+            }
+            let mut buffer = Vec::new();
+            while let Some(chunk) = response.chunk().await.map_err(transport_error)? {
+                buffer.extend_from_slice(&chunk);
+                for line in take_lines(&mut buffer) { send(line)?; }
+            }
+            if !buffer.is_empty() { send(String::from_utf8_lossy(&buffer).into_owned())?; }
+            send("\n".into())?;
+            Ok(GeminiResponse { status, body: serde_json::Value::Null })
+        } => response,
+        _ = cancelled => Err("cancelled".into()),
+    };
+    if let Ok(mut map) = pending.0.lock() {
+        map.remove(&request_id);
+    }
+    result
+}
+
 #[tauri::command]
 pub fn gemini_cancel(pending: State<'_, PendingRequests>, request_id: String) {
     if let Some(cancel) = pending.0.lock().ok().and_then(|mut map| map.remove(&request_id)) {
@@ -168,6 +232,21 @@ mod tests {
         assert!(!valid_path("GET", "models/../files"));
         assert!(!valid_path("GET", "models/"));
         assert!(!valid_path("DELETE", "interactions"));
+    }
+
+    #[test]
+    fn stream_lines_survive_chunks_that_cut_characters() {
+        let text = "data: {\"text\":\"perché è così\"}\r\n\nevent: done\n";
+        let bytes = text.as_bytes();
+        let mut buffer = Vec::new();
+        let mut lines = Vec::new();
+        // Chunks of 3 bytes split the two-byte accented letters.
+        for chunk in bytes.chunks(3) {
+            buffer.extend_from_slice(chunk);
+            lines.extend(take_lines(&mut buffer));
+        }
+        assert_eq!(lines, vec!["data: {\"text\":\"perché è così\"}", "", "event: done"]);
+        assert!(buffer.is_empty());
     }
 
     #[test]
