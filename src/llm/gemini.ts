@@ -32,12 +32,12 @@ import { LlmError, type GenerateRequest, type LlmErrorKind, type LlmModel, type 
 // Stable text models listed at https://ai.google.dev/gemini-api/docs/models (checked October 2026).
 // Shut-down or legacy models (2.0, 2.5, previews) are intentionally left out.
 export const geminiModels: LlmModel[] = [
- {id:'gemini-3.8-flash',label:'Gemini 3.8 Flash',recommended:true},
- {id:'gemini-3.6-flash',label:'Gemini 3.6 Flash'},
+ {id:'gemini-3.6-flash',label:'Gemini 3.6 Flash',recommended:true},
+ {id:'gemini-3.8-flash',label:'Gemini 3.8 Flash'},
  {id:'gemini-3.5-flash-lite',label:'Gemini 3.5 Flash-Lite'},
  {id:'gemini-4-argon',label:'Gemini 4 Argon'},
 ];
-export const defaultGeminiModel = 'gemini-3.8-flash';
+export const defaultGeminiModel = 'gemini-3.6-flash';
 
 export interface GeminiHttpRequest { method: 'GET' | 'POST'; path: string; body?: unknown; }
 export interface GeminiHttpResponse { status: number; body: unknown; }
@@ -110,6 +110,7 @@ export function createGeminiProvider(transport: GeminiTransport, options: {timeo
   id: 'gemini',
   label: 'Google Gemini',
   models: geminiModels,
+  timeoutMs,
   async testConnection(model, signal) { await call({method:'GET',path:'models/'+model}, signal); },
   async generate(model, request: GenerateRequest, signal) {
    const body = await call({method:'POST',path:'interactions',body:{

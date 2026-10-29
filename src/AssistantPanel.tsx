@@ -28,10 +28,11 @@
  */
 
 import {useEffect,useRef,useState} from 'react';
-import {Bot,Send,Square,X} from 'lucide-react';
+import {Bot,Send,X} from 'lucide-react';
 import {applyProposal,buildContext,buildRequest,defaultSelection,maxContextChars,parseAssistResult,proposalText,type ApplyMode,type AssistResult,type ContextSelection} from './assistant';
 import type {AssistantSettings} from './assistantSettings';
 import {assistActionLabels} from './assistantText';
+import {AssistantWaiting} from './AssistantWaiting';
 import type {LlmRuntime} from './llm';
 import {LlmError} from './llm/provider';
 import {questions,type Answer,type AssistAction,type Project,type Question} from './model';
@@ -80,7 +81,7 @@ export default function AssistantPanel({project,question,settings,runtime,onAppl
    <p className="notice">I dati selezionati saranno inviati {runtime.texts.destination(runtime.model)}. La risposta sarà una proposta da verificare: non viene inserita senza la tua conferma.</p>
    {runtime.requiresKey&&hasKey===false?<div className="button-row"><span>Manca la chiave API.</span><button className="secondary" onClick={onOpenSettings}>{runtime.texts.configure}</button></div>:<button className="primary" disabled={tooLarge||hasKey===null} onClick={()=>void send(phase.action)}><Send size={16}/>{runtime.texts.send}</button>}
   </div>}
-  {phase.name==='loading'&&<div className="assistant-box" aria-busy="true"><p role="status" className="assist-status busy">{runtime.texts.busy} elaborando: {assistActionLabels[phase.action].toLowerCase()}…</p><button className="secondary" onClick={()=>controller.current?.abort()}><Square size={14}/>Annulla richiesta</button></div>}
+  {phase.name==='loading'&&<AssistantWaiting runtime={runtime} activity={'elaborando: '+assistActionLabels[phase.action].toLowerCase()} onCancel={()=>controller.current?.abort()}/>}
   {phase.name==='error'&&<div className="assistant-box"><p role="alert" className="assist-status error">{phase.message}</p><p>La tua risposta non è stata modificata. Puoi continuare il percorso anche senza assistente.</p><div className="button-row"><button className="secondary" onClick={()=>setPhase({name:'select',action:phase.action})}>Riprova</button><button className="text-button" onClick={()=>setPhase({name:'idle'})}>Chiudi</button></div></div>}
   {phase.name==='result'&&<div className="assistant-box">
    <div className="assistant-head"><b>{assistActionLabels[phase.action]}</b><button className="icon-button" aria-label="Chiudi assistente" onClick={()=>setPhase({name:'idle'})}><X size={15}/></button></div>

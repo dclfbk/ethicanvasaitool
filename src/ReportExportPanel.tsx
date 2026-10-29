@@ -28,10 +28,11 @@
  */
 
 import {useEffect,useRef,useState} from 'react';
-import {Bot,FileDown,FileText,Send,Square,X} from 'lucide-react';
+import {Bot,FileDown,FileText,Send,X} from 'lucide-react';
 import {maxContextChars} from './assistant';
 import type {AssistantSettings} from './assistantSettings';
 import {toDocx,toOdt} from './documents';
+import {AssistantWaiting} from './AssistantWaiting';
 import type {LlmRuntime} from './llm';
 import {LlmError} from './llm/provider';
 import {sections,type Project,type Section} from './model';
@@ -102,7 +103,7 @@ export default function ReportExportPanel({project,settings,runtime,onOpenSettin
     <p className="notice">I dati saranno inviati {runtime.texts.destination(runtime.model)}. La sintesi sarà una bozza modificabile: entra nel rapporto solo quando lo esporti.</p>
     {runtime.requiresKey&&hasKey===false?<div className="button-row"><span>Manca la chiave API.</span><button className="secondary" onClick={onOpenSettings}>{runtime.texts.configure}</button></div>:<button className="primary" disabled={tooLarge||hasKey===null} onClick={()=>void send()}><Send size={16}/>Genera la sintesi</button>}
    </div>}
-   {phase.name==='loading'&&<div className="assistant-box" aria-busy="true"><p role="status" className="assist-status busy">{runtime.texts.busy} scrivendo la sintesi…</p><button className="secondary" onClick={()=>controller.current?.abort()}><Square size={14}/>Annulla richiesta</button></div>}
+   {phase.name==='loading'&&<AssistantWaiting runtime={runtime} activity="scrivendo la sintesi" onCancel={()=>controller.current?.abort()}/>}
    {phase.name==='error'&&<div className="assistant-box"><p role="alert" className="assist-status error">{phase.message}</p><div className="button-row"><button className="secondary" onClick={()=>setPhase({name:'select'})}>Riprova</button><button className="text-button" onClick={()=>setPhase({name:'idle'})}>Chiudi</button></div></div>}
    {draft&&<div className="assistant-box">
     <div className="assistant-head"><b>Sintesi delle conclusioni · bozza</b><button className="text-button danger" onClick={()=>{setDraft(null);setRemoved([]);}}>Scarta la sintesi</button></div>

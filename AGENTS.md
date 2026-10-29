@@ -34,6 +34,6 @@ on this repository.
 ## LLM integrations
 
 - Providers implement `LlmProvider` in `src/llm/provider.ts`; keep UI, storage and evaluation rules independent from them.
-- Never put API keys in source, bundle, URLs, logs, storage or backups. Browser keys stay in memory; desktop keys stay in the OS keychain and are read only by the Rust side.
+- Never put API keys in source, bundle, URLs, logs, storage or backups. Browser keys stay in memory; desktop keys stay in the OS keychain and are read only by the Rust side. In the browser the app may offer the Gemini key to the browser's password manager (`src/llm/passwordManager.ts`), which saves it only after asking the user; the app itself never writes it to its storage.
 - Cloud archive tokens follow the same rule: browser tokens stay in memory, desktop refresh tokens stay in the OS keychain and are used only by the Rust side; passphrases are never stored. Endpoint allowlists in `src/cloud/provider.ts` and `src-tauri/src/cloud.rs` must stay identical.
 - Assistant output is a draft: never overwrite an answer automatically and never let it change evaluation results or produce AI Act classifications.

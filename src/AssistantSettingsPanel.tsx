@@ -34,6 +34,7 @@ import type {AssistantSettings} from './assistantSettings';
 import type {LlmRuntime} from './llm';
 import {normaliseLocalUrl,type LocalProtocol,type LocalProvider} from './llm/local';
 import {configureLocalServer} from './llm/localTauri';
+import {offerToRemember,passwordManagerAccount,passwordManagerAvailable,recallFromPasswordManager} from './llm/passwordManager';
 import {LlmError} from './llm/provider';
 
 type Status={kind:'idle'|'busy'|'ok'|'error';text:string};
@@ -44,7 +45,8 @@ export default function AssistantSettingsPanel({settings,onChange,onReset,runtim
  useEffect(()=>setUrl(settings.local.url),[settings.local.url]);
  const fail=(e:unknown)=>setStatus({kind:'error',text:e instanceof LlmError?runtime.texts.errors[e.kind]:'Operazione non riuscita.'});
  useEffect(()=>{runtime.credentials.has().then(setHasKey).catch(e=>{setHasKey(false);fail(e);});},[runtime]);
- async function saveKey(e:React.FormEvent){e.preventDefault();if(!key.trim()||busy.current)return;busy.current=true;try{await runtime.credentials.set(key.trim());setKey('');setHasKey(true);setStatus({kind:'ok',text:session?'Chiave tenuta in memoria per questa sessione.':'Chiave salvata nel portachiavi del sistema.'});}catch(err){fail(err);}finally{busy.current=false;}}
+ async function saveKey(e:React.FormEvent){e.preventDefault();const k=key.trim();if(!k||busy.current)return;busy.current=true;try{await runtime.credentials.set(k);setKey('');setHasKey(true);setStatus({kind:'ok',text:session?'Chiave tenuta in memoria per questa sessione.':'Chiave salvata nel portachiavi del sistema.'});if(session&&!local)void offerToRemember(k);}catch(err){fail(err);}finally{busy.current=false;}}
+ async function recallKey(){if(busy.current)return;busy.current=true;try{const k=await recallFromPasswordManager();if(!k){setStatus({kind:'idle',text:'Nessuna chiave scelta dal gestore delle password.'});return;}await runtime.credentials.set(k);setHasKey(true);setStatus({kind:'ok',text:'Chiave presa dal gestore delle password e tenuta in memoria per questa sessione.'});}catch(err){fail(err);}finally{busy.current=false;}}
  async function test(){if(busy.current)return;busy.current=true;setStatus({kind:'busy',text:'Verifico la connessione…'});try{await runtime.provider.testConnection(runtime.model);setStatus({kind:'ok',text:local?'Connessione riuscita: il server risponde e il modello è disponibile.':'Connessione riuscita: la chiave è valida e il modello è disponibile.'});}catch(err){fail(err);}finally{busy.current=false;}}
  // The address is saved explicitly: on desktop a different address deletes the stored key on the Rust side.
  async function saveUrl(){
@@ -82,12 +84,14 @@ export default function AssistantSettingsPanel({settings,onChange,onReset,runtim
   {session&&<div className="web-warning" role="note"><h3>Stai usando la versione web</h3><ul>
    <li>Le richieste partono dal tuo browser e vanno direttamente a Google: questo sito non riceve né la chiave né i contenuti.</li>
    <li>La chiave resta solo in questa scheda, ma finché è aperta è leggibile dagli script della pagina e dalle estensioni del browser. Usa un browser senza estensioni di cui non ti fidi.</li>
+   <li>Dopo «Usa per questa sessione» il browser può proporti di ricordare la chiave nel suo gestore delle password. Accetta solo sul tuo computer personale, mai su un computer condiviso.</li>
    <li>Crea una chiave dedicata solo a questa applicazione, limitata alla Gemini API e con una quota di spesa bassa. Revocala in Google AI Studio quando non ti serve più o se pensi che sia stata esposta.</li>
    <li>Non inviare dati personali, dati riservati o documenti interni dell’ente. Se devi usare l’assistente con informazioni sensibili, preferisci l’app desktop, che conserva la chiave nel portachiavi del sistema.</li>
   </ul></div>}
   <label>Modello<select value={settings.model} onChange={e=>onChange({...settings,model:e.target.value})}>{runtime.provider.models.map(m=><option key={m.id} value={m.id}>{m.label}{m.recommended?' · consigliato':''}</option>)}</select></label>
-  <form className="key-form" onSubmit={e=>void saveKey(e)}><label>Chiave API Gemini<input type="password" autoComplete="off" spellCheck={false} value={key} onChange={e=>setKey(e.target.value)} placeholder={hasKey?'Chiave presente · inseriscine una nuova per sostituirla':'Incolla la chiave'}/></label><button className="secondary" type="submit" disabled={!key.trim()}><KeyRound size={16}/>{session?'Usa per questa sessione':'Salva nel portachiavi'}</button></form>
-  <p className="key-scope">{hasKey===null?'Controllo la chiave…':hasKey?(session?'Chiave presente solo in memoria: sarà dimenticata alla chiusura o al ricaricamento della pagina.':'Chiave presente nel portachiavi del sistema operativo.'):'Nessuna chiave configurata.'}{session&&' Nel browser la chiave non viene mai salvata su disco.'}</p>
+  <form className="key-form" autoComplete={session?'on':'off'} onSubmit={e=>void saveKey(e)}>{session&&<input className="sr-only" type="text" name="username" autoComplete="username" value={passwordManagerAccount} readOnly tabIndex={-1} aria-hidden="true"/>}<label>Chiave API Gemini<input type="password" name="gemini-api-key" autoComplete={session?'current-password':'off'} spellCheck={false} value={key} onChange={e=>setKey(e.target.value)} placeholder={hasKey?'Chiave presente · inseriscine una nuova per sostituirla':'Incolla la chiave'}/></label><button className="secondary" type="submit" disabled={!key.trim()}><KeyRound size={16}/>{session?'Usa per questa sessione':'Salva nel portachiavi'}</button></form>
+  {session&&passwordManagerAvailable()&&<button className="text-button" onClick={()=>void recallKey()}><KeyRound size={15}/>Usa la chiave salvata nel browser</button>}
+  <p className="key-scope">{hasKey===null?'Controllo la chiave…':hasKey?(session?'Chiave presente solo in memoria: sarà dimenticata alla chiusura o al ricaricamento della pagina.':'Chiave presente nel portachiavi del sistema operativo.'):'Nessuna chiave configurata.'}{session&&' L’app non salva mai la chiave: se vuoi, la può ricordare il gestore delle password del browser.'}</p>
   <div className="button-row"><button className="secondary" disabled={!hasKey||status.kind==='busy'} onClick={()=>void test()}><PlugZap size={16}/>Verifica connessione</button><button className="text-button danger" onClick={()=>void remove()}><Trash2 size={15}/>Elimina chiave e configurazione</button></div>
   {status.text&&<p role="status" className={'assist-status '+status.kind}>{status.text}</p>}
   <h3>Che cosa viene inviato a Google</h3>

@@ -45,6 +45,8 @@ export interface LlmProvider {
  readonly id: string;
  readonly label: string;
  readonly models: LlmModel[];
+ // How long a request may run before it fails with 'timeout'.
+ readonly timeoutMs: number;
  testConnection(model: string, signal?: AbortSignal): Promise<void>;
  generate(model: string, request: GenerateRequest, signal?: AbortSignal): Promise<GenerateResult>;
 }

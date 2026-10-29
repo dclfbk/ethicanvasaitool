@@ -28,7 +28,9 @@
  */
 
 import {describe,expect,it} from 'vitest';
-import {applyProposal,buildContext,buildRequest,defaultSelection,parseAssistResult,proposalText} from './assistant';
+import {applyProposal,buildContext,buildRequest,defaultSelection,italianSpelling,parseAssistResult,proposalText,systemInstruction} from './assistant';
+import {knowledgeSystemInstruction} from './knowledge';
+import {reportSystemInstruction} from './report';
 import type {GenerateRequest,LlmProvider} from './llm/provider';
 import {LlmError} from './llm/provider';
 import {createProject,evaluate,questions,type Answer,type Project} from './model';
@@ -43,9 +45,13 @@ function sample(name:string,secret:string):Project{
  return p;
 }
 // Simulated provider: records what it receives and answers with a fixed JSON payload.
-function mockProvider(reply:object|Error){const calls:GenerateRequest[]=[];const provider:LlmProvider={id:'mock',label:'Mock',models:[{id:'mock-1',label:'Mock'}],async testConnection(){},async generate(model,request){calls.push(request);if(reply instanceof Error)throw reply;return {text:JSON.stringify(reply),model};}};return {provider,calls};}
+function mockProvider(reply:object|Error){const calls:GenerateRequest[]=[];const provider:LlmProvider={id:'mock',label:'Mock',models:[{id:'mock-1',label:'Mock'}],timeoutMs:1000,async testConnection(){},async generate(model,request){calls.push(request);if(reply instanceof Error)throw reply;return {text:JSON.stringify(reply),model};}};return {provider,calls};}
 
 describe('Assistant context',()=>{
+ it('asks every prompt for correct Italian accents and apostrophes',()=>{
+  for(const s of [systemInstruction,reportSystemInstruction,knowledgeSystemInstruction])expect(s).toContain(italianSpelling);
+  expect(italianSpelling).toContain('à, è, é, ì, ò, ù');
+ });
  it('sends only the question and the items the user selected',()=>{
   const p=sample('A','alpha');const question=q('sources');
   const minimal=buildContext(p,question,{description:false,currentAnswer:false,answerIds:[],referenceIds:[]});

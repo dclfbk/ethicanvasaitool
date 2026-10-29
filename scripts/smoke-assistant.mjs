@@ -52,7 +52,7 @@ try{
  await context.route('https://generativelanguage.googleapis.com/**',async route=>{
   const r=route.request();if(r.method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
   seen.push({url:r.url(),headers:r.headers(),body:r.postData()});
-  if(r.url().endsWith('/models/gemini-3.8-flash'))return route.fulfill({status:200,headers:cors,contentType:'application/json',body:'{"name":"models/gemini-3.8-flash"}'});
+  if(r.url().endsWith('/models/gemini-3.6-flash'))return route.fulfill({status:200,headers:cors,contentType:'application/json',body:'{"name":"models/gemini-3.6-flash"}'});
   if(mode==='slow'){await new Promise(x=>setTimeout(x,2500));}
   if(mode==='quota')return route.fulfill({status:429,headers:cors,contentType:'application/json',body:JSON.stringify({error:{code:'quota_exceeded',message:'daily quota'}})});
   if(mode==='badkey')return route.fulfill({status:400,headers:cors,contentType:'application/json',body:JSON.stringify([{error:{code:400,details:[{reason:'API_KEY_INVALID'}]}}])});
@@ -70,6 +70,7 @@ try{
  await page.getByRole('button',{name:'Metodo e impostazioni'}).click();
  await page.getByLabel('Attiva l’assistente durante la compilazione').check();
  await page.getByLabel('Chiave API Gemini').fill(KEY);
+ assert.equal(await page.getByLabel('Chiave API Gemini').getAttribute('autocomplete'),'current-password','the browser password manager may offer to remember the key');
  await page.getByRole('button',{name:'Usa per questa sessione'}).click();
  await page.getByText('Chiave presente solo in memoria',{exact:false}).waitFor();
  await page.getByRole('button',{name:'Verifica connessione'}).click();
@@ -126,11 +127,11 @@ try{
  await page.getByRole('button',{name:'Aggiungi in coda come bozza'}).click();
  assert.equal(await page.locator('#answer').inputValue(),'Testo scritto a mano\n\nBozza proposta, rivista dall’utente.');
  assert.equal(await page.getByLabel('Stato della risposta').inputValue(),'draft');
- await page.getByText('Contiene testo proposto da gemini-3.8-flash',{exact:false}).waitFor();
+ await page.getByText('Contiene testo proposto da gemini-3.6-flash',{exact:false}).waitFor();
 
  // What actually went to the simulated Google endpoint.
  const last=JSON.parse(posts.at(-1).body);
- assert.equal(last.store,false);assert.equal(last.model,'gemini-3.8-flash');
+ assert.equal(last.store,false);assert.equal(last.model,'gemini-3.6-flash');
  assert.ok(!posts.at(-1).body.includes('base64'),'attachments are never sent as files');
  for(const s of seen){assert.ok(!s.url.includes(KEY));assert.equal(s.headers['x-goog-api-key'],KEY);}
 

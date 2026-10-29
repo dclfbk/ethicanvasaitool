@@ -28,9 +28,10 @@
  */
 
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {ArrowUpRight,FilePlus2,Library,Send,Square} from 'lucide-react';
+import {ArrowUpRight,FilePlus2,Library,Send} from 'lucide-react';
 import type {AssistantSettings} from './assistantSettings';
 import {buildKnowledgeContext,buildKnowledgeRequest,defaultCaseIds,knowledgeBase,knowledgeTooLarge,parseKnowledgeResult,prefillAnswers,prefillExcluded,prefillTargets,proposedDraft,rankCases,scenarioText,type KnowledgeResult,type Scenario} from './knowledge';
+import {AssistantWaiting} from './AssistantWaiting';
 import type {LlmRuntime} from './llm';
 import {LlmError} from './llm/provider';
 import {addVersion} from './history';
@@ -112,7 +113,7 @@ export default function KnowledgePanel({projects,settings,runtime,onCreate,onUpd
     {tooLarge&&<p className="assist-status error">Il contesto supera {maxContextChars.toLocaleString('it-IT')} caratteri. Deseleziona qualche caso o accorcia lo scenario.</p>}
     <p className="notice">Saranno inviati {runtime.texts.destination(runtime.model)} lo scenario e i {cases.length} casi selezionati: nomi, enti, descrizioni e risposte. Allegati, note e nomi delle persone non vengono inviati. I casi possono contenere informazioni di altri uffici: invia solo ciò che puoi condividere.</p>
     {runtime.requiresKey&&hasKey===false?<div className="button-row"><span>Manca la chiave API.</span><button className="secondary" onClick={onOpenSettings}>{runtime.texts.configure}</button></div>
-    :phase.name==='loading'?<div aria-busy="true"><p role="status" className="assist-status busy">{runtime.texts.busy} confrontando i casi…</p><button className="secondary" onClick={()=>controller.current?.abort()}><Square size={14}/>Annulla richiesta</button></div>
+    :phase.name==='loading'?<AssistantWaiting runtime={runtime} activity="confrontando i casi" onCancel={()=>controller.current?.abort()}/>
     :<button className="primary" disabled={!canSend} onClick={()=>void send()}><Send size={16}/>{runtime.texts.analyze}</button>}
     {phase.name==='error'&&<p role="alert" className="assist-status error">{phase.message}</p>}
    </>}

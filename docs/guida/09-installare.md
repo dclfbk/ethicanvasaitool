@@ -7,7 +7,7 @@ Questo capitolo è per chi installa l’applicazione per l’ente o la gestisce:
 | | Web | Desktop |
 |---|---|---|
 | Dove sono i dati | nel browser (IndexedDB), legati al sito e al profilo | in un database SQLite locale |
-| Chiave Gemini | solo in memoria, per la scheda aperta | nel portachiavi del sistema operativo |
+| Chiave Gemini | in memoria, per la scheda aperta; se l’utente lo sceglie, nel gestore delle password del browser | nel portachiavi del sistema operativo |
 | Accesso al drive | token in memoria, da ripetere a ogni sessione | refresh token nel portachiavi |
 | Chiamate esterne | dal browser, direttamente ai servizi | dal processo Rust, verso endpoint fissi |
 | Aggiornamenti | li pubblica chi gestisce il sito | automatici, con firma verificata |
