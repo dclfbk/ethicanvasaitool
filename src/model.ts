@@ -28,7 +28,8 @@
  */
 
 import { questions, questionnaireVersion } from './questionnaire';
-import { checklistIds } from './regulatoryChecklist';
+import type { RegulatoryValue } from './regulatoryChecklist';
+export type { RegulatoryValue } from './regulatoryChecklist';
 export { sections, questions, questionnaireVersion, type Section, type Question, type Profile } from './questionnaire';
 export type AnswerState = 'draft' | 'answered' | 'waiting' | 'na';
 export type AssistAction = 'explain' | 'draft' | 'gaps';
@@ -50,8 +51,8 @@ export type ReviewTrigger = 'model' | 'data' | 'purpose' | 'incident' | 'regulat
 export interface ReviewPlan { nextAt: string; owner: string; triggers: ReviewTrigger[]; note: string; }
 // Regulatory framing filled in by a legal expert on the checklist in regulatoryChecklist.ts. The application
 // never derives a category from it; conclusions are the expert's own words, registered with role and date.
-export type RegulatoryValue = 'yes' | 'no' | 'unsure' | 'na';
-export interface RegulatoryAnswer { value: RegulatoryValue; note: string; }
+// An empty value means the item is not examined yet, so a note can be written before choosing an answer.
+export interface RegulatoryAnswer { value: RegulatoryValue | ''; note: string; }
 export interface RegulatoryExpert { role: string; name: string; at: string; }
 export interface RegulatoryAssessment { checklist: string; answers: Record<string, RegulatoryAnswer>; conclusions: string; sources: string; updatedAt: string; expert?: RegulatoryExpert; }
 export interface Project { id: string; name: string; description: string; organization: string; createdAt: string; updatedAt: string; paused: boolean; demo: boolean; currentQuestion: number; questionnaireVersion: string; answers: Record<string, Answer>; references: Reference[]; versions?: ProjectVersion[]; reviews?: Review[]; reviewPlan?: ReviewPlan; regulatory?: RegulatoryAssessment; }
@@ -75,7 +76,8 @@ function validSnapshot(s:ProjectSnapshot){return !!s&&typeof s==='object'&&strin
 function validRegulatory(r:RegulatoryAssessment|undefined){
  if(r===undefined)return true;
  return !!r&&typeof r==='object'&&strings(r,['checklist','conclusions','sources','updatedAt'])&&!!r.answers&&typeof r.answers==='object'&&!Array.isArray(r.answers)
-  &&Object.entries(r.answers).every(([id,a])=>checklistIds.has(id)&&!!a&&['yes','no','unsure','na'].includes(a.value)&&typeof a.note==='string')
+  // Ids missing from the current checklist are kept, so a revised checklist never makes older archives unreadable.
+  &&Object.values(r.answers).every(a=>!!a&&['','yes','no','unsure','na'].includes(a.value)&&typeof a.note==='string')
   &&(r.expert===undefined||!!r.expert&&strings(r.expert,['role','name','at'])&&!!r.expert.role.trim());
 }
 function validHistory(p:Project){
@@ -89,7 +91,8 @@ function validProvenance(v: unknown) { const x=v as AiProvenance; return !!x&&ty
 // Backup format 1 predates AI provenance and reference excerpts; both fields are optional, so version 1 projects are valid as they are.
 // Format 3 adds the 'prefill' provenance action and its optional basedOn list, which format 2 readers would reject.
 // Format 4 adds versions, reviews and the review plan. Format 5 adds the regulatory framing checklist.
-export const backupFormatVersion = 5;
+// Format 6 allows checklist items that are not examined yet (empty value), which format 5 readers would reject.
+export const backupFormatVersion = 6;
 const answerKeys = ['value','state','note','person','request','updatedAt','aiProvenance'] as const;
 const referenceKeys = ['id','questionId','kind','title','url','note','fileName','mime','data','excerpt'] as const;
 const provenanceKeys = ['provider','model','action','mode','at','basedOn'] as const;
@@ -115,6 +118,6 @@ export function migrateProject(p: Project): Project { return portableProject(p);
 export function createBackup(projects: Project[], exportedAt = new Date().toISOString()) { return {format:'canvas-pa',version:backupFormatVersion,exportedAt,projects:projects.map(portableProject)}; }
 export function readBackup(value: unknown): Project[] | null {
  const v = value as {format?: unknown; version?: unknown; projects?: unknown};
- if (!v || v.format !== 'canvas-pa' || ![1, 2, 3, 4, 5].includes(v.version as number) || !Array.isArray(v.projects) || !v.projects.every(validateProject)) return null;
+ if (!v || v.format !== 'canvas-pa' || ![1, 2, 3, 4, 5, 6].includes(v.version as number) || !Array.isArray(v.projects) || !v.projects.every(validateProject)) return null;
  return (v.projects as Project[]).map(migrateProject);
 }

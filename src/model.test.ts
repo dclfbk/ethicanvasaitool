@@ -54,7 +54,7 @@ describe('Backup compatibility',()=>{
  });
  it('round-trips excerpts and AI provenance in version 2',()=>{
   const p=legacy();p.references[0].excerpt='Art. 3 comma 1';p.answers.purpose.aiProvenance=[{provider:'gemini',model:'gemini-3.8-flash',action:'draft',mode:'append',at:'2026-10-26T10:00:00.000Z'}];
-  const backup=JSON.parse(JSON.stringify(createBackup([p])));expect(backup.version).toBe(5);
+  const backup=JSON.parse(JSON.stringify(createBackup([p])));expect(backup.version).toBe(6);
   expect(readBackup(backup)).toEqual([p]);
  });
  it('round-trips prefill provenance with the cases it was based on in version 3',()=>{
@@ -64,7 +64,7 @@ describe('Backup compatibility',()=>{
  });
  it('rejects unknown versions and malformed provenance',()=>{
   const p=legacy();
-  expect(readBackup({format:'canvas-pa',version:6,projects:[p]})).toBeNull();
+  expect(readBackup({format:'canvas-pa',version:7,projects:[p]})).toBeNull();
   expect(validateProject({...p,answers:{purpose:{...p.answers.purpose,aiProvenance:[{provider:'gemini'}]}}})).toBe(false);
  });
  it('never writes credentials or unknown fields into backups or settings',async()=>{

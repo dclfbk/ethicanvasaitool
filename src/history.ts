@@ -36,7 +36,9 @@ export function snapshotOf(p: Project): ProjectSnapshot {
  return {name: p.name, description: p.description, organization: p.organization, answers: portableAnswers(p.answers), references: p.references.map(({data: _attachment, ...r}) => r), ...(p.regulatory?{regulatory:portableRegulatory(p.regulatory)}:{})};
 }
 // Snapshots are read like projects, for example to compute the completeness of an old version.
-export const asProject = (p: Project, s: ProjectSnapshot): Project => ({...p, name: s.name, description: s.description, organization: s.organization, answers: s.answers, references: s.references, ...(s.regulatory?{regulatory:s.regulatory}:{})});
+// A snapshot without regulatory framing predates it, so the current framing is not carried over.
+const withRegulatory = <T extends Project>({regulatory: _current, ...p}: T, s: ProjectSnapshot): Project => ({...p, ...(s.regulatory ? {regulatory: s.regulatory} : {})});
+export const asProject = (p: Project, s: ProjectSnapshot): Project => withRegulatory({...p, name: s.name, description: s.description, organization: s.organization, answers: s.answers, references: s.references}, s);
 
 export function addVersion(p: Project, v: {label: string; reason: VersionReason; note?: string}, now = new Date().toISOString()): {project: Project; version: ProjectVersion} {
  const version: ProjectVersion = {id: crypto.randomUUID(), label: v.label.trim(), reason: v.reason, note: (v.note ?? '').trim(), createdAt: now, snapshot: snapshotOf(p)};
@@ -58,8 +60,8 @@ export function restoreVersion(p: Project, versionId: string, label: string, now
  const {project} = addVersion(p, {label, reason: 'restore'}, now);
  const files = new Map(p.references.filter(r => r.data).map(r => [r.id, r.data]));
  const s = target.snapshot;
- return {...project, name: s.name, description: s.description, organization: s.organization, updatedAt: now, answers: portableAnswers(s.answers), ...(s.regulatory?{regulatory:s.regulatory}:{}),
-  references: s.references.map(r => files.has(r.id) ? {...r, data: files.get(r.id)} : r)};
+ return withRegulatory({...project, name: s.name, description: s.description, organization: s.organization, updatedAt: now, answers: portableAnswers(s.answers),
+  references: s.references.map(r => files.has(r.id) ? {...r, data: files.get(r.id)} : r)}, s);
 }
 
 export const lastReview = (p: Project) => (p.reviews ?? []).reduce<Review | undefined>((last, r) => !last || r.at > last.at ? r : last, undefined);

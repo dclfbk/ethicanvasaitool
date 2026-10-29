@@ -150,7 +150,7 @@ try{
  await page.getByRole('button',{name:'Archivio progetti'}).click();
  const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Esporta una copia'}).click();
  const backup=await readFile(await (await downloadPromise).path(),'utf8');
- assert.ok(!backup.includes(KEY));assert.equal(JSON.parse(backup).version,5);
+ assert.ok(!backup.includes(KEY));assert.equal(JSON.parse(backup).version,6);
  assert.ok(!consoleText.join('\n').includes(KEY));
 
  // Reload forgets the session key; the app keeps working without it.

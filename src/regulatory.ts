@@ -28,8 +28,8 @@
  */
 
 import { addVersion } from './history';
-import type { Project, RegulatoryAnswer, RegulatoryAssessment, RegulatoryValue } from './model';
-import { checklist, checklistVersion, groups, type ChecklistItem, type RegulatoryGroup } from './regulatoryChecklist';
+import type { Project, RegulatoryAnswer, RegulatoryAssessment } from './model';
+import { checklist, checklistIds, checklistVersion, groups, type ChecklistItem, type RegulatoryGroup } from './regulatoryChecklist';
 
 // Logic of the regulatory framing. Points for the expert are listed, never turned into a classification;
 // registering records who wrote the conclusions and when, and saves a version of the project.
@@ -37,21 +37,25 @@ import { checklist, checklistVersion, groups, type ChecklistItem, type Regulator
 export const emptyAssessment = (now: string): RegulatoryAssessment => ({checklist: checklistVersion, answers: {}, conclusions: '', sources: '', updatedAt: now});
 export const assessmentOf = (p: Project, now = new Date().toISOString()) => p.regulatory ?? emptyAssessment(now);
 
+// A note alone never chooses an answer; an item with neither answer nor note is removed.
 export function setAnswer(p: Project, id: string, patch: Partial<RegulatoryAnswer>, now = new Date().toISOString()): Project {
- const r = assessmentOf(p, now), current = r.answers[id] ?? {value: 'unsure' as RegulatoryValue, note: ''};
- return {...p, regulatory: {...r, answers: {...r.answers, [id]: {...current, ...patch}}, updatedAt: now}};
+ const r = assessmentOf(p, now), next: RegulatoryAnswer = {...(r.answers[id] ?? {value: '', note: ''}), ...patch};
+ const {[id]: _previous, ...others} = r.answers;
+ return {...p, regulatory: {...r, answers: next.value || next.note ? {...others, [id]: next} : others, updatedAt: now}};
 }
 export function setText(p: Project, patch: Partial<Pick<RegulatoryAssessment, 'conclusions' | 'sources'>>, now = new Date().toISOString()): Project {
  return {...p, regulatory: {...assessmentOf(p, now), ...patch, updatedAt: now}};
 }
 
-export interface RegulatoryStatus { answered: number; total: number; points: {item: ChecklistItem; answer: RegulatoryAnswer}[]; byGroup: Record<RegulatoryGroup, {answered: number; total: number}>; registered: boolean; changedAfter: boolean; }
+// obsolete: answers to items that are no longer in the checklist, kept for the expert to read.
+export interface RegulatoryStatus { answered: number; total: number; points: {item: ChecklistItem; answer: RegulatoryAnswer}[]; byGroup: Record<RegulatoryGroup, {answered: number; total: number}>; obsolete: {id: string; answer: RegulatoryAnswer}[]; registered: boolean; changedAfter: boolean; }
 export function regulatoryStatus(p: Project): RegulatoryStatus {
- const r = p.regulatory, answers = r?.answers ?? {};
- const byGroup = Object.fromEntries(groups.map(g => { const items = checklist.filter(i => i.group === g.id); return [g.id, {answered: items.filter(i => answers[i.id]).length, total: items.length}]; })) as RegulatoryStatus['byGroup'];
+ const r = p.regulatory, answers = r?.answers ?? {}, examined = (i: ChecklistItem) => !!answers[i.id]?.value;
+ const byGroup = Object.fromEntries(groups.map(g => { const items = checklist.filter(i => i.group === g.id); return [g.id, {answered: items.filter(examined).length, total: items.length}]; })) as RegulatoryStatus['byGroup'];
  return {
-  answered: checklist.filter(i => answers[i.id]).length, total: checklist.length, byGroup,
-  points: checklist.flatMap(item => { const answer = answers[item.id]; return answer && item.attention.includes(answer.value) ? [{item, answer}] : []; }),
+  answered: checklist.filter(examined).length, total: checklist.length, byGroup,
+  points: checklist.flatMap(item => { const answer = answers[item.id]; return answer?.value && item.attention.includes(answer.value) ? [{item, answer}] : []; }),
+  obsolete: Object.entries(answers).filter(([id]) => !checklistIds.has(id)).map(([id, answer]) => ({id, answer})),
   registered: !!r?.expert, changedAfter: !!r?.expert && r.updatedAt > r.expert.at,
  };
 }

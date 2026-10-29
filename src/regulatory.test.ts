@@ -28,7 +28,7 @@
  */
 
 import {describe,expect,it} from 'vitest';
-import {restoreVersion} from './history';
+import {addVersion,restoreVersion} from './history';
 import {createBackup,createProject,evaluate,readBackup,validateProject} from './model';
 import {conclusionsToAnswer,registerExpert,regulatoryStatus,setAnswer,setText} from './regulatory';
 import {buildReportBlocks,regulatoryAssessmentLines} from './report';
@@ -83,5 +83,39 @@ describe('Regulatory framing',()=>{
   expect(conclusionsToAnswer(existing,'append','Conclusioni esperto').answers.risk?.value).toBe('Testo già presente.\n\nConclusioni esperto\nConclusione.\nFonte.');
   expect(conclusionsToAnswer(existing,'replace','Conclusioni esperto').answers.risk?.value).toBe('Conclusioni esperto\nConclusione.\nFonte.');
   expect(()=>conclusionsToAnswer(existing,'insert','Conclusioni esperto')).toThrow('answer-exists');
+ });
+ it('keeps a note without choosing an answer and lets an item go back to not examined',()=>{
+  let project=createProject('Progetto di prova','','');
+  project=setAnswer(project,'public-benefits',{note:'Chiedere all’ufficio'});
+  expect(project.regulatory?.answers['public-benefits']).toEqual({value:'',note:'Chiedere all’ufficio'});
+  expect(regulatoryStatus(project)).toMatchObject({answered:0,points:[]});
+  expect(regulatoryAssessmentLines(project).some(line=>line.includes('Da esaminare · Chiedere all’ufficio'))).toBe(true);
+  project=setAnswer(project,'public-benefits',{value:'unsure'});
+  expect(regulatoryStatus(project).answered).toBe(1);
+  project=setAnswer(project,'public-benefits',{value:''});
+  expect(regulatoryStatus(project).answered).toBe(0);
+  project=setAnswer(project,'public-benefits',{note:''});
+  expect(project.regulatory?.answers).toEqual({});
+  const backup=JSON.parse(JSON.stringify(createBackup([setAnswer(project,'ai-system',{note:'Nota'})])));
+  expect(backup.version).toBe(6);expect(readBackup(backup)?.[0].regulatory?.answers['ai-system'].value).toBe('');
+ });
+
+ it('reads answers to items removed from the checklist and lists them apart',()=>{
+  const project=setAnswer(createProject('Progetto di prova','',''),'removed-item',{value:'yes',note:'Valutato in precedenza'});
+  const imported=readBackup(JSON.parse(JSON.stringify({...createBackup([project]),version:5})));
+  expect(imported).toEqual([project]);
+  const status=regulatoryStatus(project);
+  expect(status.answered).toBe(0);expect(status.obsolete.map(o=>o.id)).toEqual(['removed-item']);
+  expect(regulatoryAssessmentLines(project)).toContain('- Voce non più presente nella checklist (removed-item) — Sì · Valutato in precedenza');
+  expect(JSON.stringify(buildReportBlocks(project,null,{includeAnswers:false}))).toContain('Voci non più presenti');
+  expect(validateProject({...project,regulatory:{...project.regulatory!,answers:{'removed-item':{value:'maybe',note:''}}}})).toBe(false);
+ });
+
+ it('restores a version saved before the checklist without the current framing',()=>{
+  const before=addVersion(createProject('Progetto di prova','',''),{label:'Prima',reason:'milestone'},'2026-10-28T09:00:00.000Z');
+  const project=setAnswer(before.project,'ai-system',{value:'yes'},'2026-10-28T10:00:00.000Z');
+  const restored=restoreVersion(project,before.version.id,'Ripristino','2026-10-28T11:00:00.000Z');
+  expect(restored.regulatory).toBeUndefined();
+  expect(restored.versions?.at(-1)?.snapshot.regulatory?.answers['ai-system'].value).toBe('yes');
  });
 });

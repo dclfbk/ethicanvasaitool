@@ -31,9 +31,9 @@ import {useState} from 'react';
 import {ArrowRight,ShieldCheck} from 'lucide-react';
 import {checklist,checklistValidated,groups} from './regulatoryChecklist';
 import {assessmentOf,conclusionsToAnswer,registerExpert,regulatoryStatus,setAnswer,setText} from './regulatory';
-import type {Project,RegulatoryValue} from './model';
+import type {Project,RegulatoryAnswer,RegulatoryValue} from './model';
 
-const valueLabels:Record<RegulatoryValue,string>={yes:'Sì',no:'No',unsure:'Da verificare',na:'Non pertinente'};
+const valueLabels:Record<RegulatoryAnswer['value'],string>={'':'Da esaminare',yes:'Sì',no:'No',unsure:'Da verificare',na:'Non pertinente'};
 
 export default function RegulatoryPanel({project,onUpdate,onError}:{project:Project;onUpdate:(project:Project)=>void;onError:(message:string)=>void}){
  const assessment=assessmentOf(project),status=regulatoryStatus(project),[role,setRole]=useState(assessment.expert?.role??''),[name,setName]=useState(assessment.expert?.name??'');
@@ -69,7 +69,7 @@ export default function RegulatoryPanel({project,onUpdate,onError}:{project:Proj
       <legend>{item.text}</legend>
       <small>{item.reference}</small>
       {item.hint&&<p className="muted">{item.hint}</p>}
-      <label>Risposta<select aria-label={'Risposta: '+item.text} value={answer?.value??''} onChange={e=>{const value=e.target.value;if(value)editAnswer(item.id,{value:value as RegulatoryValue});}}>
+      <label>Risposta<select aria-label={'Risposta: '+item.text} value={answer?.value??''} onChange={e=>editAnswer(item.id,{value:e.target.value as RegulatoryValue|''})}>
        <option value="">Da esaminare</option><option value="yes">Sì</option><option value="no">No</option><option value="unsure">Da verificare</option><option value="na">Non pertinente</option>
       </select></label>
       <label>Nota per l’esperto<textarea aria-label={'Nota: '+item.text} value={answer?.note??''} onChange={e=>editAnswer(item.id,{note:e.target.value})} rows={2}/></label>
@@ -77,6 +77,7 @@ export default function RegulatoryPanel({project,onUpdate,onError}:{project:Proj
     })}
    </section>;
   })}
+  {status.obsolete.length>0&&<section className="panel"><h2>Voci non più presenti nella checklist</h2><p>Risposte date a una versione precedente della checklist. Restano qui per l’esperto e non sono contate tra i punti esaminati.</p><ul>{status.obsolete.map(({id,answer})=><li key={id}><b>{id}</b> — {valueLabels[answer.value]}{answer.note?' · '+answer.note:''}</li>)}</ul></section>}
   <section className="panel">
    <h2>Conclusioni dell’esperto</h2>
    <p>Registra il ragionamento e le fonti che sostengono l’inquadramento. L’app conserva le conclusioni così come le scrivi, senza trasformarle in una classificazione.</p>

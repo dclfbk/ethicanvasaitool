@@ -43,12 +43,14 @@ Dentro il progetto premi «Inquadramento normativo». La checklist raccoglie tem
 
 ![La checklist di supporto all’inquadramento normativo](img/inquadramento-normativo.png)
 
-1. Per ogni punto seleziona «Sì», «No», «Da verificare» o «Non pertinente» e annota i dubbi per l’esperto.
+1. Per ogni punto seleziona «Sì», «No», «Da verificare» o «Non pertinente» e annota i dubbi per l’esperto. Puoi scrivere una nota anche prima di scegliere: il punto resta «Da esaminare» e non viene contato. Per annullare una risposta torna a «Da esaminare».
 2. Scrivi le conclusioni e le fonti che le sostengono.
 3. Indica il «Ruolo dell’esperto legale» e premi «Registra l’inquadramento». Il nome è facoltativo. La registrazione salva una versione e indica chi ha scritto le conclusioni e quando.
 4. Se in seguito modifichi la checklist o le conclusioni, l’app segnala che l’inquadramento va riesaminato.
 
 La checklist è una bozza: i contenuti e i riferimenti devono essere verificati da un esperto legale prima dell’uso. «Punti da approfondire» segnala temi per la revisione, non risultati automatici. Puoi riportare le conclusioni nella risposta del canvas solo come bozza: scegli se inserirle, aggiungerle al testo esistente o sostituirlo.
+
+Se una nuova versione della checklist toglie un punto a cui avevi già risposto, la risposta non va persa: compare in «Voci non più presenti nella checklist» e nel rapporto, ma non viene più contata. Ripristinando una versione salvata prima di compilare la checklist, il progetto torna senza inquadramento; quello attuale resta nella versione salvata in automatico prima del ripristino.
 
 ## Confrontare due versioni
 
