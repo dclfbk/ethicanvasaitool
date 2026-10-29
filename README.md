@@ -2,8 +2,6 @@
 
 Applicazione React + TypeScript con archivio locale e contenitore Tauri 2. L'assistente Gemini è facoltativo: senza configurarlo l'applicazione funziona interamente in locale.
 
-> **Versione alpha — instabile.** Questa versione è in prova, può contenere errori, perdere dati o cambiare senza preavviso. Non usarla per attività operative né con dati reali, personali o riservati. Esporta copie di sicurezza dei progetti che vuoi conservare.
-
 ## Guida
 
 La guida per chi compila, chi coordina e chi installa è in [docs/guida](docs/guida/00-indice.md) ed è consultabile anche nell'app, dalla voce **Guida** del menu, senza connessione. Il testo è scritto in Markdown, che l'app legge al momento della build con un piccolo lettore interno ([src/guideMarkdown.ts](src/guideMarkdown.ts)), senza HTML dal testo. I link `#app-…` aprono le funzioni dell'app.

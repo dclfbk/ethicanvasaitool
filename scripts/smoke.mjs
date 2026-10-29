@@ -43,7 +43,7 @@ try{
  page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url())&&!r.url().includes('127.0.0.1'))external.push(r.url());});
  await page.goto('http://127.0.0.1:'+server.address().port);
  await page.getByRole('heading',{name:'I tuoi progetti AI.'}).waitFor();
- await page.getByText('VERSIONE ALPHA — INSTABILE.',{exact:false}).waitFor();
+ assert.equal(await page.getByText('VERSIONE ALPHA',{exact:false}).count(),0,'the stable version has no alpha banner');
  await page.getByRole('button',{name:'Nuovo progetto',exact:true}).click();
  await page.getByLabel('Nome del progetto').fill('Sportello AI di prova');
  await page.getByLabel('Ente o organizzazione').fill('Pubblica Amministrazione di prova');

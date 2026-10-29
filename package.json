@@ -1,7 +1,7 @@
 {
   "name": "ethicanvasaitool",
   "private": true,
-  "version": "0.3.0-alpha.4",
+  "version": "0.3.0",
   "description": "Local archive and AI Ethics Canvas journey for public administrations",
   "author": "Maurizio Napolitano <napo@fbk.eu>",
   "license": "AGPL-3.0-or-later",
