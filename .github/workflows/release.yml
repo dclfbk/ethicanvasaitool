@@ -26,23 +26,61 @@
 # source code to users who interact with the software over a network.
 #
 
-# Builds the desktop packages for Linux, Windows and macOS (one universal app for Apple silicon and Intel).
-# Push a tag such as v0.2.0, or start it by hand from the Actions tab:
-# the packages are attached to a draft release to review before publishing.
+# Builds the desktop packages for Linux, Windows and macOS (one universal app for Apple silicon and Intel) and
+# publishes the release on its own: when the version in src-tauri/tauri.conf.json reaches main and the release
+# v<version> does not exist yet, the packages are built into a draft that is published once every platform succeeded.
+# Versions with a suffix (0.3.0-alpha.5) become pre-releases, which the app does not offer as updates; plain versions
+# are published as stable releases and reach every installed copy. A tag pushed by hand must match the version.
+# Started by hand from the Actions tab, it builds test packages into a draft pre-release that is not published.
 # Alpha versions omit RPM and MSI because those formats reject SemVer prereleases.
 # macOS packages are signed and notarised only when the Apple secrets below are set; otherwise they are built unsigned.
 name: Desktop release
 
 on:
   push:
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      release: ${{ steps.check.outputs.release }}
+      publish: ${{ steps.check.outputs.publish }}
+      tag: ${{ steps.check.outputs.tag }}
+      prerelease: ${{ steps.check.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decide whether this version needs a release
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          tag="v$version" release=true publish=true
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            tag="v$version-build.$GITHUB_RUN_NUMBER" publish=false
+          elif [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "$tag" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match version $version in src-tauri/tauri.conf.json"; exit 1
+          elif [ "$(gh release view "$tag" --json isDraft -q .isDraft 2>/dev/null)" = false ]; then
+            # Already published: nothing to do. A draft left by a failed build is built again and published.
+            echo "Release $tag is already published: nothing to build."; release=false
+          fi
+          case "$tag" in *-*) prerelease=true ;; *) prerelease=false ;; esac
+          echo "Version $version, tag $tag, release $release, publish $publish, prerelease $prerelease"
+          { echo "release=$release"; echo "publish=$publish"; echo "tag=$tag"; echo "prerelease=$prerelease"; } >> "$GITHUB_OUTPUT"
+
   build:
+    needs: version
+    if: needs.version.outputs.release == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -116,11 +154,24 @@ jobs:
             ${{ matrix.args }}
             --config src-tauri/tauri.release.conf.json
             ${{ steps.package-version.outputs.is_prerelease == 'true' && format('--bundles {0}', matrix.alpha_bundles) || '' }}
-          tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}-build', github.run_number) }}
-          releaseName: EthiCanvasAI ${{ github.ref_type == 'tag' && github.ref_name || format('build {0}', github.run_number) }}
+          # The release is created on the commit being built; the tag is created with it when missing.
+          tagName: ${{ needs.version.outputs.tag }}
+          releaseName: EthiCanvasAI ${{ needs.version.outputs.tag }}
           releaseBody: >-
             ${{ steps.package-version.outputs.is_prerelease == 'true' &&
             'Pre-release alpha: versione sperimentale e instabile, da usare solo per la revisione e non per attività operative o dati reali. Pacchetti: Linux (.deb, AppImage), Windows (.exe) e macOS (.dmg, universal); RPM e MSI sono esclusi per incompatibilità con le versioni prerelease. I pacchetti macOS sono firmati solo se sono configurati i secret Apple.' ||
             'Desktop packages for Linux (deb, rpm, AppImage), Windows (msi, exe) and macOS (universal dmg and app). Windows packages are not code-signed; macOS packages are signed and notarised only when the Apple secrets are configured. Updates are signed with the updater key.' }}
           releaseDraft: true
-          prerelease: ${{ github.ref_type != 'tag' || contains(github.ref_name, '-') }}
+          prerelease: ${{ needs.version.outputs.prerelease == 'true' }}
+
+  # Published only when every platform built, so an incomplete release never reaches users.
+  publish:
+    needs: [version, build]
+    if: needs.version.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.version.outputs.tag }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
