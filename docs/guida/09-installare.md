@@ -40,7 +40,7 @@ npm ci
 npm run tauri build
 ```
 
-Il workflow `.github/workflows/release.yml` produce i pacchetti Linux (deb, rpm, AppImage) e Windows (msi, exe) a ogni tag `v*`, in una release in bozza da controllare. I pacchetti non sono firmati con un certificato di codice: Windows SmartScreen mostra un avviso.
+Il workflow `.github/workflows/release.yml` produce i pacchetti Linux (deb, rpm, AppImage), Windows (msi, exe) e macOS (dmg, un’unica app per i Mac con processore Apple e Intel) a ogni tag `v*`, in una release in bozza da controllare. I pacchetti Windows non sono firmati con un certificato di codice: Windows SmartScreen mostra un avviso. I pacchetti macOS vengono firmati e notarizzati solo se l’ente ha un account Apple Developer e ne ha inserito i dati nei secret del repository (vedi il README); altrimenti macOS blocca l’app al primo avvio e va aperta con il tasto destro e il comando *Apri*.
 
 ### Aggiornamenti
 
