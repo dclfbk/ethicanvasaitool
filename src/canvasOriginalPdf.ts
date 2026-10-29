@@ -33,6 +33,7 @@ import { evaluate, questionnaireVersion, questions, sections, statusLabels, type
 import { pdfCanvasTemplate, pdfFonts, pdfLogos } from './pdfAssets';
 import { dateLabel, hex, ink, stateOf, truncate, Writer as TextWriter } from './pdfText';
 import { answerStateLabels, regulatoryNote, selfAssessmentNote } from './report';
+import { blue, canvasLicense as license, drawNote, grey, navy, white } from './canvasStyle';
 import { placements, templatePageCount, templatePages, withoutCell, type Box } from './canvasTemplate';
 
 // Canvas export on the pages of the original AI Ethics Canvas (A4 landscape, Canva template, CC BY-SA 4.0): the
@@ -41,11 +42,6 @@ import { placements, templatePageCount, templatePages, withoutCell, type Box } f
 // fit, and those without a cell, continue in final pages, followed by notes and references.
 // Positions and sizes are measured in points from the top-left corner.
 const W = 841.92, H = 595.5;
-const navy = hex('#23295d'), blue = hex('#489dd7'), grey = rgb(0.42, 0.43, 0.48), white = rgb(1, 1, 1);
-const profileHex: Record<Profile, string> = {scientist: '#7ed957', engineer: '#0cc0df', user: '#ffde59'};
-const mix = ['#f6d98b', '#b9fbf2'];
-const profileLabels: Record<Profile, string> = {scientist: 'AI scientist', engineer: 'AI engineer', user: 'AI user'};
-const license = 'Canvas AI Ethics © 2024 by Provincia Autonoma di Trento e Fondazione Bruno Kessler is licensed under CC BY-SA 4.0';
 const area = {left: 22, right: 820, top: 161, bottom: 574};
 
 interface Fonts extends Record<string, PDFFont> { regular: PDFFont; bold: PDFFont; italic: PDFFont; display: PDFFont; condensed: PDFFont; }
@@ -88,23 +84,7 @@ class Canvas {
   page.drawRectangle({x: 803, y: T(592), width: 34, height: 11, borderColor: ink, borderWidth: 0.8, color: white});
   this.centered(page, 'cc by-sa', 820, 589.2, fonts.bold, 5.6);
  }
- // Sticky note: one profile colour, or a left-to-right gradient for questions shared by several profiles.
- note(page: PDFPage, x: number, top: number, width: number, height: number, profiles: Profile[]) {
-  const stops = profiles.length === 1 ? [profileHex[profiles[0]], profileHex[profiles[0]]] : profiles.length === 2 ? profiles.map(p => profileHex[p]) : mix;
-  if (stops[0] === stops[1]) { page.drawRectangle({x, y: T(top + height), width, height, color: hex(stops[0])}); }
-  else {
-   const [a, b] = stops.map(hex), strips = 40, sw = width / strips;
-   for (let i = 0; i < strips; i++) { const t = i / (strips - 1); page.drawRectangle({x: x + i * sw, y: T(top + height), width: sw + 0.6, height, color: rgb(a.red + (b.red - a.red) * t, a.green + (b.green - a.green) * t, a.blue + (b.blue - a.blue) * t)}); }
-  }
-  // Shapes identify single profiles; notes shared by all three profiles have none, as in the original legend.
-  if (profiles.length < 3) profiles.forEach((p, i) => shape(page, p, x + width - 14 - i * 17, top + 14, 5.2, 2.1));
- }
-}
-
-function shape(page: PDFPage, p: Profile, cx: number, cy: number, r: number, stroke: number) {
- if (p === 'scientist') page.drawRectangle({x: cx - r, y: T(cy) - r, width: 2 * r, height: 2 * r, borderColor: ink, borderWidth: stroke});
- else if (p === 'engineer') page.drawCircle({x: cx, y: T(cy), size: r, borderColor: ink, borderWidth: stroke});
- else page.drawSvgPath(`M ${-r * 1.15} ${r * 0.9} L ${r * 1.15} ${r * 0.9} L 0 ${-r * 1.1} Z`, {x: cx, y: T(cy), borderColor: ink, borderWidth: stroke});
+ note(page: PDFPage, x: number, top: number, width: number, height: number, profiles: Profile[]) { drawNote(page, x, top, width, height, profiles); }
 }
 
 // Horizontal room kept free on both sides of a centred title for the profile shapes.
