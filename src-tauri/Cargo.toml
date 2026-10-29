@@ -1,6 +1,6 @@
 [package]
 name = "ethicanvasaitool"
-version = "0.3.0-alpha.3"
+version = "0.3.0-alpha.4"
 description = "Local archive and AI Ethics Canvas journey for public administrations"
 authors = ["Maurizio Napolitano <napo@fbk.eu>"]
 license = "AGPL-3.0-or-later"
