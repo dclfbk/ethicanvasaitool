@@ -46,7 +46,7 @@ try{
  page.on('request',r=>{if(!r.url().startsWith('http://127.0.0.1'))external.push(r.url());});
  await page.goto('http://127.0.0.1:'+server.address().port);
  await page.getByRole('button',{name:'leggi la guida'}).click();
- await page.getByRole('heading',{name:'Guida a EthiCanvas AI',level:1}).waitFor();
+ await page.getByRole('heading',{name:'Guida a EthiCanvasAI',level:1}).waitFor();
  const nav=page.getByRole('navigation',{name:'Capitoli della guida'});
  assert.equal(await nav.getByRole('button').count(),11);
 

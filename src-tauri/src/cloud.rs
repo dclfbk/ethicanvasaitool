@@ -51,7 +51,7 @@ use tokio::{
 };
 
 const SERVICE: &str = "eu.fbk.dcl.canvaspa";
-const CALLBACK_PAGE: &str = "<!doctype html><meta charset=\"utf-8\"><title>EthiCanvas AI</title><p style=\"font-family:sans-serif\">Accesso completato. Puoi chiudere questa scheda e tornare all'applicazione.</p>";
+const CALLBACK_PAGE: &str = "<!doctype html><meta charset=\"utf-8\"><title>EthiCanvasAI</title><p style=\"font-family:sans-serif\">Accesso completato. Puoi chiudere questa scheda e tornare all'applicazione.</p>";
 
 // OAuth client identifiers are injected at build time; a provider without one is reported as not configured.
 // Google desktop clients need a client secret that Google documents as not confidential for installed apps.

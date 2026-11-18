@@ -105,7 +105,7 @@ export function createLocalProvider(protocol: LocalProtocol, transport: LocalTra
  }
  const listModels = async (signal?: AbortSignal) => modelNames(protocol, await call({method: 'GET', path: localPaths[protocol].models}, signal));
  return {
-  id: 'local', label: 'Modello locale', models: [], listModels,
+  id: 'local', label: 'Modello locale', models: [], timeoutMs, streams: false, listModels,
   async testConnection(model, signal) {
    const names = await listModels(signal);
    // Ollama lists "name:tag"; a model chosen without a tag means ":latest".

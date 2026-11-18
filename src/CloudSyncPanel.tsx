@@ -86,7 +86,7 @@ export default function CloudSyncPanel({projects,onRestore}:{projects:Project[];
  const restore=()=>run(async()=>{
   setStatus({kind:'busy',text:folder?'Leggo l’archivio dalla cartella…':'Scarico l’archivio dal drive…'});
   const r=await drive.download();
-  if(!r){setStatus({kind:'error',text:`${folder?'Nella cartella':'Sul drive'} non c’è ancora un archivio di EthiCanvas AI.`});return;}
+  if(!r){setStatus({kind:'error',text:`${folder?'Nella cartella':'Sul drive'} non c’è ancora un archivio di EthiCanvasAI.`});return;}
   let value:unknown;
   try{value=JSON.parse(r.text);}catch{setStatus({kind:'error',text:`Il file ${where} non è un archivio compatibile. Nessun progetto è stato modificato.`});return;}
   if(isEncryptedArchive(value)){setLocked({envelope:value,info:r.info});setStatus({kind:'ok',text:'L’archivio è cifrato: inserisci la passphrase per ripristinarlo.'});return;}

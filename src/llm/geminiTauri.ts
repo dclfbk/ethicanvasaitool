@@ -27,8 +27,8 @@
  * source code to users who interact with the software over a network.
  */
 
-import { invoke } from '@tauri-apps/api/core';
-import type { GeminiHttpResponse, GeminiTransport } from './gemini';
+import { Channel, invoke } from '@tauri-apps/api/core';
+import { serverSentEventParser, type GeminiHttpResponse, type GeminiTransport } from './gemini';
 import { LlmError, type CredentialStore, type LlmErrorKind } from './provider';
 
 // On desktop the key is stored in the operating system keychain by the Rust side and never returns to the web view.
@@ -54,6 +54,27 @@ export const tauriGeminiTransport: GeminiTransport = {
    signal.addEventListener('abort', onAbort, {once: true});
    invoke<GeminiHttpResponse>('gemini_request', {requestId, method: request.method, path: request.path, body: request.body ?? null})
     .then(resolve, e => reject(toLlmError(e)))
+    .finally(() => signal.removeEventListener('abort', onAbort));
+  });
+ },
+ // The Rust side streams the response line by line and ends with a lone "\n"; the command resolves with the status,
+ // and with the body for a non-2xx answer. An error raised while reading an event stops the request.
+ stream(request, signal, onEvent) {
+  const requestId = crypto.randomUUID();
+  return new Promise<GeminiHttpResponse>((resolve, reject) => {
+   let failed: unknown, ended = false, response: GeminiHttpResponse | undefined;
+   const parser = serverSentEventParser(onEvent);
+   const settle = () => { if (failed === undefined && response && (ended || response.status < 200 || response.status >= 300)) resolve(response); };
+   const fail = (e: unknown) => { if (failed !== undefined) return; failed = e; void invoke('gemini_cancel', {requestId}); reject(e); };
+   const channel = new Channel<string>(l => {
+    if (failed !== undefined) return;
+    try { if (l === '\n') { parser.end(); ended = true; settle(); } else parser.push(l + '\n'); } catch (e) { fail(e); }
+   });
+   const onAbort = () => fail(new LlmError('cancelled'));
+   if (signal.aborted) return onAbort();
+   signal.addEventListener('abort', onAbort, {once: true});
+   invoke<GeminiHttpResponse>('gemini_stream', {requestId, body: request.body ?? null, onLine: channel})
+    .then(r => { response = r; settle(); }, e => fail(toLlmError(e)))
     .finally(() => signal.removeEventListener('abort', onAbort));
   });
  },

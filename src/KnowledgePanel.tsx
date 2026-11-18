@@ -28,9 +28,11 @@
  */
 
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {ArrowUpRight,FilePlus2,Library,Send,Square} from 'lucide-react';
+import {ArrowUpRight,FilePlus2,Library,Send} from 'lucide-react';
 import type {AssistantSettings} from './assistantSettings';
 import {buildKnowledgeContext,buildKnowledgeRequest,defaultCaseIds,knowledgeBase,knowledgeTooLarge,parseKnowledgeResult,prefillAnswers,prefillExcluded,prefillTargets,proposedDraft,rankCases,scenarioText,type KnowledgeResult,type Scenario} from './knowledge';
+import {AssistantWaiting} from './AssistantWaiting';
+import type {GenerateProgress} from './llm/provider';
 import type {LlmRuntime} from './llm';
 import {LlmError} from './llm/provider';
 import {addVersion} from './history';
@@ -46,6 +48,7 @@ const title=(id:string)=>questions.find(q=>q.id===id)?.title??id;
 export default function KnowledgePanel({projects,settings,runtime,onCreate,onUpdate,onOpen,onOpenSettings}:{projects:Project[];settings:AssistantSettings;runtime:LlmRuntime;onCreate:(p:Project)=>void;onUpdate:(p:Project)=>void;onOpen:(p:Project)=>void;onOpenSettings:()=>void}){
  const [mode,setMode]=useState<'new'|'project'>('new'),[projectId,setProjectId]=useState(''),[name,setName]=useState(''),[organization,setOrganization]=useState(''),[description,setDescription]=useState(''),[question,setQuestion]=useState('');
  const [chosen,setChosen]=useState<string[]|null>(null),[prefill,setPrefill]=useState(true),[phase,setPhase]=useState<Phase>({name:'idle'}),[drafts,setDrafts]=useState<Record<string,Draft>>({}),[hasKey,setHasKey]=useState<boolean|null>(null),[outcome,setOutcome]=useState('');
+ const [progress,setProgress]=useState<GenerateProgress>();
  const controller=useRef<AbortController|null>(null);
  useEffect(()=>()=>controller.current?.abort(),[]);
  useEffect(()=>{if(settings.enabled)runtime.credentials.has().then(setHasKey).catch(()=>setHasKey(false));},[settings.enabled,runtime]);
@@ -63,9 +66,9 @@ export default function KnowledgePanel({projects,settings,runtime,onCreate,onUpd
  const toggle=(id:string)=>{setChosen(selected.includes(id)?selected.filter(x=>x!==id):[...selected,id]);};
  async function send(){
   if(!canSend)return;
-  const c=new AbortController();controller.current=c;setPhase({name:'loading'});setOutcome('');
+  const c=new AbortController();controller.current=c;setProgress(undefined);setPhase({name:'loading'});setOutcome('');
   try{
-   const res=await runtime.provider.generate(runtime.model,request,c.signal);if(c.signal.aborted)return;
+   const res=await runtime.provider.generate(runtime.model,request,c.signal,p=>{if(!c.signal.aborted)setProgress(p);});if(c.signal.aborted)return;
    const result=parseKnowledgeResult(res.text,items,targets),labels=Object.fromEntries(items.filter(i=>i.caseId).map(i=>[i.id,cases.find(p=>p.id===i.caseId)!.name]));
    setDrafts(Object.fromEntries(result.answers.map(a=>[a.questionId,{text:proposedDraft(a),include:true,basedOn:a.sources.flatMap(id=>labels[id]?[labels[id]]:[])}])));
    setPhase({name:'result',result,model:res.model,at:new Date().toISOString(),labels});
@@ -112,7 +115,7 @@ export default function KnowledgePanel({projects,settings,runtime,onCreate,onUpd
     {tooLarge&&<p className="assist-status error">Il contesto supera {maxContextChars.toLocaleString('it-IT')} caratteri. Deseleziona qualche caso o accorcia lo scenario.</p>}
     <p className="notice">Saranno inviati {runtime.texts.destination(runtime.model)} lo scenario e i {cases.length} casi selezionati: nomi, enti, descrizioni e risposte. Allegati, note e nomi delle persone non vengono inviati. I casi possono contenere informazioni di altri uffici: invia solo ciò che puoi condividere.</p>
     {runtime.requiresKey&&hasKey===false?<div className="button-row"><span>Manca la chiave API.</span><button className="secondary" onClick={onOpenSettings}>{runtime.texts.configure}</button></div>
-    :phase.name==='loading'?<div aria-busy="true"><p role="status" className="assist-status busy">{runtime.texts.busy} confrontando i casi…</p><button className="secondary" onClick={()=>controller.current?.abort()}><Square size={14}/>Annulla richiesta</button></div>
+    :phase.name==='loading'?<AssistantWaiting runtime={runtime} activity="confrontando i casi" progress={progress} onCancel={()=>controller.current?.abort()}/>
     :<button className="primary" disabled={!canSend} onClick={()=>void send()}><Send size={16}/>{runtime.texts.analyze}</button>}
     {phase.name==='error'&&<p role="alert" className="assist-status error">{phase.message}</p>}
    </>}

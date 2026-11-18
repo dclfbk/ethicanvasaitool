@@ -37,11 +37,27 @@ Ogni revisione salva anche una versione dello stato attuale, così resta chiaro 
 
 Il riepilogo del progetto mostra l’ultima revisione e il prossimo riesame; il rapporto e il PDF in formato poster riportano anche lo storico completo.
 
+## Esaminare l’inquadramento normativo
+
+Dentro il progetto premi «Inquadramento normativo». La checklist raccoglie temi da esaminare con un esperto legale: non assegna categorie di rischio e non determina obblighi o conformità.
+
+![La checklist di supporto all’inquadramento normativo](img/inquadramento-normativo.png)
+
+1. Per ogni punto seleziona «Sì», «No», «Da verificare» o «Non pertinente» e annota i dubbi per l’esperto. Puoi scrivere una nota anche prima di scegliere: il punto resta «Da esaminare» e non viene contato. Per annullare una risposta torna a «Da esaminare».
+2. Scrivi le conclusioni e le fonti che le sostengono.
+3. Indica il «Ruolo dell’esperto legale» e premi «Registra l’inquadramento». Il nome è facoltativo. La registrazione salva una versione e indica chi ha scritto le conclusioni e quando.
+4. Se in seguito modifichi la checklist o le conclusioni, l’app segnala che l’inquadramento va riesaminato.
+
+La checklist è una bozza: i contenuti e i riferimenti devono essere verificati da un esperto legale prima dell’uso. «Punti da approfondire» segnala temi per la revisione, non risultati automatici. Puoi riportare le conclusioni nella risposta del canvas solo come bozza: scegli se inserirle, aggiungerle al testo esistente o sostituirlo.
+
+Se una nuova versione della checklist toglie un punto a cui avevi già risposto, la risposta non va persa: compare in «Voci non più presenti nella checklist» e nel rapporto, ma non viene più contata. Ripristinando una versione salvata prima di compilare la checklist, il progetto torna senza inquadramento; quello attuale resta nella versione salvata in automatico prima del ripristino.
+
 ## Confrontare due versioni
 
 1. Nella «Cronologia» premi «Confronta» accanto a una versione: viene confrontata con lo stato attuale.
 2. Nel riquadro «Confronto» puoi scegliere qualunque coppia di versioni.
 3. Per ogni domanda cambiata vedi le parole aggiunte, in verde, e quelle tolte, in rosso, insieme ai cambi di stato e ai riferimenti aggiunti o tolti.
+4. Se è cambiato l’inquadramento normativo, la parte «Inquadramento normativo» elenca i punti della checklist con la risposta prima e dopo, le note modificate, le conclusioni, le fonti e la registrazione dell’esperto.
 
 Con «Mostra anche le domande invariate» vedi tutto il questionario.
 

@@ -28,100 +28,160 @@
  */
 
 import fontkit from '@pdf-lib/fontkit';
-import { PDFDocument, rgb, type PDFFont, type PDFPage, type RGB } from 'pdf-lib';
-import { accepted, evaluate, questionnaireVersion, questions, sections, statusLabels, type Project, type Question } from './model';
-import { pdfFonts } from './pdfAssets';
-import { dateLabel, hex, stateOf, truncate, Writer as TextWriter } from './pdfText';
+import { PDFDocument, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
+import { accepted, evaluate, questionnaireVersion, questions, sections, statusLabels, type Profile, type Project, type Question } from './model';
+import { pdfFonts, pdfLogos } from './pdfAssets';
+import { dateLabel, ink, stateOf, truncate, Writer as TextWriter } from './pdfText';
+import { blue, canvasLicense, drawNote, drawShape, grey, navy, profileLabels, white } from './canvasStyle';
 import { answerStateLabels, canvasAttribution, historyLines, regulatoryNote, selfAssessmentNote } from './report';
 
 // Canvas export: page 1 is an A3 landscape poster with the six sections, then A4 pages with every answer in full.
+// Both follow the graphic language of the original AI Ethics Canvas: logos and blue rule in the header, numbered sections,
+// sticky notes coloured by profile with their shapes, legend and licence at the bottom.
 const A3: [number, number] = [1190.55, 841.89];
 const A4: [number, number] = [595.28, 841.89];
-const navy = rgb(0x23 / 255, 0x29 / 255, 0x5d / 255), ink = rgb(0.14, 0.12, 0.13), grey = rgb(0.43, 0.44, 0.5), white = rgb(1, 1, 1), paper = rgb(0.97, 0.97, 0.98);
-interface Fonts extends Record<string, PDFFont> { regular: PDFFont; semibold: PDFFont; italic: PDFFont; display: PDFFont; }
+interface Fonts extends Record<string, PDFFont> { regular: PDFFont; semibold: PDFFont; bold: PDFFont; italic: PDFFont; display: PDFFont; condensed: PDFFont; }
+interface Logos { funding: PDFImage; pat: PDFImage; fbk: PDFImage; }
 type Writer = TextWriter<Fonts>;
 
-function poster(w: Writer, project: Project, now: Date) {
- const {fonts} = w, page = w.doc.addPage(A3), [W, H] = A3, m = 32, r = evaluate(project);
- page.drawRectangle({x: 0, y: 0, width: W, height: H, color: paper});
- page.drawRectangle({x: 0, y: H - 84, width: W, height: 84, color: navy});
- w.draw(page, 'AI ETHICS CANVAS · PUBBLICA AMMINISTRAZIONE', m, H - 26, fonts.semibold, 8, rgb(0.72, 0.85, 0.95));
- const title = w.lines(project.name, fonts.display, 28, W - 2 * m - 260)[0];
- w.draw(page, title, m, H - 56, fonts.display, 28, white);
- w.draw(page, [project.organization || 'Ente non indicato', dateLabel(now)].join(' · '), m, H - 74, fonts.regular, 9, rgb(0.85, 0.87, 0.93));
- const right = `${statusLabels[r.status]} · ${r.percent}%`;
- w.draw(page, right, W - m - fonts.display.widthOfTextAtSize(right, 20), H - 52, fonts.display, 20, white);
- const sub = `${r.done.length} di ${questions.length} risposte completate`;
- w.draw(page, sub, W - m - fonts.regular.widthOfTextAtSize(sub, 9), H - 70, fonts.regular, 9, rgb(0.85, 0.87, 0.93));
-
- const footer = 46, gap = 12, cols = 3, rows = 2, top = H - 84 - gap;
- const boxW = (W - 2 * m - gap * (cols - 1)) / cols, boxH = (top - footer - gap * (rows - 1) - m / 2) / rows;
- sections.forEach((s, i) => {
-  const x = m + (i % cols) * (boxW + gap), yTop = top - Math.floor(i / cols) * (boxH + gap), color = hex(s.color);
-  page.drawRectangle({x, y: yTop - boxH, width: boxW, height: boxH, color: white, borderColor: color, borderWidth: 1.2});
-  page.drawRectangle({x, y: yTop - 28, width: boxW, height: 28, color});
-  w.draw(page, s.name, x + 10, yTop - 19, fonts.display, 15, white);
-  const qs = questions.filter(q => q.section === s.id), done = qs.filter(q => accepted(project.answers[q.id])).length;
-  const count = `${done} di ${qs.length}`;
-  w.draw(page, count, x + boxW - 10 - fonts.semibold.widthOfTextAtSize(count, 8), yTop - 18, fonts.semibold, 8, white);
-  questionBlocks(w, page, project, qs, x + 10, yTop - 40, boxW - 20, boxH - 48);
- });
- const notes = [selfAssessmentNote + ' Le risposte abbreviate proseguono nelle pagine di dettaglio.', `${canvasAttribution} Generato con EthiCanvas AI · questionario ${questionnaireVersion}.`];
- notes.forEach((n, i) => w.draw(page, w.lines(n, fonts.regular, 7.5, W - 2 * m)[0], m, footer - 18 - i * 11, fonts.regular, 7.5, grey));
+// Drawing in points from the top-left corner of the page.
+const T = (page: PDFPage, y: number) => page.getHeight() - y;
+function text(w: Writer, page: PDFPage, s: string, x: number, baseline: number, font: PDFFont, size: number, color: RGB = ink) { w.draw(page, s, x, T(page, baseline), font, size, color); }
+function centered(w: Writer, page: PDFPage, s: string, cx: number, baseline: number, font: PDFFont, size: number, color: RGB = ink) {
+ const t = w.text(font, s); text(w, page, t, cx - font.widthOfTextAtSize(t, size) / 2, baseline, font, size, color);
+}
+function image(page: PDFPage, i: PDFImage, x: number, top: number, width: number) { const h = width * i.height / i.width; page.drawImage(i, {x, y: T(page, top) - h, width, height: h}); }
+function numberBadge(w: Writer, page: PDFPage, n: number, cx: number, cy: number, r: number) {
+ page.drawCircle({x: cx, y: T(page, cy), size: r, borderColor: ink, borderWidth: r / 11});
+ centered(w, page, String(n), cx, cy + r * 0.32, w.fonts.bold, r * 0.85);
+}
+// The use case is not numbered in the original canvas: a small note with the mixed colours stands for it.
+function sectionBadge(w: Writer, page: PDFPage, index: number, cx: number, cy: number, r: number) {
+ if (index) numberBadge(w, page, index, cx, cy, r);
+ else drawNote(page, cx - r * 0.85, cy - r * 0.85, r * 1.7, r * 1.7, ['scientist', 'engineer', 'user']);
+}
+// Licence on the left and page number with the CC BY-SA mark on the right, as at the bottom of the original pages.
+function footer(w: Writer, page: PDFPage, project: Project, index: number, total: number) {
+ const {fonts} = w, W = page.getWidth(), H = page.getHeight();
+ text(w, page, w.lines(canvasLicense, fonts.regular, 6.5, W - 200)[0], 14, H - 9, fonts.regular, 6.5);
+ const label = w.lines(`${project.name} · pagina ${index} di ${total}`, fonts.regular, 6.5, 220)[0];
+ text(w, page, label, W - 52 - fonts.regular.widthOfTextAtSize(label, 6.5), H - 9, fonts.regular, 6.5, grey);
+ page.drawRectangle({x: W - 46, y: 5, width: 34, height: 11, borderColor: ink, borderWidth: 0.8, color: white});
+ centered(w, page, 'cc by-sa', W - 29, H - 8.2, fonts.bold, 5.6);
 }
 
-// Shares the box height among the questions: each one first gets what it needs up to a fair share,
-// then the space left by short answers goes to the longer ones.
-function questionBlocks(w: Writer, page: PDFPage, project: Project, qs: Question[], x: number, yTop: number, width: number, height: number) {
- const {fonts} = w, size = 7.6, lead = 9.6, titleSize = 8.2, titleLead = 10.4, spacing = 7;
+function poster(w: Writer, logos: Logos, project: Project, now: Date) {
+ const {fonts} = w, page = w.doc.addPage(A3), [W, H] = A3, m = 28, r = evaluate(project);
+ // Header: version, logos, kicker, project as the title, status and the blue rule.
+ text(w, page, `ver ${questionnaireVersion} · ${now.toLocaleDateString('it-IT')}`, 12, 14, fonts.regular, 7);
+ image(page, logos.funding, W - 312, 8, 300); image(page, logos.pat, W - 248, 42, 58);
+ text(w, page, 'in collaborazione con', W - 170, 49, fonts.regular, 5); image(page, logos.fbk, W - 96, 48, 80);
+ centered(w, page, 'Canvas: AI per la PA', W / 2, 40, fonts.regular, 16, navy);
+ let size = 54; const title = w.text(fonts.display, project.name);
+ while (size > 28 && fonts.display.widthOfTextAtSize(title, size) > 640) size -= 2;
+ centered(w, page, w.lines(title, fonts.display, size, 640)[0], W / 2, 92, fonts.display, size, navy);
+ const sub = [project.organization || 'Ente non indicato', dateLabel(now), `${statusLabels[r.status]} · ${r.percent}%`, `${r.done.length} di ${questions.length} risposte completate`].join(' · ');
+ centered(w, page, w.lines(sub, fonts.regular, 11, 760)[0], W / 2, 114, fonts.regular, 11, navy);
+ page.drawRectangle({x: W / 2 - 380, y: T(page, 128), width: 760, height: 2.4, color: blue});
+
+ const top = 146, bottom = H - 78, gap = 14, cols = 3, rows = 2;
+ const boxW = (W - 2 * m - gap * (cols - 1)) / cols, boxH = (bottom - top - gap * (rows - 1)) / rows;
+ sections.forEach((s, i) => {
+  const x = m + (i % cols) * (boxW + gap), y = top + Math.floor(i / cols) * (boxH + gap);
+  const qs = questions.filter(q => q.section === s.id), done = qs.filter(q => accepted(project.answers[q.id])).length;
+  sectionBadge(w, page, i, x + 13, y + 14, 12);
+  text(w, page, w.lines(s.name, fonts.display, 21, boxW - 110)[0], x + 34, y + 21, fonts.display, 21, navy);
+  const count = `${done} di ${qs.length}`;
+  text(w, page, count, x + boxW - fonts.semibold.widthOfTextAtSize(count, 9), y + 12, fonts.semibold, 9, done === qs.length ? navy : grey);
+  text(w, page, w.lines(s.subtitle, fonts.regular, 8.5, 110)[0], x + boxW - fonts.regular.widthOfTextAtSize(w.lines(s.subtitle, fonts.regular, 8.5, 110)[0], 8.5), y + 23, fonts.regular, 8.5, grey);
+  page.drawRectangle({x, y: T(page, y + 31), width: boxW, height: 1.2, color: blue});
+  notes(w, page, project, qs, x, y + 38, boxW, boxH - 38);
+ });
+
+ // Legend and notes, as at the bottom of the original cover.
+ const ly = H - 62;
+ text(w, page, 'Legenda', m, ly + 4, fonts.display, 18, navy);
+ (['scientist', 'engineer', 'user'] as Profile[]).forEach((p, i) => {
+  const x = m + 84 + i * 118;
+  drawNote(page, x, ly - 9, 16, 16, [p], false); drawShape(page, p, x + 8, ly - 1, 4.2, 1.4);
+  text(w, page, profileLabels[p], x + 22, ly + 3, fonts.semibold, 10);
+ });
+ drawNote(page, m + 84 + 3 * 118, ly - 9, 16, 16, ['scientist', 'engineer', 'user']);
+ text(w, page, 'Colori misti: tutti insieme', m + 84 + 3 * 118 + 22, ly + 3, fonts.semibold, 10);
+ const notesX = m + 84 + 3 * 118 + 190, notesW = W - m - notesX;
+ [selfAssessmentNote + ' Le risposte abbreviate proseguono nelle pagine di dettaglio.', `${canvasAttribution} Generato con EthiCanvasAI · questionario ${questionnaireVersion}.`]
+  .flatMap(n => w.lines(n, fonts.regular, 7.2, notesW)).slice(0, 5).forEach((l, i) => text(w, page, l, notesX, ly - 6 + i * 9.5, fonts.regular, 7.2, grey));
+}
+
+// Space needed on the left and right of a note title for the profile shapes.
+const shapesWidth = (q: Question) => q.profiles.length < 3 ? 8 + q.profiles.length * 17 : 0;
+
+// One sticky note per question. The height is shared among the notes: each one first gets what it needs up to a fair
+// share, then the space left by short answers goes to the longer ones.
+function notes(w: Writer, page: PDFPage, project: Project, qs: Question[], x: number, top: number, width: number, height: number) {
+ const {fonts} = w, size = 8.8, lead = 10.4, titleSize = 9.6, titleLead = 11, statusSize = 7.6, pad = 8, gap = 6, inner = width - 2 * pad;
  const parts = qs.map(q => {
   const a = project.answers[q.id], state = stateOf(a);
-  const tag = state === 'answered' ? '' : `[${answerStateLabels[state]}${state === 'waiting' && a?.request.trim() ? ': ' + a.request.trim() : ''}] `;
-  const body = (a?.aiProvenance?.length ? '[Testo proposto dall’AI] ' : '') + tag + (a?.value.trim() || (state === 'waiting' ? '' : 'Nessuna risposta.'));
-  return {title: w.lines(q.title, fonts.semibold, titleSize, width).slice(0, 2), body: w.lines(body.trim(), fonts.regular, size, width), muted: state !== 'answered'};
+  const status = [state === 'answered' || state === 'missing' ? '' : answerStateLabels[state] + (state === 'waiting' && a?.request.trim() ? ': ' + a.request.trim() : ''), a?.aiProvenance?.length ? 'testo proposto dall’AI, da verificare' : ''].filter(Boolean).join(' · ').toUpperCase();
+  return {q, title: w.lines(q.title.toUpperCase(), fonts.display, titleSize, inner - shapesWidth(q)).slice(0, 2), status: status ? w.lines(status, fonts.display, statusSize, inner).slice(0, 2) : [], body: a?.value.trim() ? w.lines(a.value.trim(), fonts.condensed, size, inner) : []};
  });
- const fixed = parts.reduce((h, p) => h + p.title.length * titleLead + spacing, 0);
- let budget = Math.max(0, Math.floor((height - fixed) / lead));
- const alloc = parts.map(() => 0);
+ const fixed = parts.reduce((h, p) => h + pad + p.title.length * titleLead + 3 + p.status.length * 9 + pad, 0) + gap * (parts.length - 1);
+ let budget = Math.max(0, Math.floor((height - fixed) / lead) - parts.length);
+ const alloc = parts.map(() => 1);
  // Fill in rounds of one line so that every question keeps at least some text.
  while (budget > 0 && parts.some((p, i) => alloc[i] < p.body.length)) parts.forEach((p, i) => { if (budget > 0 && alloc[i] < p.body.length) { alloc[i]++; budget--; } });
- let y = yTop;
+ // What is left goes to the last note, so the column ends at the bottom of the section like the cards of the canvas.
+ const heights = parts.map((p, i) => pad + p.title.length * titleLead + 3 + p.status.length * 9 + alloc[i] * lead + pad);
+ heights[heights.length - 1] += Math.max(0, height - heights.reduce((a, b) => a + b, 0) - gap * (parts.length - 1));
+ let y = top;
  parts.forEach((p, i) => {
-  for (const l of p.title) { w.draw(page, l, x, y, fonts.semibold, titleSize, navy); y -= titleLead; }
-  const lines = truncate(p.body, alloc[i], width, s => fonts.regular.widthOfTextAtSize(s, size), ' … (segue)');
-  for (const l of lines) { w.draw(page, l, x, y, p.muted ? fonts.italic : fonts.regular, size, p.muted ? grey : ink); y -= lead; }
-  y -= spacing;
+  drawNote(page, x, y, width, heights[i], p.q.profiles);
+  let ty = y + pad + titleSize - 1;
+  for (const l of p.title) { text(w, page, l, x + pad, ty, fonts.display, titleSize); ty += titleLead; }
+  ty += 3;
+  for (const l of p.status) { text(w, page, l, x + pad, ty, fonts.display, statusSize); ty += 9; }
+  if (!p.body.length) text(w, page, 'Da compilare', x + pad, ty, fonts.italic, 8, grey);
+  else for (const l of truncate(p.body, alloc[i], inner, s => fonts.condensed.widthOfTextAtSize(s, size), ' … (segue)')) { text(w, page, l, x + pad, ty, fonts.condensed, size); ty += lead; }
+  y += heights[i] + gap;
  });
 }
 
-// A4 detail pages with a running cursor.
+// A4 detail pages with a running cursor (from the top). A question is marked by a strip in its profile colours.
 class Flow {
- page!: PDFPage; y = 0;
- readonly m = 52; readonly width = A4[0] - 2 * 52;
+ page!: PDFPage; y = 0; profiles?: Profile[];
+ readonly m = 52; readonly width = A4[0] - 2 * 52; readonly bottom = A4[1] - 48;
  constructor(readonly w: Writer, readonly heading: string) { this.newPage(); }
  newPage() {
-  this.page = this.w.doc.addPage(A4); this.y = A4[1] - this.m;
-  this.w.draw(this.page, this.w.lines(this.heading, this.w.fonts.regular, 8, this.width)[0], this.m, A4[1] - 30, this.w.fonts.regular, 8, grey);
+  this.page = this.w.doc.addPage(A4); this.y = 58;
+  const {fonts} = this.w;
+  text(this.w, this.page, 'Canvas: AI per la PA', this.m, 30, fonts.regular, 9, navy);
+  const h = this.w.lines(this.heading, fonts.regular, 8, this.width - 110)[0];
+  text(this.w, this.page, h, A4[0] - this.m - fonts.regular.widthOfTextAtSize(h, 8), 30, fonts.regular, 8, grey);
+  this.page.drawRectangle({x: this.m, y: T(this.page, 38), width: this.width, height: 1.2, color: blue});
  }
- ensure(h: number) { if (this.y - h < this.m) this.newPage(); }
- paragraph(text: string, font: PDFFont, size: number, color: RGB = ink, lead = size * 1.4, indent = 0) {
-  for (const l of this.w.lines(text, font, size, this.width - indent)) { this.ensure(lead); this.w.draw(this.page, l, this.m + indent, this.y - size, font, size, color); this.y -= lead; }
+ ensure(h: number) { if (this.y + h > this.bottom) this.newPage(); }
+ strip(h: number) { if (this.profiles) drawNote(this.page, this.m - 14, this.y, 5, h, this.profiles, false); }
+ paragraph(s: string, font: PDFFont, size: number, color: RGB = ink, lead = size * 1.4, indent = 0) {
+  for (const l of this.w.lines(s, font, size, this.width - indent)) { this.ensure(lead); this.strip(lead); text(this.w, this.page, l, this.m + indent, this.y + size, font, size, color); this.y += lead; }
  }
- space(h: number) { this.y -= h; }
+ space(h: number) { if (this.y + h <= this.bottom) this.strip(h); this.y += h; }
 }
 
 function details(w: Writer, project: Project) {
  const {fonts} = w, f = new Flow(w, `${project.name} · dettaglio delle risposte`), r = evaluate(project);
- for (const s of sections) {
-  f.ensure(80);
-  f.page.drawRectangle({x: f.m, y: f.y - 26, width: f.width, height: 26, color: hex(s.color)});
-  w.draw(f.page, s.name, f.m + 10, f.y - 18, fonts.display, 15, white);
-  f.space(40);
+ sections.forEach((s, i) => {
+  f.profiles = undefined;
+  f.ensure(110);
+  if (f.y > 70) f.space(10);
+  sectionBadge(w, f.page, i, f.m + 13, f.y + 14, 13);
+  text(w, f.page, s.name, f.m + 36, f.y + 23, fonts.display, 24, navy);
+  text(w, f.page, s.subtitle, f.m + 36, f.y + 36, fonts.regular, 9, grey);
+  f.space(46);
   for (const q of questions.filter(x => x.section === s.id)) {
    const a = project.answers[q.id], state = stateOf(a);
-   f.ensure(60);
-   f.paragraph(q.title, fonts.semibold, 11, navy, 15);
-   f.paragraph(`Stato: ${answerStateLabels[state]} · Origine: ${q.source}${q.critical ? ' · punto essenziale' : ''}`, fonts.italic, 8, grey, 12);
+   f.profiles = undefined; f.ensure(70); f.profiles = q.profiles;
+   f.paragraph(q.title.toUpperCase(), fonts.display, 12.5, ink, 16);
+   f.paragraph(`${q.profiles.map(p => profileLabels[p]).join(', ')} · Stato: ${answerStateLabels[state]} · Origine: ${q.source}${q.critical ? ' · punto essenziale' : ''}`, fonts.italic, 8, grey, 12);
    f.space(3);
    f.paragraph(a?.value.trim() || 'Nessuna risposta.', a?.value.trim() ? fonts.regular : fonts.italic, 9.5, a?.value.trim() ? ink : grey, 13.5);
    if (a?.person.trim()) f.paragraph('Figura da coinvolgere: ' + a.person.trim(), fonts.regular, 8.5, grey, 12);
@@ -129,37 +189,38 @@ function details(w: Writer, project: Project) {
    if (a?.note.trim()) f.paragraph('Note: ' + a.note.trim(), fonts.regular, 8.5, grey, 12);
    if (a?.aiProvenance?.length) f.paragraph('Contiene testo proposto da un assistente AI: ' + a.aiProvenance.map(x => x.model + ', ' + dateLabel(new Date(x.at))).join('; ') + '. Da verificare.', fonts.italic, 8, grey, 11.5);
    for (const ref of project.references.filter(x => x.questionId === q.id)) f.paragraph('• Riferimento: ' + ref.title + (ref.url ? ' — ' + ref.url : '') + (ref.note.trim() ? ' — ' + ref.note.trim() : ''), fonts.regular, 8.5, ink, 12, 8);
-   f.space(12);
+   f.profiles = undefined; f.space(14);
   }
- }
- f.ensure(80);
- f.paragraph('Da completare', fonts.display, 15, navy, 20);
+ });
+ const heading = (s: string) => { f.ensure(60); f.paragraph(s, fonts.display, 20, navy, 24); f.space(2); };
+ heading('Da completare');
  if (r.missing.length) for (const q of r.missing) f.paragraph('• ' + q.title + (q.critical ? ' (essenziale)' : ''), fonts.regular, 9.5, ink, 13.5, 8);
  else f.paragraph('Tutte le risposte sono presenti. Verifica evidenze, misure e responsabilità con le figure competenti.', fonts.regular, 9.5);
- f.space(10);
+ f.space(12);
  const h = historyLines(project);
  if (h.plan.length || h.reviews.length || h.versions.length) {
-  f.paragraph('Revisioni e riesame', fonts.display, 15, navy, 20);
+  heading('Revisioni e riesame');
   for (const l of h.plan) f.paragraph(l, fonts.regular, 9.5);
   for (const l of h.reviews) f.paragraph('• Revisione: ' + l, fonts.regular, 9.5, ink, 13.5, 8);
   for (const l of h.versions) f.paragraph('• Versione: ' + l, fonts.regular, 8.5, grey, 12, 8);
-  f.space(10);
+  f.space(12);
  }
- f.paragraph('Inquadramento normativo', fonts.display, 15, navy, 20);
+ heading('Inquadramento normativo');
  f.paragraph(regulatoryNote, fonts.regular, 9.5);
 }
 
 export async function canvasPdf(project: Project, now = new Date()): Promise<Uint8Array<ArrayBuffer>> {
  const doc = await PDFDocument.create();
  doc.registerFontkit(fontkit);
- const raw = pdfFonts();
- const fonts: Fonts = {regular: await doc.embedFont(raw.regular, {subset: true}), semibold: await doc.embedFont(raw.semibold, {subset: true}), italic: await doc.embedFont(raw.italic, {subset: true}), display: await doc.embedFont(raw.display, {subset: true})};
+ const raw = pdfFonts(), l = pdfLogos(), embed = (b: Uint8Array) => doc.embedFont(b, {subset: true});
+ const fonts: Fonts = {regular: await embed(raw.regular), semibold: await embed(raw.semibold), bold: await embed(raw.bold), italic: await embed(raw.italic), display: await embed(raw.display), condensed: await embed(raw.condensed)};
+ const logos: Logos = {funding: await doc.embedPng(l.funding), pat: await doc.embedPng(l.pat), fbk: await doc.embedPng(l.fbk)};
  const w: Writer = new TextWriter(doc, fonts);
- poster(w, project, now);
+ poster(w, logos, project, now);
  details(w, project);
  const pages = doc.getPages();
- pages.forEach((p, i) => { const label = `Pagina ${i + 1} di ${pages.length}`, {width} = p.getSize(); w.draw(p, label, width - 32 - fonts.regular.widthOfTextAtSize(label, 7.5), 14, fonts.regular, 7.5, grey); });
- doc.setTitle('AI Ethics Canvas · ' + project.name); doc.setAuthor(project.organization || 'EthiCanvas AI'); doc.setSubject(selfAssessmentNote);
- doc.setCreator('EthiCanvas AI'); doc.setProducer('EthiCanvas AI (pdf-lib)'); doc.setLanguage('it-IT'); doc.setCreationDate(now); doc.setModificationDate(now);
+ pages.forEach((p, i) => footer(w, p, project, i + 1, pages.length));
+ doc.setTitle('AI Ethics Canvas · ' + project.name); doc.setAuthor(project.organization || 'EthiCanvasAI'); doc.setSubject(selfAssessmentNote);
+ doc.setCreator('EthiCanvasAI'); doc.setProducer('EthiCanvasAI (pdf-lib)'); doc.setLanguage('it-IT'); doc.setCreationDate(now); doc.setModificationDate(now);
  return new Uint8Array(await doc.save());
 }

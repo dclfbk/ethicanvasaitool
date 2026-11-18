@@ -30,6 +30,7 @@
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
 import {canvasOriginalPdf} from './canvasOriginalPdf';
+import {placements,templatePages,withoutCell} from './canvasTemplate';
 import {canvasPdf} from './canvasPdf';
 import {truncate,wrap} from './pdfText';
 import {toDocx,toOdt,type DocBlock} from './documents';
@@ -82,11 +83,20 @@ describe('Canvas PDF',()=>{
 });
 
 describe('Canvas PDF in the original style',()=>{
+ it('places every question of the five sections in cells of its own page, or among those without a cell',()=>{
+  const pageOf:Record<string,number>={data:templatePages.data,algorithm:templatePages.algorithm,analysis:templatePages.analysis,social:templatePages.social,requirements:templatePages.requirements};
+  for(const q of questions.filter(x=>x.section!=='scope'))expect(!!placements[q.id]!==withoutCell.includes(q.id),q.id).toBe(true);
+  for(const [id,p] of Object.entries(placements)){
+   const q=questions.find(x=>x.id===id)!;expect(q,id).toBeDefined();expect(p.page,id).toBe(pageOf[q.section]);
+   for(const [x0,y0,x1,y1] of p.boxes){expect(x0).toBeGreaterThanOrEqual(0);expect(y0).toBeGreaterThan(150);expect(x1).toBeLessThanOrEqual(842);expect(y1).toBeLessThanOrEqual(585);expect(x1-x0).toBeGreaterThan(40);expect(y1-y0).toBeGreaterThan(18);}
+  }
+ });
  it('renders cover, use case, five numbered sections and continuation pages',async()=>{
   const pdf=await canvasOriginalPdf(sample(),new Date('2026-10-28T10:00:00Z'));
   save('canvas-originale.pdf',pdf);
   expect(new TextDecoder().decode(pdf.subarray(0,8))).toBe('%PDF-1.7');
-  expect(pdf.length).toBeLessThan(500_000);
+  // The original canvas (about 1.3 MB) is the background of the pages.
+  expect(pdf.length).toBeLessThan(2_000_000);
  });
 });
 

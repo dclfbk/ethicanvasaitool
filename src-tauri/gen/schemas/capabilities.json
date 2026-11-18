@@ -1,1 +1,1 @@
-{"default":{"identifier":"default","description":"Access to the local EthiCanvas AI SQLite archive and to signed updates","local":true,"windows":["main"],"permissions":["core:default","sql:default","sql:allow-execute","updater:default","process:allow-restart"]}}
+{"default":{"identifier":"default","description":"Access to the local EthiCanvasAI SQLite archive and to signed updates","local":true,"windows":["main"],"permissions":["core:default","sql:default","sql:allow-execute","updater:default","process:allow-restart"]}}

@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Access to the local EthiCanvas AI SQLite archive and to signed updates",
+  "description": "Access to the local EthiCanvasAI SQLite archive and to signed updates",
   "windows": [
     "main"
   ],

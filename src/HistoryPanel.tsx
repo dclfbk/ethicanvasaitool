@@ -31,13 +31,16 @@ import {useState} from 'react';
 import {CalendarPlus,GitCompare,History,RotateCcw,Save,ShieldCheck,X} from 'lucide-react';
 import {addReview,addVersion,asProject,diffSnapshots,restoreVersion,reviewCalendar,reviewDue,snapshotOf,type DiffPart} from './history';
 import {dueLabel,manualReasons,outcomeLabels,reasonLabels,triggerLabels} from './historyText';
-import {answerStateLabels,fileSlug} from './report';
+import {answerStateLabels,fileSlug,regulatoryValueLabels} from './report';
+import {checklist} from './regulatoryChecklist';
 import {download} from './storage';
-import {evaluate,questions,type Project,type ReviewOutcome,type ReviewPlan,type ReviewTrigger,type VersionReason} from './model';
+import {evaluate,questions,type Project,type RegulatoryExpert,type ReviewOutcome,type ReviewPlan,type ReviewTrigger,type VersionReason} from './model';
 
 const when=(s:string)=>new Date(s).toLocaleString('it-IT',{dateStyle:'medium',timeStyle:'short'});
 const emptyPlan:ReviewPlan={nextAt:'',owner:'',triggers:[],note:''};
-const fieldLabels={name:'Nome',description:'Descrizione',organization:'Ente'};
+const fieldLabels={name:'Nome',description:'Descrizione',organization:'Ente'},regulatoryFieldLabels={conclusions:'Conclusioni dell’esperto',sources:'Fonti e riferimenti'};
+const expertLabel=(e?:RegulatoryExpert)=>e?[e.role,e.name,when(e.at)].filter(Boolean).join(' · '):'Non registrata';
+const itemText=(id:string)=>checklist.find(i=>i.id===id)?.text??`Voce non più presente nella checklist (${id})`;
 const current='current';
 function Diff({parts}:{parts:DiffPart[]}){return <p className="diff">{parts.length?parts.map((p,i)=>p.kind==='same'?<span key={i}>{p.text}</span>:p.kind==='added'?<ins key={i}>{p.text}</ins>:<del key={i}>{p.text}</del>):<i>Nessun testo</i>}</p>;}
 
@@ -54,6 +57,7 @@ export default function HistoryPanel({project,onUpdate}:{project:Project;onUpdat
  const snapshot=(id:string)=>id===current?snapshotOf(project):project.versions?.find(v=>v.id===id)?.snapshot;
  const a=snapshot(from),b=snapshot(to),diff=a&&b&&from!==to?diffSnapshots(a,b):null;
  const changed=diff?diff.questions.filter(q=>q.kind!=='same'):[];
+ const regulatory=diff?.regulatory,regulatoryChanged=!!regulatory&&(regulatory.items.length>0||regulatory.texts.length>0||!!regulatory.expert);
  const versionName=(id:string)=>id===current?'Stato attuale':project.versions?.find(v=>v.id===id)?.label??'';
  function saveVersion(){if(!label.trim())return;const {project:next,version}=addVersion(project,{label,reason,note});onUpdate(next);setFrom(version.id);setTo(current);setForm('none');setLabel('');setNote('');}
  function saveReview(){
@@ -129,6 +133,11 @@ export default function HistoryPanel({project,onUpdate}:{project:Project;onUpdat
      <Diff parts={c.text}/>
      {c.referencesAdded.map(t=><small key={'+'+t} className="ref-added">+ Riferimento: {t}</small>)}{c.referencesRemoved.map(t=><small key={'-'+t} className="ref-removed">− Riferimento: {t}</small>)}
     </div>)}
+    {regulatory&&regulatoryChanged&&<div className="diff-regulatory"><h3>Inquadramento normativo</h3>
+     {regulatory.items.map(c=><div className="diff-item changed" key={c.id}><b>{itemText(c.id)}</b><small>{c.valueBefore!==c.valueAfter?`Risposta: ${regulatoryValueLabels[c.valueBefore]} → ${regulatoryValueLabels[c.valueAfter]}`:'Nota modificata'}</small>{c.note.some(part=>part.kind!=='same')&&<Diff parts={c.note}/>}</div>)}
+     {regulatory.texts.map(t=><div className="diff-item changed" key={t.field}><b>{regulatoryFieldLabels[t.field]}</b><Diff parts={t.text}/></div>)}
+     {regulatory.expert&&<div className="diff-item changed"><b>Registrazione dell’esperto</b><small>{expertLabel(regulatory.expert.before)} → {expertLabel(regulatory.expert.after)}</small></div>}
+    </div>}
     <label className="switch-row"><input type="checkbox" checked={showSame} onChange={e=>setShowSame(e.target.checked)}/>Mostra anche le domande invariate</label>
    </>}
   </section>}

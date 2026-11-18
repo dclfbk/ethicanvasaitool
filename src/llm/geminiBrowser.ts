@@ -27,7 +27,7 @@
  * source code to users who interact with the software over a network.
  */
 
-import { geminiBaseUrl, type GeminiTransport } from './gemini';
+import { geminiBaseUrl, serverSentEventParser, type GeminiHttpRequest, type GeminiTransport } from './gemini';
 import { LlmError, type CredentialStore } from './provider';
 
 // The key is held in this module only: it is never written to storage and disappears when the page is closed or reloaded.
@@ -40,24 +40,48 @@ export const sessionCredentialStore: CredentialStore = {
  async clear() { sessionKey = null; },
 };
 
+async function open(request: GeminiHttpRequest, signal: AbortSignal): Promise<Response> {
+ if (!sessionKey) throw new LlmError('not-configured');
+ try {
+  return await fetch(geminiBaseUrl + request.path, {
+   method: request.method,
+   headers: {'x-goog-api-key': sessionKey, ...(request.body ? {'Content-Type': 'application/json'} : {})},
+   body: request.body ? JSON.stringify(request.body) : undefined,
+   signal, credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
+  });
+ } catch (e) {
+  if (signal.aborted) throw e;
+  throw new LlmError(navigator.onLine === false ? 'offline' : 'network');
+ }
+}
+async function readBody(response: Response): Promise<unknown> {
+ const text = await response.text();
+ try { return JSON.parse(text); } catch { return text; }
+}
+
+// Feeds the body of a streamed response to the server-sent event parser as it arrives.
+export async function readServerSentEvents(body: ReadableStream<Uint8Array>, onEvent: (event: unknown) => void) {
+ const reader = body.getReader(), decoder = new TextDecoder(), parser = serverSentEventParser(onEvent);
+ for (;;) {
+  const {value, done} = await reader.read();
+  parser.push(decoder.decode(value, {stream: !done}));
+  if (done) return parser.end();
+ }
+}
+
 export const browserGeminiTransport: GeminiTransport = {
  async send(request, signal) {
-  if (!sessionKey) throw new LlmError('not-configured');
-  let response: Response;
-  try {
-   response = await fetch(geminiBaseUrl + request.path, {
-    method: request.method,
-    headers: {'x-goog-api-key': sessionKey, ...(request.body ? {'Content-Type': 'application/json'} : {})},
-    body: request.body ? JSON.stringify(request.body) : undefined,
-    signal, credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
-   });
-  } catch (e) {
-   if (signal.aborted) throw e;
+  const response = await open(request, signal);
+  return {status: response.status, body: await readBody(response)};
+ },
+ async stream(request, signal, onEvent) {
+  const response = await open(request, signal);
+  if (!response.ok || !response.body) return {status: response.status, body: await readBody(response)};
+  try { await readServerSentEvents(response.body, onEvent); }
+  catch (e) {
+   if (signal.aborted || e instanceof LlmError) throw e;
    throw new LlmError(navigator.onLine === false ? 'offline' : 'network');
   }
-  const text = await response.text();
-  let body: unknown = text;
-  try { body = JSON.parse(text); } catch { /* keep raw text */ }
-  return {status: response.status, body};
+  return {status: response.status, body: undefined};
  },
 };

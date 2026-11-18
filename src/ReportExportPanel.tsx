@@ -28,10 +28,12 @@
  */
 
 import {useEffect,useRef,useState} from 'react';
-import {Bot,FileDown,FileText,Send,Square,X} from 'lucide-react';
+import {Bot,FileDown,FileText,Send,X} from 'lucide-react';
 import {maxContextChars} from './assistant';
 import type {AssistantSettings} from './assistantSettings';
 import {toDocx,toOdt} from './documents';
+import {AssistantWaiting} from './AssistantWaiting';
+import type {GenerateProgress} from './llm/provider';
 import type {LlmRuntime} from './llm';
 import {LlmError} from './llm/provider';
 import {sections,type Project,type Section} from './model';
@@ -46,6 +48,7 @@ const parts:[Exclude<keyof ReportDraft,'summary'|'sections'|'model'|'at'>,string
 export default function ReportExportPanel({project,settings,runtime,onOpenSettings,onError}:{project:Project;settings:AssistantSettings;runtime:LlmRuntime;onOpenSettings:()=>void;onError:(message:string)=>void}){
  const [includeAnswers,setIncludeAnswers]=useState(true),[busy,setBusy]=useState(false),[phase,setPhase]=useState<Phase>({name:'idle'});
  const [selection,setSelection]=useState<ReportSelection>({notes:false,referenceIds:[]}),[draft,setDraft]=useState<ReportDraft|null>(null),[removed,setRemoved]=useState<string[]>([]),[hasKey,setHasKey]=useState<boolean|null>(null);
+ const [progress,setProgress]=useState<GenerateProgress>();
  const controller=useRef<AbortController|null>(null);
  useEffect(()=>()=>controller.current?.abort(),[]);
  const items=buildReportContext(project,selection),request=buildReportRequest(items),tooLarge=reportTooLarge(request);
@@ -62,15 +65,15 @@ export default function ReportExportPanel({project,settings,runtime,onOpenSettin
   finally{setBusy(false);}
  }
  function report(format:'docx'|'odt'){
-  const blocks=buildReportBlocks(project,draft,{includeAnswers}),meta={title:'Rapporto di valutazione · '+project.name,author:project.organization||'EthiCanvas AI',language:'it-IT',created:new Date().toISOString()};
+  const blocks=buildReportBlocks(project,draft,{includeAnswers}),meta={title:'Rapporto di valutazione · '+project.name,author:project.organization||'EthiCanvasAI',language:'it-IT',created:new Date().toISOString()};
   download(`${name}-rapporto.${format}`,format==='docx'?toDocx(blocks,meta):toOdt(blocks,meta),format==='docx'?docxMime:odtMime);
  }
  function choose(){setPhase({name:'select'});runtime.credentials.has().then(setHasKey).catch(()=>setHasKey(false));}
  async function send(){
   if(phase.name==='loading'||tooLarge)return;
-  const c=new AbortController();controller.current=c;setPhase({name:'loading'});
+  const c=new AbortController();controller.current=c;setProgress(undefined);setPhase({name:'loading'});
   try{
-   const res=await runtime.provider.generate(runtime.model,request,c.signal);if(c.signal.aborted)return;
+   const res=await runtime.provider.generate(runtime.model,request,c.signal,p=>{if(!c.signal.aborted)setProgress(p);});if(c.signal.aborted)return;
    const result=parseReportResult(res.text,items);
    setDraft(toDraft(result,items,res.model,new Date().toISOString(),runtime.texts.subject));setRemoved(result.removed);setPhase({name:'idle'});
   }catch(e){if(c.signal.aborted&&!(e instanceof LlmError&&e.kind==='timeout'))setPhase({name:'select'});else setPhase({name:'error',message:e instanceof LlmError?runtime.texts.errors[e.kind]:runtime.texts.errors['bad-response']});}
@@ -80,7 +83,7 @@ export default function ReportExportPanel({project,settings,runtime,onOpenSettin
  const editSection=(id:Section,text:string)=>setDraft(d=>d&&{...d,sections:{...d.sections,[id]:text}});
  const rows=(text:string)=>Math.min(12,Math.max(3,text.split('\n').length+1));
  return <section className="panel report-export"><h2>Esporta il progetto</h2>
-  <p>Il canvas in PDF è disponibile in due formati. Lo stile originale riproduce le pagine A4 orizzontali dell’AI Ethics Canvas, con i riquadri colorati per profilo e il seguito delle risposte lunghe in pagine finali. Il formato poster mette le sei sezioni su un A3 orizzontale e poi tutte le risposte per intero. Il rapporto in DOCX o ODT riassume lo stato della valutazione{settings.enabled?` e, se la generi, la sintesi delle conclusioni proposta ${runtime.provider.id==='local'?'dal modello locale':'da Gemini'}`:''}.</p>
+  <p>Il canvas in PDF è disponibile in due formati. Lo stile originale usa le pagine dell’AI Ethics Canvas così come sono e scrive le risposte nei loro riquadri; il caso d’uso ha una pagina nello stesso stile e le risposte lunghe proseguono in pagine finali. Il formato poster mette le sei sezioni su un A3 orizzontale e poi tutte le risposte per intero. Il rapporto in DOCX o ODT riassume lo stato della valutazione{settings.enabled?` e, se la generi, la sintesi delle conclusioni proposta ${runtime.provider.id==='local'?'dal modello locale':'da Gemini'}`:''}.</p>
   <label className="switch-row"><input type="checkbox" checked={includeAnswers} onChange={e=>setIncludeAnswers(e.target.checked)}/>Allega al rapporto le risposte complete</label>
   <div className="button-row">
    <button className="primary" disabled={busy} onClick={()=>void pdf('original')}><FileDown size={16}/>{busy?'Preparo il PDF…':'Canvas in PDF · stile originale'}</button>
@@ -102,7 +105,7 @@ export default function ReportExportPanel({project,settings,runtime,onOpenSettin
     <p className="notice">I dati saranno inviati {runtime.texts.destination(runtime.model)}. La sintesi sarà una bozza modificabile: entra nel rapporto solo quando lo esporti.</p>
     {runtime.requiresKey&&hasKey===false?<div className="button-row"><span>Manca la chiave API.</span><button className="secondary" onClick={onOpenSettings}>{runtime.texts.configure}</button></div>:<button className="primary" disabled={tooLarge||hasKey===null} onClick={()=>void send()}><Send size={16}/>Genera la sintesi</button>}
    </div>}
-   {phase.name==='loading'&&<div className="assistant-box" aria-busy="true"><p role="status" className="assist-status busy">{runtime.texts.busy} scrivendo la sintesi…</p><button className="secondary" onClick={()=>controller.current?.abort()}><Square size={14}/>Annulla richiesta</button></div>}
+   {phase.name==='loading'&&<AssistantWaiting runtime={runtime} activity="scrivendo la sintesi" progress={progress} onCancel={()=>controller.current?.abort()}/>}
    {phase.name==='error'&&<div className="assistant-box"><p role="alert" className="assist-status error">{phase.message}</p><div className="button-row"><button className="secondary" onClick={()=>setPhase({name:'select'})}>Riprova</button><button className="text-button" onClick={()=>setPhase({name:'idle'})}>Chiudi</button></div></div>}
    {draft&&<div className="assistant-box">
     <div className="assistant-head"><b>Sintesi delle conclusioni · bozza</b><button className="text-button danger" onClick={()=>{setDraft(null);setRemoved([]);}}>Scarta la sintesi</button></div>
