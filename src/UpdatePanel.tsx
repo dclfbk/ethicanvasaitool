@@ -29,21 +29,37 @@
 
 import {useRef,useState} from 'react';
 import {Download,RefreshCw,X} from 'lucide-react';
-import {findUpdate,type PendingUpdate,type UpdateSettings} from './updates';
+import {appVersion,checkWebVersion,findUpdate,updatesSupported,type PendingUpdate,type UpdateSettings} from './updates';
 
-type Status={kind:'idle'|'busy'|'ok'|'error';text:string};
+type Status={kind:'idle'|'busy'|'ok'|'error';text:string;url?:string};
 export const releasesUrl='https://github.com/dclfbk/ethicanvasaitool/releases';
 
 export function UpdateSettingsPanel({settings,onChange,onFound}:{settings:UpdateSettings;onChange:(s:UpdateSettings)=>void;onFound:(u:PendingUpdate)=>void}){
- const [status,setStatus]=useState<Status>({kind:'idle',text:''}),busy=useRef(false);
- async function checkNow(){if(busy.current)return;busy.current=true;setStatus({kind:'busy',text:'Cerco una nuova versione…'});try{const u=await findUpdate();if(u){setStatus({kind:'idle',text:''});onFound(u);}else setStatus({kind:'ok',text:'Stai usando la versione più recente.'});}catch{setStatus({kind:'error',text:'Controllo non riuscito. Verifica la connessione a internet e riprova.'});}finally{busy.current=false;}}
+ const [status,setStatus]=useState<Status>({kind:'idle',text:''}),busy=useRef(false),desktop=updatesSupported();
+ async function checkNow(){
+  if(busy.current)return;
+  busy.current=true;
+  setStatus({kind:'busy',text:'Cerco una nuova versione…'});
+  try{
+   if(desktop){
+    const u=await findUpdate();
+    if(u){setStatus({kind:'idle',text:''});onFound(u);}
+    else setStatus({kind:'ok',text:`Stai usando la versione più recente (v${appVersion}).`});
+   }else{
+    const res=await checkWebVersion();
+    if(res.hasUpdate)setStatus({kind:'ok',text:`È disponibile una nuova versione: v${res.latestVersion} (attuale: v${res.currentVersion}).`,url:res.url});
+    else setStatus({kind:'ok',text:`Stai usando la versione più recente (v${res.currentVersion}).`});
+   }
+  }catch{setStatus({kind:'error',text:'Controllo non riuscito. Verifica la connessione a internet e riprova.'});}
+  finally{busy.current=false;}
+ }
  return <section className="panel" aria-labelledby="updates-title">
   <h2 id="updates-title">Aggiornamenti</h2>
-  <p>All’avvio l’applicazione controlla se su GitHub è stata pubblicata una nuova versione e, se c’è, chiede se installarla. Nulla viene installato senza la tua conferma.</p>
-  <label className="switch-row"><input type="checkbox" checked={settings.checkOnStartup} onChange={e=>onChange({checkOnStartup:e.target.checked})}/>Controlla gli aggiornamenti all’avvio</label>
-  <p className="notice">Il controllo scarica solo la descrizione dell’ultima versione da github.com: GitHub vede l’indirizzo IP del computer, ma non riceve progetti, risposte o chiavi. I pacchetti sono firmati e l’installazione viene bloccata se la firma non corrisponde.</p>
+  <p>Versione dell’applicazione: <b>v{appVersion}</b>. {desktop?'All’avvio l’applicazione controlla se su GitHub è stata pubblicata una nuova versione e, se c’è, chiede se installarla. Nulla viene installato senza la tua conferma.':'Nel browser non vengono effettuati controlli automatici all’avvio: puoi verificare su richiesta se su GitHub esiste una versione più recente.'}</p>
+  {desktop&&<label className="switch-row"><input type="checkbox" checked={settings.checkOnStartup} onChange={e=>onChange({checkOnStartup:e.target.checked})}/>Controlla gli aggiornamenti all’avvio</label>}
+  <p className="notice">{desktop?'Il controllo scarica solo la descrizione dell’ultima versione da github.com: GitHub vede l’indirizzo IP del computer, ma non riceve progetti, risposte o chiavi. I pacchetti sono firmati e l’installazione viene bloccata se la firma non corrisponde.':'Il controllo interroga le release pubbliche su github.com solo quando premi «Controlla ora», senza inviare progetti, risposte o chiavi.'}</p>
   <div className="button-row"><button className="secondary" disabled={status.kind==='busy'} onClick={()=>void checkNow()}><RefreshCw size={16}/>Controlla ora</button><a href={releasesUrl} target="_blank" rel="noreferrer">Tutte le versioni ↗</a></div>
-  {status.text&&<p role="status" className={'assist-status '+status.kind}>{status.text}</p>}
+  {status.text&&<p role="status" className={'assist-status '+status.kind}>{status.text}{status.url&&<> <a href={status.url} target="_blank" rel="noreferrer">Apri su GitHub ↗</a></>}</p>}
  </section>;
 }
 

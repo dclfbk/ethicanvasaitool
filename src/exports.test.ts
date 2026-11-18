@@ -123,7 +123,7 @@ describe('Report synthesis',()=>{
   expect(r.removed).toHaveLength(2);expect(r.risks.map(x=>x.text)).toEqual(['Messaggi con dati personali']);
   expect(r.sections.map(s=>s.id)).toEqual(['data']);expect(r.sections[0].conclusions.map(c=>c.unverified)).toEqual([false,true]);
   const d=toDraft(r,items,'gemini-3.8-flash','2026-10-28T10:00:00.000Z');
-  expect(d.strengths).toContain('(fonti: risposta «Quale problema vuoi risolvere?»; descrizione del progetto)');
+  expect(d.strengths).toContain('(fonti: risposta «Quale problema vuoi risolvere? È necessaria l’AI per questo obiettivo?»; descrizione del progetto)');
   expect(d.sections.data).toContain('[da verificare: fonte non riconosciuta]');expect(d.actions).toContain('responsabile: DPO');
   expect(draftItems('- uno\n\n• due\n tre')).toEqual(['uno','due','tre']);
   const blocks=buildReportBlocks(p,d,{includeAnswers:true,now:new Date('2026-10-28T10:00:00Z')});

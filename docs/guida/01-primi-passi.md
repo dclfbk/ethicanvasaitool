@@ -32,6 +32,17 @@ Se è la prima volta, parti da un caso già avviato: un chatbot che aiuta i citt
 
 [Crea un nuovo progetto](#app-new)
 
+## Accessibilità e visualizzazione
+
+In alto a destra, accanto allo stato di salvataggio, trovi il pulsante «Accessibilità». Premendolo puoi adattare l’interfaccia alle tue esigenze visive e di navigazione:
+
+- **Contrasto e tema**: scegli tra «Predefinito», «Alto contrasto» o «Tema scuro».
+- **Riconoscimento dei colori**: adatta la tavolozza per «Protanopia», «Deuteranopia», «Tritanopia» o «Acromatopsia» e attiva «Indicatori e simboli oltre al colore».
+- **Testo e leggibilità**: ingrandisci il testo («Normale», «Grande», «Molto grande»), amplia la «Spaziatura ampliata» o attiva il «Carattere uniforme ad alta leggibilità».
+- **Navigazione e movimento**: attiva l’«Evidenziazione forte del focus da tastiera», le «Aree cliccabili ampliate» o «Riduci animazioni e transizioni».
+
+Le preferenze si applicano subito e rimangono salvate sul dispositivo; puoi azzerarle in qualsiasi momento con «Ripristina predefiniti».
+
 ## Il tuo lavoro resta qui
 
 Ogni modifica viene salvata subito sul dispositivo: in alto a destra leggi «Tutto salvato in locale». Puoi chiudere e riprendere quando vuoi.

@@ -195,7 +195,7 @@ function cover(c: Canvas, page: PDFPage) {
  for (const l of c.w.lines(project.description, fonts.regular, 9.5, 500).slice(0, 6)) { c.text(page, l, 40, y, fonts.regular, 9.5); y += 13; }
  y += 10;
  sections.forEach((s, i) => {
-  const qs = questions.filter(q => q.section === s.id), done = qs.filter(q => accepted(project.answers[q.id])).length, col = i % 3, row = Math.floor(i / 3), x = 40 + col * 170, yy = y + row * 30;
+  const qs = questions.filter(q => (q.canvasSection ?? q.section) === s.id), done = qs.filter(q => accepted(project.answers[q.id])).length, col = i % 3, row = Math.floor(i / 3), x = 40 + col * 170, yy = y + row * 30;
   // Numbered like the section pages; the use case is not numbered in the original either.
   if (i) { page.drawCircle({x: x + 9, y: T(yy - 4), size: 9, borderColor: ink, borderWidth: 1}); c.centered(page, String(i), x + 9, yy, fonts.bold, 9); }
   else c.note(page, x, yy - 13, 18, 18, ['scientist', 'engineer', 'user']);
@@ -235,7 +235,7 @@ export async function canvasOriginalPdf(project: Project, now = new Date()): Pro
  const c = new Canvas(new TextWriter(doc, fonts), logos, project, now);
 
  // Plan first: which answers continue, and on which page each continuation lands.
- const bySection = sections.map(s => ({s, qs: questions.filter(q => q.section === s.id)}));
+ const bySection = sections.map(s => ({s, qs: questions.filter(q => (q.canvasSection ?? q.section) === s.id)}));
  const sectionPages = 1 + bySection.length;
  const long = bySection.flatMap(({qs}) => overflowing(c, qs));
  const fullWidth = area.right - area.left - 24;

@@ -45,6 +45,9 @@ describe('Contribution request',()=>{
  it('selects the questions waiting for a person',()=>{
   expect(waitingPeople(sample())).toEqual(['Fornitore','DPO']);
   expect(waitingFor(sample(),'dpo')).toEqual(['privacy']);expect(waitingFor(sample())).toEqual(['sources','privacy']);
+  const p=sample();p.answers.privacy=answer('Da chiarire','waiting',{person:'DPO, Referente legale',request:'Verificare base'});
+  expect(waitingPeople(p)).toEqual(['Fornitore','DPO','Referente legale']);
+  expect(waitingFor(p,'referente legale')).toEqual(['privacy']);
  });
  it('contains only the chosen questions, without notes, contributors or attachments',()=>{
   const p=sample();p.references.push({id:'r',questionId:'privacy',kind:'document',title:'Registro',url:'',note:'',data:'data:text/plain;base64,AAAA'});

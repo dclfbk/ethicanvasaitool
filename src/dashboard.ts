@@ -28,6 +28,7 @@
  */
 
 import { lastReview, reviewDue } from './history';
+import { parsePeople } from './contributions';
 import { accepted, evaluate, questions, sections, type EvaluationStatus, type Project, type ReviewOutcome, type Section } from './model';
 
 // Organisation overview: figures computed on the device from the projects of the archive. Demo projects
@@ -59,7 +60,11 @@ export function buildDashboard(all: Project[], today = new Date(), includeDemo =
   return [{project: p, questionId: q.id, person: a.person.trim(), request: a.request.trim(), since: a.updatedAt, days: Math.max(0, Math.floor((startOfDay(today) - startOfDay(new Date(a.updatedAt))) / dayMs))}];
  })).sort((a, b) => b.days - a.days || a.project.name.localeCompare(b.project.name));
  const people = new Map<string, number>();
- waiting.forEach(w => { const k = w.person || ''; people.set(k, (people.get(k) ?? 0) + 1); });
+ waiting.forEach(w => {
+  const list = parsePeople(w.person);
+  if (!list.length) people.set('', (people.get('') ?? 0) + 1);
+  else list.forEach(k => people.set(k, (people.get(k) ?? 0) + 1));
+ });
  return {
   projects, byStatus, paused: projects.filter(p => p.paused).length,
   averagePercent: evals.length ? Math.round(evals.reduce((s, e) => s + e.percent, 0) / evals.length) : 0,

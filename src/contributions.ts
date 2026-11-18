@@ -57,8 +57,9 @@ export function createRequest(p: Project, o: RequestOptions, now = new Date().to
   questions: ids.map(id => ({id, request: p.answers[id]?.request.trim() ?? '', answer: o.includeAnswers ? p.answers[id]?.value.trim() ?? '' : ''}))};
 }
 // Questions that are waiting for someone, optionally only for one person: the default selection of a request.
-export const waitingFor = (p: Project, person?: string) => questions.filter(q => { const a = p.answers[q.id]; return a?.state === 'waiting' && (!person?.trim() || a.person.trim().toLowerCase() === person.trim().toLowerCase()); }).map(q => q.id);
-export const waitingPeople = (p: Project) => [...new Set(questions.flatMap(q => { const a = p.answers[q.id]; return a?.state === 'waiting' && a.person.trim() ? [a.person.trim()] : []; }))];
+export const parsePeople = (person: string) => person.split(',').map(s => s.trim()).filter(Boolean);
+export const waitingFor = (p: Project, person?: string) => questions.filter(q => { const a = p.answers[q.id]; return a?.state === 'waiting' && (!person?.trim() || parsePeople(a.person).some(x => x.toLowerCase() === person.trim().toLowerCase())); }).map(q => q.id);
+export const waitingPeople = (p: Project) => [...new Set(questions.flatMap(q => { const a = p.answers[q.id]; return a?.state === 'waiting' ? parsePeople(a.person) : []; }))];
 
 const str = (v: unknown, max: number) => typeof v === 'string' && v.length <= max;
 const known = new Set(questions.map(q => q.id));

@@ -32,12 +32,15 @@ Con «Indietro» torni alla domanda precedente; con «Salva e riprendi più avan
 Spesso una risposta richiede chi conosce i dati, il contratto con il fornitore o la normativa.
 
 1. Premi «Serve un’altra figura».
-2. Nel riquadro «Coinvolgi la persona giusta» indica la figura e che cosa deve chiarire.
+2. Nel riquadro «Coinvolgi la persona giusta» aggiungi una o più figure con «Aggiungi figura» e scrivi che cosa devono chiarire.
 3. La risposta passa allo stato «In attesa di un contributo» e compare tra i contributi in attesa nel riepilogo.
+4. Se cambi idea, premi «Annulla richiesta» (oppure premi di nuovo «Serve un’altra figura») per tornare a «Bozza da approfondire».
 
 ![Una richiesta di contributo](img/attesa.png)
 
-La richiesta resta nel tuo archivio: non viene inviata a nessuno. Puoi copiarla in una mail o portarla in riunione.
+La richiesta resta nel tuo archivio: non viene inviata a nessuno. Puoi copiarla in una mail o portarla in riunione, oppure creare un file di richiesta dalla scheda «Contributi».
+
+Nell’ultima domanda sul riesame puoi anche impostare la «Data prevista per il prossimo riesame (facoltativa)», che viene sincronizzata con «Versioni e revisioni» e mostrata in «Quadro dell’ente».
 
 ## Note e motivazioni
 

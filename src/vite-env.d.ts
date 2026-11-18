@@ -35,3 +35,4 @@ interface ImportMetaEnv {
  readonly VITE_MS_CLIENT_ID?: string;
  readonly VITE_MS_TENANT?: string;
 }
+declare const __APP_VERSION__: string | undefined;
