@@ -28,7 +28,7 @@
  */
 
 import fontkit from '@pdf-lib/fontkit';
-import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
+import { PDFDocument, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
 import {
   evaluate,
   questionnaireVersion,
@@ -40,7 +40,7 @@ import {
   type Question,
 } from './model';
 import { pdfCanvasTemplate, pdfFonts, pdfLogos } from './pdfAssets';
-import { dateLabel, hex, ink, stateOf, truncate, Writer as TextWriter } from './pdfText';
+import { dateLabel, ink, stateOf, truncate, Writer as TextWriter } from './pdfText';
 import { answerStateLabels, regulatoryNote, selfAssessmentNote } from './report';
 import { blue, canvasLicense as license, drawNote, grey, navy, white } from './canvasStyle';
 import { placements, templatePageCount, templatePages, withoutCell, type Box } from './canvasTemplate';

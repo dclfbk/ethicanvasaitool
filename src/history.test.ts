@@ -194,7 +194,7 @@ describe('Review plan', () => {
       new Date('2026-10-28T10:00:00Z'),
     )!;
     expect(ics).toContain('DTSTART;VALUE=DATE:20270312\r\nDTEND;VALUE=DATE:20270313');
-    expect(ics).toContain('SUMMARY:Riesame\; «Chatbot»\\, anagrafe');
+    expect(ics).toContain('SUMMARY:Riesame\\; «Chatbot»\\, anagrafe');
     expect(ics.split('\r\n').every(l => new TextEncoder().encode(l).length <= 75)).toBe(true);
     expect(ics.endsWith('END:VCALENDAR\r\n')).toBe(true);
     expect(reviewCalendar(sample(), 'x', 'y')).toBeNull();

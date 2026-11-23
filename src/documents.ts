@@ -42,6 +42,8 @@ export interface DocMeta {
 // Characters outside the XML 1.0 range would make the package unreadable.
 const xml = (s: string) =>
   s
+    // Keeps only the characters allowed in XML 1.0; tab, LF and CR are listed on purpose.
+    // eslint-disable-next-line no-control-regex
     .replace(/[^\u0009\u000a\u000d -퟿-�\u{10000}-\u{10ffff}]/gu, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

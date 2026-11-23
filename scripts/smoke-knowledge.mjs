@@ -87,10 +87,6 @@ const streamedReply = (r, text) => {
     throw new Error('the browser must stream with reasoning summaries');
   return { status: 200, headers: cors, contentType: 'text/event-stream', body: streamed(text) };
 };
-const reply = json => ({
-  status: 'completed',
-  steps: [{ type: 'model_output', content: [{ type: 'text', text: JSON.stringify(json) }] }],
-});
 const result = {
   summary: 'Lo scenario è vicino al chatbot dei tributi.',
   user_question_answer: 'Il caso C1 prevede un avviso sui dati personali.',

@@ -61,7 +61,7 @@ type Phase =
 export default function AssistantPanel({
   project,
   question,
-  settings,
+  settings: _settings,
   runtime,
   onApply,
   onAddNote,

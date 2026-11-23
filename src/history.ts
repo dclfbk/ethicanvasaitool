@@ -321,7 +321,8 @@ export function diffSnapshots(before: ProjectSnapshot, after: ProjectSnapshot): 
 // iCalendar all-day event for the planned review, to add to any calendar application (RFC 5545).
 export function reviewCalendar(p: Project, summary: string, description: string, now = new Date()) {
   if (!p.reviewPlan?.nextAt) return null;
-  const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  const esc = (s: string) =>
+    s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
   const day = p.reviewPlan.nextAt.replace(/-/g, ''),
     next = new Date(p.reviewPlan.nextAt + 'T00:00:00Z');
   next.setUTCDate(next.getUTCDate() + 1);

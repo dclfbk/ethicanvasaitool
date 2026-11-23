@@ -30,7 +30,7 @@
 import { useEffect, useState } from 'react';
 import { FileDown, FileUp } from 'lucide-react';
 import { createResponse, readRequest, type ContributionRequest } from './contributions';
-import { minPassphraseLength, readContributionFile, saveContributionFile, unlock } from './contributionFiles';
+import { readContributionFile, saveContributionFile, unlock } from './contributionFiles';
 import type { EncryptedArchive } from './cloud/archiveCrypto';
 import { questions } from './model';
 

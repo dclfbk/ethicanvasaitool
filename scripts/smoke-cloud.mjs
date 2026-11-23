@@ -111,7 +111,7 @@ async function routes(context) {
     if (u.pathname === '/drive/v3/files' && r.method() === 'GET') {
       const value = /value='(\w+)'/.exec(u.searchParams.get('q'))[1];
       return json(route, {
-        files: google.files.filter(f => f.appProperties?.canvasPa === value).map(({ content, ...f }) => f),
+        files: google.files.filter(f => f.appProperties?.canvasPa === value).map(({ content: _content, ...f }) => f),
       });
     }
     if (u.pathname === '/drive/v3/files' && r.method() === 'POST') {
@@ -213,7 +213,6 @@ async function openSettings(page, service = 'Google Drive') {
   await page.getByRole('heading', { name: 'Archivio sul tuo drive' }).waitFor();
   await page.getByRole('group', { name: 'Servizio di archiviazione' }).getByRole('button', { name: service }).click();
 }
-const status = page => page.locator('.cloud-sync .assist-status');
 
 let browser;
 try {

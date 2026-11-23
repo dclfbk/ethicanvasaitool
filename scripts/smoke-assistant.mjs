@@ -87,10 +87,6 @@ const streamedReply = (r, text) => {
     throw new Error('the browser must stream with reasoning summaries');
   return { status: 200, headers: cors, contentType: 'text/event-stream', body: streamed(text) };
 };
-const reply = json => ({
-  status: 'completed',
-  steps: [{ type: 'model_output', content: [{ type: 'text', text: JSON.stringify(json) }] }],
-});
 const proposal = {
   explanation: 'Servono inventario e responsabilità.',
   draft_answer: 'Bozza proposta: documenti pubblici e log tecnici.',
@@ -176,13 +172,11 @@ try {
   await page.getByRole('heading', { name: 'Quali dati e documenti entrano in gioco?' }).waitFor();
   await page.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await page.getByLabel('Titolo', { exact: true }).fill('Inventario fonti');
-  await page
-    .getByLabel('File locale')
-    .setInputFiles({
-      name: 'inventario.txt',
-      mimeType: 'text/plain',
-      buffer: Buffer.from('Fonte locale di prova: albo pretorio'),
-    });
+  await page.getByLabel('File locale').setInputFiles({
+    name: 'inventario.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('Fonte locale di prova: albo pretorio'),
+  });
   await page.getByRole('button', { name: 'Aggiungi riferimento', exact: true }).click();
   await page.getByText('Estratto testuale · nessuno').click();
   await page.getByRole('button', { name: 'Estrai testo dal file (in locale)' }).click();

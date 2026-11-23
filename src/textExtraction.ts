@@ -111,7 +111,7 @@ export function odtText(xml: string) {
 
 function plainText(bytes: Uint8Array): Extraction {
   if (bytes.includes(0)) return { ok: false, reason: 'binary' };
-  const text = new TextDecoder('utf-8').decode(bytes).replace(/^﻿/, '');
+  const text = new TextDecoder('utf-8').decode(bytes).replace(/^\uFEFF/, '');
   const invalid = (text.match(/�/g) ?? []).length;
   if (text.length && invalid / text.length > 0.02) return { ok: false, reason: 'binary' };
   return { ok: true, text, truncated: false };

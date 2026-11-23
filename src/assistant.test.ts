@@ -127,7 +127,7 @@ describe('Assistant context', () => {
   });
   it('keeps projects separate', () => {
     const a = sample('A', 'alpha'),
-      b = sample('B', 'beta');
+      _b = sample('B', 'beta'); // exists alongside A but must not leak into its request
     const input = buildRequest(
       'draft',
       buildContext(a, q('sources'), {

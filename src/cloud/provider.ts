@@ -100,8 +100,8 @@ export const archiveFolderName = 'EthiCanvas AI';
 
 // Only these endpoints can be reached; the desktop side enforces the same list in Rust.
 // Unauthenticated GETs are allowed only towards pre-authenticated OneDrive download links.
-const googlePrefixes = ['https://www.googleapis.com/drive/v3/', 'https://www.googleapis.com/upload/drive/v3/'];
-const graphPrefix = 'https://graph.microsoft.com/v1.0/me';
+export const googlePrefixes = ['https://www.googleapis.com/drive/v3/', 'https://www.googleapis.com/upload/drive/v3/'];
+export const graphPrefix = 'https://graph.microsoft.com/v1.0/me';
 // Returns the normalised URL to send, or null when the request is not allowed.
 export function allowedCloudRequest(provider: CloudProviderId, request: CloudHttpRequest): string | null {
   if (provider === 'folder') return null;
