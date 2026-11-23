@@ -29,13 +29,34 @@
 
 import type { ReviewOutcome, ReviewTrigger, VersionReason } from './model';
 
-export const reasonLabels: Record<VersionReason, string> = {milestone:'Tappa del progetto',review:'Revisione',change:'Cambiamento del progetto',restore:'Prima di un ripristino',prefill:'Prima della precompilazione',contribution:'Prima di un contributo importato',other:'Altro'};
+export const reasonLabels: Record<VersionReason, string> = {
+  milestone: 'Tappa del progetto',
+  review: 'Revisione',
+  change: 'Cambiamento del progetto',
+  restore: 'Prima di un ripristino',
+  prefill: 'Prima della precompilazione',
+  contribution: 'Prima di un contributo importato',
+  other: 'Altro',
+};
 // Reasons a person can choose; the others are set by the application when it saves a version automatically.
-export const manualReasons: VersionReason[] = ['milestone','change','other'];
-export const outcomeLabels: Record<ReviewOutcome, string> = {shared:'Valutazione condivisa',conditions:'Condivisa con condizioni',revise:'Da rivedere'};
-export const triggerLabels: Record<ReviewTrigger, string> = {model:'Cambio di modello o di fornitore',data:'Nuove fonti di dati',purpose:'Cambio di finalità o di utenti',incident:'Incidente o segnalazione',regulation:'Nuova norma o linea guida',other:'Altro evento'};
-export function dueLabel(due: {days: number; overdue: boolean} | null) {
- if (!due) return 'Nessun riesame pianificato';
- if (due.overdue) return `Riesame scaduto da ${-due.days} ${due.days === -1 ? 'giorno' : 'giorni'}`;
- return due.days === 0 ? 'Riesame previsto per oggi' : `Riesame tra ${due.days} ${due.days === 1 ? 'giorno' : 'giorni'}`;
+export const manualReasons: VersionReason[] = ['milestone', 'change', 'other'];
+export const outcomeLabels: Record<ReviewOutcome, string> = {
+  shared: 'Valutazione condivisa',
+  conditions: 'Condivisa con condizioni',
+  revise: 'Da rivedere',
+};
+export const triggerLabels: Record<ReviewTrigger, string> = {
+  model: 'Cambio di modello o di fornitore',
+  data: 'Nuove fonti di dati',
+  purpose: 'Cambio di finalità o di utenti',
+  incident: 'Incidente o segnalazione',
+  regulation: 'Nuova norma o linea guida',
+  other: 'Altro evento',
+};
+export function dueLabel(due: { days: number; overdue: boolean } | null) {
+  if (!due) return 'Nessun riesame pianificato';
+  if (due.overdue) return `Riesame scaduto da ${-due.days} ${due.days === -1 ? 'giorno' : 'giorni'}`;
+  return due.days === 0
+    ? 'Riesame previsto per oggi'
+    : `Riesame tra ${due.days} ${due.days === 1 ? 'giorno' : 'giorni'}`;
 }

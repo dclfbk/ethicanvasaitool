@@ -33,47 +33,76 @@ import type { Answer } from './model';
 
 // Text helpers shared by the two canvas PDF layouts.
 export const ink = rgb(0x23 / 255, 0x1f / 255, 0x20 / 255);
-export const hex = (h: string) => rgb(parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255);
+export const hex = (h: string) =>
+  rgb(parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255);
 
 // Characters the font cannot draw (emoji, rare symbols) are left out instead of breaking the export.
 function sanitizer(font: PDFFont) {
- const supported = new Set(font.getCharacterSet());
- return (text: string) => [...text.replace(/\t/g, '    ').replace(/\r/g, '')].filter(c => c === '\n' || supported.has(c.codePointAt(0)!)).join('').replace(/ +$/gm, '');
+  const supported = new Set(font.getCharacterSet());
+  return (text: string) =>
+    [...text.replace(/\t/g, '    ').replace(/\r/g, '')]
+      .filter(c => c === '\n' || supported.has(c.codePointAt(0)!))
+      .join('')
+      .replace(/ +$/gm, '');
 }
 export function wrap(text: string, width: number, measure: (s: string) => number): string[] {
- const lines: string[] = [];
- for (const paragraph of text.split('\n')) {
-  let current = '';
-  for (const word of paragraph.split(/ +/)) {
-   const candidate = current ? current + ' ' + word : word;
-   if (measure(candidate) <= width) { current = candidate; continue; }
-   if (current) lines.push(current);
-   // A word longer than the line is split character by character.
-   let rest = word;
-   while (measure(rest) > width) { let n = rest.length - 1; while (n > 1 && measure(rest.slice(0, n)) > width) n--; lines.push(rest.slice(0, n)); rest = rest.slice(n); }
-   current = rest;
+  const lines: string[] = [];
+  for (const paragraph of text.split('\n')) {
+    let current = '';
+    for (const word of paragraph.split(/ +/)) {
+      const candidate = current ? current + ' ' + word : word;
+      if (measure(candidate) <= width) {
+        current = candidate;
+        continue;
+      }
+      if (current) lines.push(current);
+      // A word longer than the line is split character by character.
+      let rest = word;
+      while (measure(rest) > width) {
+        let n = rest.length - 1;
+        while (n > 1 && measure(rest.slice(0, n)) > width) n--;
+        lines.push(rest.slice(0, n));
+        rest = rest.slice(n);
+      }
+      current = rest;
+    }
+    lines.push(current);
   }
-  lines.push(current);
- }
- return lines;
+  return lines;
 }
 export function truncate(lines: string[], max: number, width: number, measure: (s: string) => number, suffix: string) {
- if (lines.length <= max) return lines;
- if (max <= 0) return [];
- const kept = lines.slice(0, max);
- let last = kept[max - 1];
- while (last && measure(last + suffix) > width) last = last.slice(0, -1);
- kept[max - 1] = last.trimEnd() + suffix;
- return kept;
+  if (lines.length <= max) return lines;
+  if (max <= 0) return [];
+  const kept = lines.slice(0, max);
+  let last = kept[max - 1];
+  while (last && measure(last + suffix) > width) last = last.slice(0, -1);
+  kept[max - 1] = last.trimEnd() + suffix;
+  return kept;
 }
 
-export function stateOf(a?: Answer) { return a?.value.trim() || a?.state === 'waiting' ? a.state : 'missing'; }
-export const dateLabel = (d: Date) => d.toLocaleDateString('it-IT', {day: 'numeric', month: 'long', year: 'numeric'});
+export function stateOf(a?: Answer) {
+  return a?.value.trim() || a?.state === 'waiting' ? a.state : 'missing';
+}
+export const dateLabel = (d: Date) => d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
 
 export class Writer<F extends Record<string, PDFFont>> {
- constructor(readonly doc: PDFDocument, readonly fonts: F) {}
- private clean = new Map<PDFFont, (s: string) => string>();
- text(font: PDFFont, s: string) { let f = this.clean.get(font); if (!f) { f = sanitizer(font); this.clean.set(font, f); } return f(s); }
- lines(s: string, font: PDFFont, size: number, width: number) { return wrap(this.text(font, s), width, x => font.widthOfTextAtSize(x, size)); }
- draw(page: PDFPage, s: string, x: number, y: number, font: PDFFont, size: number, color: RGB = ink) { page.drawText(this.text(font, s), {x, y, font, size, color}); }
+  constructor(
+    readonly doc: PDFDocument,
+    readonly fonts: F,
+  ) {}
+  private clean = new Map<PDFFont, (s: string) => string>();
+  text(font: PDFFont, s: string) {
+    let f = this.clean.get(font);
+    if (!f) {
+      f = sanitizer(font);
+      this.clean.set(font, f);
+    }
+    return f(s);
+  }
+  lines(s: string, font: PDFFont, size: number, width: number) {
+    return wrap(this.text(font, s), width, x => font.widthOfTextAtSize(x, size));
+  }
+  draw(page: PDFPage, s: string, x: number, y: number, font: PDFFont, size: number, color: RGB = ink) {
+    page.drawText(this.text(font, s), { x, y, font, size, color });
+  }
 }

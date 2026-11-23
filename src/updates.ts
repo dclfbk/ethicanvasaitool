@@ -34,87 +34,107 @@ export const appVersion = typeof __APP_VERSION__ === 'string' && __APP_VERSION__
 // Signed in-app updates are offered only in the desktop app; the web build can still check GitHub on demand.
 export const updatesSupported = () => isTauri();
 
-export interface UpdateSettings { checkOnStartup: boolean; }
+export interface UpdateSettings {
+  checkOnStartup: boolean;
+}
 const storageKey = 'canvas-pa.updates';
-export const defaultUpdateSettings: UpdateSettings = {checkOnStartup: true};
+export const defaultUpdateSettings: UpdateSettings = { checkOnStartup: true };
 
 export function normalizeVersion(value: string): string {
- return value.trim().replace(/^v/i, '');
+  return value.trim().replace(/^v/i, '');
 }
 
 function parseSemver(value: string): { core: [number, number, number]; pre: (number | string)[] } | null {
- const clean = normalizeVersion(value).split('+')[0];
- const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(clean);
- if (!match) return null;
- const core: [number, number, number] = [Number(match[1]), Number(match[2]), Number(match[3])];
- const pre = match[4] ? match[4].split('.').map(p => (/^\d+$/.test(p) ? Number(p) : p)) : [];
- return {core, pre};
+  const clean = normalizeVersion(value).split('+')[0];
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(clean);
+  if (!match) return null;
+  const core: [number, number, number] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const pre = match[4] ? match[4].split('.').map(p => (/^\d+$/.test(p) ? Number(p) : p)) : [];
+  return { core, pre };
 }
 
 // Returns >0 if a > b, <0 if a < b, 0 if equal (following SemVer 2.0.0 prerelease rules).
 export function compareVersions(a: string, b: string): number {
- const pa = parseSemver(a), pb = parseSemver(b);
- if (!pa || !pb) return normalizeVersion(a).localeCompare(normalizeVersion(b));
- for (let i = 0; i < 3; i++) if (pa.core[i] !== pb.core[i]) return pa.core[i] - pb.core[i];
- if (pa.pre.length === 0 && pb.pre.length === 0) return 0;
- if (pa.pre.length === 0) return 1;
- if (pb.pre.length === 0) return -1;
- for (let i = 0; i < Math.max(pa.pre.length, pb.pre.length); i++) {
-  const xa = pa.pre[i], xb = pb.pre[i];
-  if (xa === undefined) return -1;
-  if (xb === undefined) return 1;
-  if (xa === xb) continue;
-  if (typeof xa === 'number' && typeof xb === 'number') return xa - xb;
-  if (typeof xa === 'number') return -1;
-  if (typeof xb === 'number') return 1;
-  return xa.localeCompare(xb);
- }
- return 0;
+  const pa = parseSemver(a),
+    pb = parseSemver(b);
+  if (!pa || !pb) return normalizeVersion(a).localeCompare(normalizeVersion(b));
+  for (let i = 0; i < 3; i++) if (pa.core[i] !== pb.core[i]) return pa.core[i] - pb.core[i];
+  if (pa.pre.length === 0 && pb.pre.length === 0) return 0;
+  if (pa.pre.length === 0) return 1;
+  if (pb.pre.length === 0) return -1;
+  for (let i = 0; i < Math.max(pa.pre.length, pb.pre.length); i++) {
+    const xa = pa.pre[i],
+      xb = pb.pre[i];
+    if (xa === undefined) return -1;
+    if (xb === undefined) return 1;
+    if (xa === xb) continue;
+    if (typeof xa === 'number' && typeof xb === 'number') return xa - xb;
+    if (typeof xa === 'number') return -1;
+    if (typeof xb === 'number') return 1;
+    return xa.localeCompare(xb);
+  }
+  return 0;
 }
 
 export function loadUpdateSettings(): UpdateSettings {
- try {
-  const v = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
-  if (!v || typeof v !== 'object') return defaultUpdateSettings;
-  return {checkOnStartup: v.checkOnStartup !== false};
- } catch { return defaultUpdateSettings; }
+  try {
+    const v = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
+    if (!v || typeof v !== 'object') return defaultUpdateSettings;
+    return { checkOnStartup: v.checkOnStartup !== false };
+  } catch {
+    return defaultUpdateSettings;
+  }
 }
 export function saveUpdateSettings(s: UpdateSettings) {
- try { localStorage.setItem(storageKey, JSON.stringify({checkOnStartup: s.checkOnStartup})); } catch { /* preferences are optional */ }
+  try {
+    localStorage.setItem(storageKey, JSON.stringify({ checkOnStartup: s.checkOnStartup }));
+  } catch {
+    /* preferences are optional */
+  }
 }
 
 export interface PendingUpdate {
- version: string; currentVersion: string; date?: string; notes?: string;
- // Downloads, verifies the signature, installs and restarts the app. Progress is a percentage, or null when the size is unknown.
- install(onProgress: (percent: number | null) => void): Promise<void>;
- dismiss(): Promise<void>;
+  version: string;
+  currentVersion: string;
+  date?: string;
+  notes?: string;
+  // Downloads, verifies the signature, installs and restarts the app. Progress is a percentage, or null when the size is unknown.
+  install(onProgress: (percent: number | null) => void): Promise<void>;
+  dismiss(): Promise<void>;
 }
 
 // Asks the release endpoint configured in tauri.conf.json for a newer signed version.
 export async function findUpdate(): Promise<PendingUpdate | null> {
- const {check} = await import('@tauri-apps/plugin-updater');
- const update = await check();
- if (!update) return null;
- return {
-  version: update.version, currentVersion: update.currentVersion, date: update.date, notes: update.body,
-  async install(onProgress) {
-   let total = 0, done = 0;
-   await update.downloadAndInstall(e => {
-    if (e.event === 'Started') total = e.data.contentLength ?? 0;
-    else if (e.event === 'Progress') { done += e.data.chunkLength; onProgress(total ? Math.min(100, Math.round(done * 100 / total)) : null); }
-   });
-   const {relaunch} = await import('@tauri-apps/plugin-process');
-   await relaunch();
-  },
-  dismiss: () => update.close(),
- };
+  const { check } = await import('@tauri-apps/plugin-updater');
+  const update = await check();
+  if (!update) return null;
+  return {
+    version: update.version,
+    currentVersion: update.currentVersion,
+    date: update.date,
+    notes: update.body,
+    async install(onProgress) {
+      let total = 0,
+        done = 0;
+      await update.downloadAndInstall(e => {
+        if (e.event === 'Started') total = e.data.contentLength ?? 0;
+        else if (e.event === 'Progress') {
+          done += e.data.chunkLength;
+          onProgress(total ? Math.min(100, Math.round((done * 100) / total)) : null);
+        }
+      });
+      const { relaunch } = await import('@tauri-apps/plugin-process');
+      await relaunch();
+    },
+    dismiss: () => update.close(),
+  };
 }
 
 export interface WebVersionCheck {
- currentVersion: string;
- latestVersion: string;
- hasUpdate: boolean;
- url: string;
+  currentVersion: string;
+  latestVersion: string;
+  hasUpdate: boolean;
+  url: string;
 }
 
 const repoReleasesApi = 'https://api.github.com/repos/dclfbk/ethicanvasaitool/releases/latest';
@@ -123,24 +143,35 @@ const repoReleasesPage = 'https://github.com/dclfbk/ethicanvasaitool/releases';
 
 // Checks GitHub Releases (falling back to Git tags) on explicit user action in the browser build.
 export async function checkWebVersion(fetchImpl: typeof fetch = fetch): Promise<WebVersionCheck> {
- const headers = {Accept: 'application/vnd.github+json'};
- const res = await fetchImpl(repoReleasesApi, {headers});
- if (res.ok) {
-  const data = (await res.json()) as { tag_name?: string; html_url?: string };
-  if (data.tag_name) {
-   const latest = normalizeVersion(data.tag_name);
-   return {currentVersion: appVersion, latestVersion: latest, hasUpdate: compareVersions(latest, appVersion) > 0, url: data.html_url || repoReleasesPage};
+  const headers = { Accept: 'application/vnd.github+json' };
+  const res = await fetchImpl(repoReleasesApi, { headers });
+  if (res.ok) {
+    const data = (await res.json()) as { tag_name?: string; html_url?: string };
+    if (data.tag_name) {
+      const latest = normalizeVersion(data.tag_name);
+      return {
+        currentVersion: appVersion,
+        latestVersion: latest,
+        hasUpdate: compareVersions(latest, appVersion) > 0,
+        url: data.html_url || repoReleasesPage,
+      };
+    }
+  } else if (res.status !== 404) {
+    throw new Error(`github-${res.status}`);
   }
- } else if (res.status !== 404) {
-  throw new Error(`github-${res.status}`);
- }
 
- const tagsRes = await fetchImpl(repoTagsApi, {headers});
- if (!tagsRes.ok) throw new Error(`github-${tagsRes.status}`);
- const tags = (await tagsRes.json()) as { name?: string }[];
- const valid = tags.map(t => t.name).filter((n): n is string => typeof n === 'string' && !!parseSemver(n));
- if (!valid.length) return {currentVersion: appVersion, latestVersion: appVersion, hasUpdate: false, url: repoReleasesPage};
- valid.sort((a, b) => compareVersions(b, a));
- const latest = normalizeVersion(valid[0]);
- return {currentVersion: appVersion, latestVersion: latest, hasUpdate: compareVersions(latest, appVersion) > 0, url: `${repoReleasesPage}/tag/${encodeURIComponent(valid[0])}`};
+  const tagsRes = await fetchImpl(repoTagsApi, { headers });
+  if (!tagsRes.ok) throw new Error(`github-${tagsRes.status}`);
+  const tags = (await tagsRes.json()) as { name?: string }[];
+  const valid = tags.map(t => t.name).filter((n): n is string => typeof n === 'string' && !!parseSemver(n));
+  if (!valid.length)
+    return { currentVersion: appVersion, latestVersion: appVersion, hasUpdate: false, url: repoReleasesPage };
+  valid.sort((a, b) => compareVersions(b, a));
+  const latest = normalizeVersion(valid[0]);
+  return {
+    currentVersion: appVersion,
+    latestVersion: latest,
+    hasUpdate: compareVersions(latest, appVersion) > 0,
+    url: `${repoReleasesPage}/tag/${encodeURIComponent(valid[0])}`,
+  };
 }

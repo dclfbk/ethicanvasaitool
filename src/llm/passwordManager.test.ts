@@ -27,41 +27,69 @@
  * source code to users who interact with the software over a network.
  */
 
-import {afterEach,describe,expect,it,vi} from 'vitest';
-import {offerToRemember,passwordManagerAccount,passwordManagerAvailable,recallFromPasswordManager} from './passwordManager';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  offerToRemember,
+  passwordManagerAccount,
+  passwordManagerAvailable,
+  recallFromPasswordManager,
+} from './passwordManager';
 
-afterEach(()=>vi.unstubAllGlobals());
-function stubBrowser(get:()=>Promise<unknown>){
- const stored:unknown[]=[];
- class PasswordCredential{constructor(public data:object){}}
- vi.stubGlobal('PasswordCredential',PasswordCredential);
- vi.stubGlobal('navigator',{credentials:{store:async(c:unknown)=>{stored.push(c);return c;},get}});
- return stored;
+afterEach(() => vi.unstubAllGlobals());
+function stubBrowser(get: () => Promise<unknown>) {
+  const stored: unknown[] = [];
+  class PasswordCredential {
+    constructor(public data: object) {}
+  }
+  vi.stubGlobal('PasswordCredential', PasswordCredential);
+  vi.stubGlobal('navigator', {
+    credentials: {
+      store: async (c: unknown) => {
+        stored.push(c);
+        return c;
+      },
+      get,
+    },
+  });
+  return stored;
 }
 
-describe('browser password manager',()=>{
- it('does nothing where the Credential Management API is missing',async()=>{
-  vi.stubGlobal('PasswordCredential',undefined);
-  expect(passwordManagerAvailable()).toBe(false);
-  await expect(offerToRemember('AIzaKEY')).resolves.toBeUndefined();
-  expect(await recallFromPasswordManager()).toBeUndefined();
- });
- it('offers the key to the browser under a fixed account name',async()=>{
-  const stored=stubBrowser(async()=>null);
-  await offerToRemember('AIzaKEY');
-  expect(stored).toEqual([{data:{id:passwordManagerAccount,password:'AIzaKEY',name:'Chiave API Gemini'}}]);
- });
- it('returns the chosen key, or nothing when the user dismisses the chooser or the browser fails',async()=>{
-  stubBrowser(async()=>({password:' AIzaKEY \n'}));
-  expect(await recallFromPasswordManager()).toBe('AIzaKEY');
-  stubBrowser(async()=>null);
-  expect(await recallFromPasswordManager()).toBeUndefined();
-  stubBrowser(async()=>{throw new Error('NotAllowedError');});
-  expect(await recallFromPasswordManager()).toBeUndefined();
- });
- it('never throws when the browser refuses to store',async()=>{
-  vi.stubGlobal('PasswordCredential',class{constructor(){}});
-  vi.stubGlobal('navigator',{credentials:{store:async()=>{throw new Error('denied');}}});
-  await expect(offerToRemember('AIzaKEY')).resolves.toBeUndefined();
- });
+describe('browser password manager', () => {
+  it('does nothing where the Credential Management API is missing', async () => {
+    vi.stubGlobal('PasswordCredential', undefined);
+    expect(passwordManagerAvailable()).toBe(false);
+    await expect(offerToRemember('AIzaKEY')).resolves.toBeUndefined();
+    expect(await recallFromPasswordManager()).toBeUndefined();
+  });
+  it('offers the key to the browser under a fixed account name', async () => {
+    const stored = stubBrowser(async () => null);
+    await offerToRemember('AIzaKEY');
+    expect(stored).toEqual([{ data: { id: passwordManagerAccount, password: 'AIzaKEY', name: 'Chiave API Gemini' } }]);
+  });
+  it('returns the chosen key, or nothing when the user dismisses the chooser or the browser fails', async () => {
+    stubBrowser(async () => ({ password: ' AIzaKEY \n' }));
+    expect(await recallFromPasswordManager()).toBe('AIzaKEY');
+    stubBrowser(async () => null);
+    expect(await recallFromPasswordManager()).toBeUndefined();
+    stubBrowser(async () => {
+      throw new Error('NotAllowedError');
+    });
+    expect(await recallFromPasswordManager()).toBeUndefined();
+  });
+  it('never throws when the browser refuses to store', async () => {
+    vi.stubGlobal(
+      'PasswordCredential',
+      class {
+        constructor() {}
+      },
+    );
+    vi.stubGlobal('navigator', {
+      credentials: {
+        store: async () => {
+          throw new Error('denied');
+        },
+      },
+    });
+    await expect(offerToRemember('AIzaKEY')).resolves.toBeUndefined();
+  });
 });

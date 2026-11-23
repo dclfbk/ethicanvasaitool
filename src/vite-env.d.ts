@@ -31,8 +31,8 @@
 
 // Public OAuth client identifiers for the cloud archive; not secrets. Unset providers are shown as unavailable.
 interface ImportMetaEnv {
- readonly VITE_GOOGLE_CLIENT_ID?: string;
- readonly VITE_MS_CLIENT_ID?: string;
- readonly VITE_MS_TENANT?: string;
+  readonly VITE_GOOGLE_CLIENT_ID?: string;
+  readonly VITE_MS_CLIENT_ID?: string;
+  readonly VITE_MS_TENANT?: string;
 }
 declare const __APP_VERSION__: string | undefined;

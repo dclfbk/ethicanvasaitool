@@ -38,18 +38,42 @@ import { localKeychainStore, tauriLocalTransport } from './localTauri';
 import type { CredentialStore, LlmProvider } from './provider';
 
 // requiresKey is false for local servers, where a key is optional.
-export interface LlmRuntime { provider: LlmProvider; credentials: CredentialStore; requiresKey: boolean; model: string; texts: ProviderTexts; }
+export interface LlmRuntime {
+  provider: LlmProvider;
+  credentials: CredentialStore;
+  requiresKey: boolean;
+  model: string;
+  texts: ProviderTexts;
+}
 
 let gemini: LlmProvider | undefined;
 const locals = new Map<string, LocalProvider>();
 export function assistantRuntime(s: AssistantSettings): LlmRuntime {
- const tauri = isTauri();
- if (s.provider === 'local') {
-  const key = s.local.protocol + ' ' + s.local.url;
-  let provider = locals.get(key);
-  if (!provider) { provider = createLocalProvider(s.local.protocol, tauri ? tauriLocalTransport : browserLocalTransport(s.local.url)); locals.set(key, provider); }
-  return {provider, credentials: tauri ? localKeychainStore : localSessionStore, requiresKey: false, model: s.local.model, texts: localTexts(s.local.url)};
- }
- gemini ??= createGeminiProvider(tauri ? tauriGeminiTransport : browserGeminiTransport);
- return {provider: gemini, credentials: tauri ? keychainCredentialStore : sessionCredentialStore, requiresKey: true, model: s.model, texts: geminiTexts};
+  const tauri = isTauri();
+  if (s.provider === 'local') {
+    const key = s.local.protocol + ' ' + s.local.url;
+    let provider = locals.get(key);
+    if (!provider) {
+      provider = createLocalProvider(
+        s.local.protocol,
+        tauri ? tauriLocalTransport : browserLocalTransport(s.local.url),
+      );
+      locals.set(key, provider);
+    }
+    return {
+      provider,
+      credentials: tauri ? localKeychainStore : localSessionStore,
+      requiresKey: false,
+      model: s.local.model,
+      texts: localTexts(s.local.url),
+    };
+  }
+  gemini ??= createGeminiProvider(tauri ? tauriGeminiTransport : browserGeminiTransport);
+  return {
+    provider: gemini,
+    credentials: tauri ? keychainCredentialStore : sessionCredentialStore,
+    requiresKey: true,
+    model: s.model,
+    texts: geminiTexts,
+  };
 }

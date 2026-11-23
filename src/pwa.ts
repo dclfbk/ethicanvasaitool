@@ -32,6 +32,8 @@ import { isTauri } from '@tauri-apps/api/core';
 // The web version registers its service worker so that it can be installed and opened offline.
 // The desktop app has its files on disk and never registers one; neither does the development server.
 export function registerServiceWorker() {
- if (isTauri() || !import.meta.env.PROD || !('serviceWorker' in navigator)) return;
- window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+  if (isTauri() || !import.meta.env.PROD || !('serviceWorker' in navigator)) return;
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
 }

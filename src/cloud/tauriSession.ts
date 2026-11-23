@@ -28,24 +28,58 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import { CloudError, type CloudErrorKind, type CloudHttpResponse, type CloudSession, type OAuthProviderId } from './provider';
+import {
+  CloudError,
+  type CloudErrorKind,
+  type CloudHttpResponse,
+  type CloudSession,
+  type OAuthProviderId,
+} from './provider';
 
 // On desktop the sign-in runs in the system browser with a loopback redirect; the Rust side keeps the refresh token
 // in the operating system keychain, attaches the access token and never returns it to the web view.
-const rustErrors: CloudErrorKind[] = ['not-configured', 'not-connected', 'session-expired', 'cancelled', 'admin-consent', 'permission', 'network', 'timeout', 'bad-request', 'bad-response', 'credential-store'];
+const rustErrors: CloudErrorKind[] = [
+  'not-configured',
+  'not-connected',
+  'session-expired',
+  'cancelled',
+  'admin-consent',
+  'permission',
+  'network',
+  'timeout',
+  'bad-request',
+  'bad-response',
+  'credential-store',
+];
 function toCloudError(e: unknown) {
- const kind = String(e).split(':')[0] as CloudErrorKind;
- return new CloudError(rustErrors.includes(kind) ? kind : 'network');
+  const kind = String(e).split(':')[0] as CloudErrorKind;
+  return new CloudError(rustErrors.includes(kind) ? kind : 'network');
 }
-const call = async <T>(command: string, args: Record<string, unknown>) => { try { return await invoke<T>(command, args); } catch (e) { throw toCloudError(e); } };
+const call = async <T>(command: string, args: Record<string, unknown>) => {
+  try {
+    return await invoke<T>(command, args);
+  } catch (e) {
+    throw toCloudError(e);
+  }
+};
 
 export function tauriSession(provider: OAuthProviderId): CloudSession {
- return {
-  scope: 'system',
-  configured: () => call<boolean>('cloud_configured', {provider}),
-  connected: () => call<boolean>('cloud_status', {provider}),
-  connect: () => call<void>('cloud_connect', {provider}),
-  disconnect: () => call<void>('cloud_disconnect', {provider}),
-  send: request => call<CloudHttpResponse>('cloud_request', {provider, request: {method: request.method, url: request.url, headers: request.headers ?? {}, body: request.body ?? null, auth: request.auth !== false}}).then(r => r.location ? r : {status: r.status, body: r.body}),
- };
+  return {
+    scope: 'system',
+    configured: () => call<boolean>('cloud_configured', { provider }),
+    connected: () => call<boolean>('cloud_status', { provider }),
+    connect: () => call<void>('cloud_connect', { provider }),
+    disconnect: () => call<void>('cloud_disconnect', { provider }),
+    send: request =>
+      call<CloudHttpResponse>('cloud_request', {
+        provider,
+        request: {
+          method: request.method,
+          url: request.url,
+          headers: request.headers ?? {},
+          body: request.body ?? null,
+          auth: request.auth !== false,
+        },
+      }).then(r => (r.location ? r : { status: r.status, body: r.body })),
+  };
 }

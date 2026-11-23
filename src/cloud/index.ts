@@ -36,20 +36,32 @@ import { webSession } from './webSession';
 
 // Requests outside the fixed endpoint list are refused before they reach the transport.
 function guarded(provider: CloudProviderId, session: CloudSession): CloudSession {
- return {...session, send: request => {
-  const url = allowedCloudRequest(provider, request);
-  return url ? session.send({...request, url}) : Promise.reject(new CloudError('bad-request', 'endpoint not allowed'));
- }};
+  return {
+    ...session,
+    send: request => {
+      const url = allowedCloudRequest(provider, request);
+      return url
+        ? session.send({ ...request, url })
+        : Promise.reject(new CloudError('bad-request', 'endpoint not allowed'));
+    },
+  };
 }
 
 const drives = new Map<CloudProviderId, CloudDrive>();
 export function cloudDrive(provider: CloudProviderId): CloudDrive {
- let drive = drives.get(provider);
- if (!drive) {
-  if (provider === 'folder') drive = folderDrive(isTauri() ? tauriFolder : webFolder);
-  else { const session = guarded(provider, isTauri() ? tauriSession(provider) : webSession(provider)); drive = provider === 'google' ? googleDrive(session) : microsoftDrive(session); }
-  drives.set(provider, drive);
- }
- return drive;
+  let drive = drives.get(provider);
+  if (!drive) {
+    if (provider === 'folder') drive = folderDrive(isTauri() ? tauriFolder : webFolder);
+    else {
+      const session = guarded(provider, isTauri() ? tauriSession(provider) : webSession(provider));
+      drive = provider === 'google' ? googleDrive(session) : microsoftDrive(session);
+    }
+    drives.set(provider, drive);
+  }
+  return drive;
 }
-export const cloudLabels: Record<CloudProviderId, string> = {folder: 'Cartella sincronizzata', google: 'Google Drive', microsoft: 'OneDrive · Microsoft 365'};
+export const cloudLabels: Record<CloudProviderId, string> = {
+  folder: 'Cartella sincronizzata',
+  google: 'Google Drive',
+  microsoft: 'OneDrive · Microsoft 365',
+};

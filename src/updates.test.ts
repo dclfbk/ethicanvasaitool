@@ -55,9 +55,15 @@ describe('version helpers', () => {
 
   it('checks GitHub releases and falls back to tags when no release is published', async () => {
     const mockReleaseFetch = (async () =>
-      new Response(JSON.stringify({ tag_name: 'v9.9.9', html_url: 'https://github.com/dclfbk/ethicanvasaitool/releases/tag/v9.9.9' }), {
-        status: 200,
-      })) as unknown as typeof fetch;
+      new Response(
+        JSON.stringify({
+          tag_name: 'v9.9.9',
+          html_url: 'https://github.com/dclfbk/ethicanvasaitool/releases/tag/v9.9.9',
+        }),
+        {
+          status: 200,
+        },
+      )) as unknown as typeof fetch;
 
     const r1 = await checkWebVersion(mockReleaseFetch);
     expect(r1).toEqual({
@@ -71,9 +77,12 @@ describe('version helpers', () => {
     const mockTagFallbackFetch = (async () => {
       calls++;
       if (calls === 1) return new Response('Not Found', { status: 404 });
-      return new Response(JSON.stringify([{ name: 'v0.1.0' }, { name: 'v0.3.0-alpha.2' }, { name: 'v0.3.0-alpha.1' }]), {
-        status: 200,
-      });
+      return new Response(
+        JSON.stringify([{ name: 'v0.1.0' }, { name: 'v0.3.0-alpha.2' }, { name: 'v0.3.0-alpha.1' }]),
+        {
+          status: 200,
+        },
+      );
     }) as unknown as typeof fetch;
 
     const r2 = await checkWebVersion(mockTagFallbackFetch);

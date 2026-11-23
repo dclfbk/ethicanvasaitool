@@ -29,37 +29,79 @@
 
 // Provider-neutral contract between the assistant logic and a concrete LLM service.
 export type LlmErrorKind =
- | 'not-configured' | 'invalid-key' | 'permission' | 'quota' | 'rate-limit' | 'payment'
- | 'model-unavailable' | 'timeout' | 'network' | 'offline' | 'server' | 'blocked'
- | 'bad-request' | 'bad-response' | 'cancelled' | 'credential-store';
+  | 'not-configured'
+  | 'invalid-key'
+  | 'permission'
+  | 'quota'
+  | 'rate-limit'
+  | 'payment'
+  | 'model-unavailable'
+  | 'timeout'
+  | 'network'
+  | 'offline'
+  | 'server'
+  | 'blocked'
+  | 'bad-request'
+  | 'bad-response'
+  | 'cancelled'
+  | 'credential-store';
 
 export class LlmError extends Error {
- constructor(readonly kind: LlmErrorKind, detail?: string) { super(detail ?? kind); this.name = 'LlmError'; }
+  constructor(
+    readonly kind: LlmErrorKind,
+    detail?: string,
+  ) {
+    super(detail ?? kind);
+    this.name = 'LlmError';
+  }
 }
 
-export interface LlmModel { id: string; label: string; recommended?: boolean; }
-export interface GenerateRequest { system: string; input: string; schema: Record<string, unknown>; maxOutputTokens?: number; }
-export interface GenerateResult { text: string; model: string; }
+export interface LlmModel {
+  id: string;
+  label: string;
+  recommended?: boolean;
+}
+export interface GenerateRequest {
+  system: string;
+  input: string;
+  schema: Record<string, unknown>;
+  maxOutputTokens?: number;
+}
+export interface GenerateResult {
+  text: string;
+  model: string;
+}
 // What a streaming provider reports while it works: the summary of the model's reasoning so far and how much of the answer arrived.
-export interface GenerateProgress { phase: 'thinking' | 'writing'; thoughts: string; outputChars: number; }
+export interface GenerateProgress {
+  phase: 'thinking' | 'writing';
+  thoughts: string;
+  outputChars: number;
+}
 
 export interface LlmProvider {
- readonly id: string;
- readonly label: string;
- readonly models: LlmModel[];
- // How long a request may run before it fails with 'timeout'. When streams is true it is the time allowed without any news.
- readonly timeoutMs: number;
- readonly streams: boolean;
- testConnection(model: string, signal?: AbortSignal): Promise<void>;
- generate(model: string, request: GenerateRequest, signal?: AbortSignal, onProgress?: (progress: GenerateProgress) => void): Promise<GenerateResult>;
+  readonly id: string;
+  readonly label: string;
+  readonly models: LlmModel[];
+  // How long a request may run before it fails with 'timeout'. When streams is true it is the time allowed without any news.
+  readonly timeoutMs: number;
+  readonly streams: boolean;
+  testConnection(model: string, signal?: AbortSignal): Promise<void>;
+  generate(
+    model: string,
+    request: GenerateRequest,
+    signal?: AbortSignal,
+    onProgress?: (progress: GenerateProgress) => void,
+  ): Promise<GenerateResult>;
 }
 
 // Where the API key lives: 'session' keeps it in page memory only, 'system' in the operating system keychain.
 export interface CredentialStore {
- readonly scope: 'session' | 'system';
- has(): Promise<boolean>;
- set(key: string): Promise<void>;
- clear(): Promise<void>;
+  readonly scope: 'session' | 'system';
+  has(): Promise<boolean>;
+  set(key: string): Promise<void>;
+  clear(): Promise<void>;
 }
 
-export function isAbort(e: unknown) { return e instanceof DOMException && e.name === 'AbortError' || e instanceof LlmError && e.kind === 'cancelled'; }
+export function isAbort(e: unknown) {
+  return (e instanceof DOMException && e.name === 'AbortError') || (e instanceof LlmError && e.kind === 'cancelled');
+}

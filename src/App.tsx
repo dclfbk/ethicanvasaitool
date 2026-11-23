@@ -27,130 +27,1832 @@
  * source code to users who interact with the software over a network.
  */
 
-import {lazy,Suspense,useEffect,useMemo,useRef,useState} from 'react';
-import {Accessibility,ArrowLeft,ArrowRight,ArrowUpRight,BookOpen,Check,CheckCircle2,ChevronRight,Compass,Download,FileText,FolderOpen,Gauge,HelpCircle,History as HistoryIcon,LayoutDashboard,Library,LifeBuoy,Link,Pause,Plus,Search,ShieldCheck,Sparkles,Trash2,Upload,Users,X} from 'lucide-react';
-import {accepted,createBackup,createProject,demoProject,evaluate,questions,questionnaireVersion,readBackup,sections,statusLabels,type Answer,type Profile,type Project,type Reference} from './model';
-import {applyAccessibilitySettings,clearAccessibilitySettings,countActiveAccessibilitySettings,defaultAccessibilitySettings,loadAccessibilitySettings,saveAccessibilitySettings,type AccessibilitySettings} from './accessibility';
-import {parsePeople} from './contributions';
-import {type GuideAction} from './GuidePanel';
-import {changedSinceReview,lastReview,reviewDue} from './history';
-import {dueLabel,outcomeLabels} from './historyText';
-import {regulatoryAssessmentLines} from './report';
-import {regulatoryStatus} from './regulatory';
-import {checklistValidated} from './regulatoryChecklist';
-import {clearAssistantSettings,defaultAssistantSettings,loadAssistantSettings,saveAssistantSettings,type AssistantSettings} from './assistantSettings';
-import {assistantRuntime} from './llm';
-import {configureLocalServer} from './llm/localTauri';
-import {isTauri} from '@tauri-apps/api/core';
-import {appVersion,findUpdate,loadUpdateSettings,saveUpdateSettings,updatesSupported,type PendingUpdate,type UpdateSettings} from './updates';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Accessibility,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  BookOpen,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  Compass,
+  Download,
+  FileText,
+  FolderOpen,
+  Gauge,
+  HelpCircle,
+  History as HistoryIcon,
+  LayoutDashboard,
+  Library,
+  LifeBuoy,
+  Link,
+  Pause,
+  Plus,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+  Upload,
+  Users,
+  X,
+} from 'lucide-react';
+import {
+  accepted,
+  createBackup,
+  createProject,
+  demoProject,
+  evaluate,
+  questions,
+  questionnaireVersion,
+  readBackup,
+  sections,
+  statusLabels,
+  type Answer,
+  type Profile,
+  type Project,
+  type Reference,
+} from './model';
+import {
+  applyAccessibilitySettings,
+  clearAccessibilitySettings,
+  countActiveAccessibilitySettings,
+  defaultAccessibilitySettings,
+  loadAccessibilitySettings,
+  saveAccessibilitySettings,
+  type AccessibilitySettings,
+} from './accessibility';
+import { parsePeople } from './contributions';
+import { type GuideAction } from './GuidePanel';
+import { changedSinceReview, lastReview, reviewDue } from './history';
+import { dueLabel, outcomeLabels } from './historyText';
+import { regulatoryAssessmentLines } from './report';
+import { regulatoryStatus } from './regulatory';
+import { checklistValidated } from './regulatoryChecklist';
+import {
+  clearAssistantSettings,
+  defaultAssistantSettings,
+  loadAssistantSettings,
+  saveAssistantSettings,
+  type AssistantSettings,
+} from './assistantSettings';
+import { assistantRuntime } from './llm';
+import { configureLocalServer } from './llm/localTauri';
+import { isTauri } from '@tauri-apps/api/core';
+import {
+  appVersion,
+  findUpdate,
+  loadUpdateSettings,
+  saveUpdateSettings,
+  updatesSupported,
+  type PendingUpdate,
+  type UpdateSettings,
+} from './updates';
 
-const AccessibilityPanel=lazy(()=>import('./AccessibilityPanel'));
-const AssistantPanel=lazy(()=>import('./AssistantPanel'));
-const AssistantSettingsPanel=lazy(()=>import('./AssistantSettingsPanel'));
-const CloudSyncPanel=lazy(()=>import('./CloudSyncPanel'));
-const DashboardPanel=lazy(()=>import('./DashboardPanel'));
-const GuidePanel=lazy(()=>import('./GuidePanel'));
-const HistoryPanel=lazy(()=>import('./HistoryPanel'));
-const ContributionsPanel=lazy(()=>import('./ContributionsPanel'));
-const RespondPanel=lazy(()=>import('./RespondPanel'));
-const KnowledgePanel=lazy(()=>import('./KnowledgePanel'));
-const ReportExportPanel=lazy(()=>import('./ReportExportPanel'));
-const RegulatoryPanel=lazy(()=>import('./RegulatoryPanel'));
-const UpdateDialog=lazy(()=>import('./UpdatePanel').then(m=>({default:m.UpdateDialog})));
-const UpdateSettingsPanel=lazy(()=>import('./UpdatePanel').then(m=>({default:m.UpdateSettingsPanel})));
-import {canExtract,extractText,type ExtractionError} from './textExtraction';
-import {maxExcerptChars} from './assistant';
+const AccessibilityPanel = lazy(() => import('./AccessibilityPanel'));
+const AssistantPanel = lazy(() => import('./AssistantPanel'));
+const AssistantSettingsPanel = lazy(() => import('./AssistantSettingsPanel'));
+const CloudSyncPanel = lazy(() => import('./CloudSyncPanel'));
+const DashboardPanel = lazy(() => import('./DashboardPanel'));
+const GuidePanel = lazy(() => import('./GuidePanel'));
+const HistoryPanel = lazy(() => import('./HistoryPanel'));
+const ContributionsPanel = lazy(() => import('./ContributionsPanel'));
+const RespondPanel = lazy(() => import('./RespondPanel'));
+const KnowledgePanel = lazy(() => import('./KnowledgePanel'));
+const ReportExportPanel = lazy(() => import('./ReportExportPanel'));
+const RegulatoryPanel = lazy(() => import('./RegulatoryPanel'));
+const UpdateDialog = lazy(() => import('./UpdatePanel').then(m => ({ default: m.UpdateDialog })));
+const UpdateSettingsPanel = lazy(() => import('./UpdatePanel').then(m => ({ default: m.UpdateSettingsPanel })));
+import { canExtract, extractText, type ExtractionError } from './textExtraction';
+import { maxExcerptChars } from './assistant';
 import fundingLogos from './assets/logos/canvas-funding.png';
 import patLogo from './assets/logos/pat.png';
 import fbkLogo from './assets/logos/fbk.png';
-import {download,storage} from './storage';
+import { download, storage } from './storage';
 
-const date=(s:string)=>new Date(s).toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'});
-const emptyAnswer=():Answer=>({value:'',state:'draft',note:'',person:'',request:'',updatedAt:new Date().toISOString()});
-const refKinds={document:'Documento',law:'Legge o linea guida',dataset:'Dataset',expert:'Contributo esperto',test:'Test o verifica'};
-const saveLabels={saved:'Tutto salvato in locale',saving:'Salvataggio…',failed:'Salvataggio non riuscito',persisted:'Archiviazione persistente concessa',notPersisted:'Il browser non ha concesso la persistenza'};
-type SaveState=keyof typeof saveLabels;
-const profileLabels:Record<Profile,string>={scientist:'AI scientist',engineer:'AI engineer',user:'AI user'};
-const profileColors:Record<Profile,string>={scientist:'var(--green)',engineer:'var(--cyan)',user:'var(--yellow)'};
-const profileStyle=(ps:Profile[])=>({'--profile-bg':ps.length===3?'var(--mix)':ps.length===1?profileColors[ps[0]]:'linear-gradient(90deg,'+ps.map(x=>profileColors[x]).join(',')+')'}) as React.CSSProperties;
-const Shape=({profile}:{profile:Profile})=><span className={'shape '+profile} aria-hidden="true"/>;
-const extractionErrors:Record<ExtractionError,string>={unsupported:'Estrazione disponibile per file TXT, MD, CSV, JSON, DOCX, ODT e PDF. Per gli altri formati incolla a mano il passaggio pertinente.',binary:'Il file non contiene testo leggibile.',empty:'Il file non contiene testo.',scanned:'Il PDF non contiene testo selezionabile: forse è una scansione. Incolla a mano il passaggio pertinente.',encrypted:'Il file è protetto da password: aprilo e incolla a mano il passaggio pertinente.',damaged:'Non è stato possibile leggere il file: potrebbe essere danneggiato o in un formato diverso da quello indicato.'};
-const provenanceLine=(ans?:Answer)=>ans?.aiProvenance?.length?'Contiene testo proposto da '+ans.aiProvenance.map(x=>x.model+' ('+new Date(x.at).toLocaleDateString('it-IT')+(x.basedOn?.length?', dal confronto con: '+x.basedOn.join(', '):'')+')').join(', ')+': da verificare.':'';
-function safeUrl(value:string){try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:undefined;}catch{return undefined;}}
+const date = (s: string) =>
+  new Date(s).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
+const emptyAnswer = (): Answer => ({
+  value: '',
+  state: 'draft',
+  note: '',
+  person: '',
+  request: '',
+  updatedAt: new Date().toISOString(),
+});
+const refKinds = {
+  document: 'Documento',
+  law: 'Legge o linea guida',
+  dataset: 'Dataset',
+  expert: 'Contributo esperto',
+  test: 'Test o verifica',
+};
+const saveLabels = {
+  saved: 'Tutto salvato in locale',
+  saving: 'Salvataggio…',
+  failed: 'Salvataggio non riuscito',
+  persisted: 'Archiviazione persistente concessa',
+  notPersisted: 'Il browser non ha concesso la persistenza',
+};
+type SaveState = keyof typeof saveLabels;
+const profileLabels: Record<Profile, string> = { scientist: 'AI scientist', engineer: 'AI engineer', user: 'AI user' };
+const profileColors: Record<Profile, string> = {
+  scientist: 'var(--green)',
+  engineer: 'var(--cyan)',
+  user: 'var(--yellow)',
+};
+const profileStyle = (ps: Profile[]) =>
+  ({
+    '--profile-bg':
+      ps.length === 3
+        ? 'var(--mix)'
+        : ps.length === 1
+          ? profileColors[ps[0]]
+          : 'linear-gradient(90deg,' + ps.map(x => profileColors[x]).join(',') + ')',
+  }) as React.CSSProperties;
+const Shape = ({ profile }: { profile: Profile }) => <span className={'shape ' + profile} aria-hidden="true" />;
+const extractionErrors: Record<ExtractionError, string> = {
+  unsupported:
+    'Estrazione disponibile per file TXT, MD, CSV, JSON, DOCX, ODT e PDF. Per gli altri formati incolla a mano il passaggio pertinente.',
+  binary: 'Il file non contiene testo leggibile.',
+  empty: 'Il file non contiene testo.',
+  scanned: 'Il PDF non contiene testo selezionabile: forse è una scansione. Incolla a mano il passaggio pertinente.',
+  encrypted: 'Il file è protetto da password: aprilo e incolla a mano il passaggio pertinente.',
+  damaged:
+    'Non è stato possibile leggere il file: potrebbe essere danneggiato o in un formato diverso da quello indicato.',
+};
+const provenanceLine = (ans?: Answer) =>
+  ans?.aiProvenance?.length
+    ? 'Contiene testo proposto da ' +
+      ans.aiProvenance
+        .map(
+          x =>
+            x.model +
+            ' (' +
+            new Date(x.at).toLocaleDateString('it-IT') +
+            (x.basedOn?.length ? ', dal confronto con: ' + x.basedOn.join(', ') : '') +
+            ')',
+        )
+        .join(', ') +
+      ': da verificare.'
+    : '';
+function safeUrl(value: string) {
+  try {
+    const u = new URL(value);
+    return ['https:', 'http:'].includes(u.protocol) ? u.href : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
-export default function App(){
- const [projects,setProjects]=useState<Project[]>([]),[activeId,setActiveId]=useState<string|null>(null),[page,setPage]=useState<'archive'|'journey'|'report'|'history'|'contributions'|'respond'|'dashboard'|'knowledge'|'guide'|'settings'>('archive'),[regulatoryOpen,setRegulatoryOpen]=useState(false);
- const [loading,setLoading]=useState(true),[error,setError]=useState(''),[saving,setSaving]=useState<SaveState>('saved');
- const [search,setSearch]=useState(''),[filter,setFilter]=useState('all'),[newOpen,setNewOpen]=useState(false),[refOpen,setRefOpen]=useState(false),[help,setHelp]=useState(false);
- const [newName,setNewName]=useState(''),[newDescription,setNewDescription]=useState(''),[newOrg,setNewOrg]=useState('');
- const [newPerson,setNewPerson]=useState('');
- const [assistant,setAssistant]=useState<AssistantSettings>(loadAssistantSettings);
- const runtime=useMemo(()=>assistantRuntime(assistant),[assistant.provider,assistant.model,assistant.local.protocol,assistant.local.url,assistant.local.model]);
- // On desktop the Rust side keeps the local server address; it is aligned with the preferences at start-up.
- useEffect(()=>{if(isTauri()&&assistant.provider==='local')configureLocalServer(assistant.local.url,assistant.local.protocol).catch(()=>{/* shown when the assistant is used */});},[assistant.provider,assistant.local.url,assistant.local.protocol]);
- const [updates,setUpdates]=useState<UpdateSettings>(loadUpdateSettings),[pendingUpdate,setPendingUpdate]=useState<PendingUpdate|null>(null);
- const [a11y,setA11y]=useState<AccessibilitySettings>(loadAccessibilitySettings),[a11yOpen,setA11yOpen]=useState(false);
- const a11yTriggerRef=useRef<HTMLButtonElement>(null);
- const activeA11y=countActiveAccessibilitySettings(a11y);
- useEffect(()=>{applyAccessibilitySettings(a11y);},[a11y]);
- function updateA11y(next:AccessibilitySettings){setA11y(next);saveAccessibilitySettings(next);}
- function resetA11y(){clearAccessibilitySettings();setA11y(defaultAccessibilitySettings);}
- const [refExcerpt,setRefExcerpt]=useState(''),[refTitle,setRefTitle]=useState(''),[refUrl,setRefUrl]=useState(''),[refNote,setRefNote]=useState(''),[refKind,setRefKind]=useState<Reference['kind']>('document'),[refFile,setRefFile]=useState<File|null>(null),[refBusy,setRefBusy]=useState(false);
- const queue=useRef(Promise.resolve()),seq=useRef(0),importInput=useRef<HTMLInputElement>(null);
- const projectsRef=useRef(projects);projectsRef.current=projects;
- const project=projects.find(p=>p.id===activeId),q=questions[project?.currentQuestion??0],a=project?.answers[q.id]??emptyAnswer(),result=project?evaluate(project):null;
- useEffect(()=>{setNewPerson('');},[activeId,project?.currentQuestion]);
- function updateAssistant(next:AssistantSettings){setAssistant(next);saveAssistantSettings(next);}
- function updateUpdates(next:UpdateSettings){setUpdates(next);saveUpdateSettings(next);}
- function updateReference(id:string,patch:Partial<Reference>){if(project)change({references:project.references.map(r=>r.id===id?{...r,...patch}:r)});}
- // PDF extraction can take a while: the excerpt is applied to the latest copy of the project, if the reference is still there.
- async function extractExcerpt(r:Reference){const owner=project?.id,x=await extractText(r);if(!x.ok){setError(extractionErrors[x.reason]);return;}if(r.excerpt?.trim()&&!confirm('Sostituire l’estratto attuale con il testo del file?'))return;const latest=projectsRef.current.find(p=>p.id===owner);if(!latest?.references.some(ref=>ref.id===r.id))return;persist({...latest,references:latest.references.map(ref=>ref.id===r.id?{...ref,excerpt:x.text}:ref),updatedAt:new Date().toISOString()});if(x.truncated)setError('Il testo supera '+maxExcerptChars.toLocaleString('it-IT')+' caratteri: sono stati conservati i primi. Riducilo al passaggio pertinente prima di usarlo.');}
- useEffect(()=>{if(updatesSupported()&&updates.checkOnStartup)findUpdate().then(setPendingUpdate).catch(()=>{/* offline or no release yet: retry at next start */});},[]);
- useEffect(()=>{storage.list().then(setProjects).catch(()=>setError('Impossibile aprire l’archivio locale. Verifica che il browser consenta l’archiviazione.')).finally(()=>setLoading(false));},[]);
- useEffect(()=>{const f=(e:BeforeUnloadEvent)=>{if(saving==='saving'||saving==='failed'){e.preventDefault();}};window.addEventListener('beforeunload',f);return()=>window.removeEventListener('beforeunload',f);},[saving]);
- function persist(p:Project){setProjects(prev=>[p,...prev.filter(x=>x.id!==p.id)]);setSaving('saving');const ticket=++seq.current;queue.current=queue.current.catch(()=>{}).then(()=>storage.put(p)).then(()=>{if(ticket===seq.current)setSaving('saved');}).catch(()=>{setSaving('failed');setError('Salvataggio non riuscito. I cambiamenti sono ancora in memoria: esporta l’archivio prima di chiudere.');});}
- function change(patch:Partial<Project>){if(project)persist({...project,...patch,updatedAt:new Date().toISOString()});}
- function answer(patch:Partial<Answer>){if(project)change({answers:{...project.answers,[q.id]:{...a,...patch,updatedAt:new Date().toISOString()}}});}
- function addWaitingPerson(){const name=newPerson.trim();if(!name)return;const list=parsePeople(a.person);if(!list.some(x=>x.toLowerCase()===name.toLowerCase()))answer({person:[...list,name].join(', ')});setNewPerson('');}
- function removeWaitingPerson(name:string){answer({person:parsePeople(a.person).filter(x=>x!==name).join(', ')});}
- function start(p:Project){persist(p);setActiveId(p.id);setPage('journey');setHelp(false);}
- function open(p:Project){setActiveId(p.id);setPage('journey');setHelp(false);}
- function jump(index:number){change({currentQuestion:index,paused:false});setPage('journey');setHelp(false);}
- function advance(){if(!project)return;const next=project.currentQuestion===questions.length-1;const answers=a.state==='draft'&&a.value.trim()?{...project.answers,[q.id]:{...a,state:'answered' as const,updatedAt:new Date().toISOString()}}:project.answers;change({answers,currentQuestion:next?project.currentQuestion:project.currentQuestion+1,paused:false});setHelp(false);if(next)setPage('report');}
- // Opens a project at a question, for example from the organisation overview.
- function openAt(p:Project,questionId?:string){const index=questionId?questions.findIndex(q=>q.id===questionId):-1;if(index>=0)persist({...p,currentQuestion:index,paused:false});setActiveId(p.id);setPage('journey');setHelp(false);}
- function guideAction(a:GuideAction){if(a==='demo')start(demoProject());else if(a==='new'){setPage('archive');setNewOpen(true);}else setPage(a);}
- function exportArchive(){download('canvas-pa-archivio.json',JSON.stringify(createBackup(projects),null,2));}
- async function importArchive(file:File){try{if(file.size>100*1024*1024)throw new Error('Il pacchetto supera 100 MB.');const imported=readBackup(JSON.parse(await file.text()));if(!imported)throw new Error('Formato o versione non compatibile. Nessun progetto è stato importato.');for(const p of imported){const copy={...p,id:crypto.randomUUID(),name:p.name+' · importato',updatedAt:new Date().toISOString()};persist(copy);}setPage('archive');}catch(e){setError(e instanceof Error?e.message:'Importazione non riuscita.');}}
- async function addReference(e:React.FormEvent){e.preventDefault();if(!project||!refTitle.trim())return;setRefBusy(true);try{if(refUrl&&!safeUrl(refUrl))throw new Error('Inserisci un collegamento http o https valido.');let data:string|undefined;if(refFile){if(refFile.size>10*1024*1024)throw new Error('Per questa versione il limite è 10 MB per allegato.');data=await new Promise<string>((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=()=>reject(new Error('Lettura del file non riuscita.'));r.readAsDataURL(refFile);});}change({references:[...project.references,{id:crypto.randomUUID(),questionId:q.id,kind:refKind,title:refTitle.trim(),url:refUrl,note:refNote,fileName:refFile?.name,mime:refFile?.type,data,excerpt:refExcerpt.trim().slice(0,maxExcerptChars)||undefined}]});setRefOpen(false);setRefExcerpt('');setRefTitle('');setRefUrl('');setRefNote('');setRefFile(null);}catch(e){setError((e as Error).message);}finally{setRefBusy(false);}}
- async function removeProject(){if(!project||!confirm('Eliminare questo progetto e i suoi allegati locali? Esporta prima una copia se vuoi conservarli.'))return;const id=project.id;try{await queue.current;await storage.remove(id);setProjects(ps=>ps.filter(p=>p.id!==id));setActiveId(null);setPage('archive');}catch{setError('Eliminazione non riuscita.');}}
- async function removeArchivedProject(p:Project){if(!confirm(`Eliminare «${p.name}» e i suoi allegati locali? Esporta prima una copia se vuoi conservarli.`))return;try{await queue.current;await storage.remove(p.id);setProjects(ps=>ps.filter(x=>x.id!==p.id));if(activeId===p.id)setActiveId(null);}catch{setError('Eliminazione non riuscita.');}}
- function reportExport(){if(!project||!result)return;const text=['# '+project.name,project.description,'Ente: '+project.organization,'Questionario: '+project.questionnaireVersion,'Stato: '+statusLabels[result.status],'Completezza: '+result.percent+'%','Questo rapporto documenta una autovalutazione. Non certifica conformità normativa o validazione indipendente.','## Profilo dichiarato',...['type','audience','autonomy'].map(id=>questions.find(x=>x.id===id)!.title+': '+(project.answers[id]?.value||'Non definito')),...questions.flatMap(question=>{const ans=project.answers[question.id];return ['## '+question.title,'Fonte: '+question.source,'Stato: '+(ans?.state||'mancante'),ans?.value||'Risposta mancante',ans?.note||'',ans?.person?'Figura da coinvolgere: '+ans.person:'',ans?.request?'Richiesta: '+ans.request:'',provenanceLine(ans),...project.references.filter(r=>r.questionId===question.id).map(r=>'Riferimento: '+r.title+' '+r.url+' '+r.note)];}),'## Mancano',...result.missing.map(x=>'- '+x.title),'## Inquadramento normativo','L’applicazione non determina categorie di rischio né conformità normativa. Le conclusioni spettano alle persone competenti.',...regulatoryAssessmentLines(project)].join('\n\n');download(project.name.replace(/[^\p{L}\p{N}-]/gu,'-')+'-valutazione.md',text,'text/markdown;charset=utf-8');}
- const shown=projects.filter(p=>(p.name+' '+p.description+' '+p.organization+' '+Object.values(p.answers).map(a=>a.value).join(' ')).toLocaleLowerCase().includes(search.toLocaleLowerCase())&&(filter==='all'||filter==='paused'&&p.paused||filter==='complete'&&evaluate(p).missing.length===0));
- return <div className="app-shell">
-  <aside className="sidebar"><a className="brand" href="#" onClick={e=>{e.preventDefault();setPage('archive');}}><span className="brand-mark" aria-hidden="true"><Shape profile="scientist"/><Shape profile="engineer"/><Shape profile="user"/></span><span><span className="brand-name">Canvas <span className="brand-ai">AI Ethics</span></span><span className="brand-pa">per la PA</span><small>Una guida per l’adozione etica dell’AI</small></span></a><div className="workspace-label">IL TUO SPAZIO DI LAVORO</div><nav><button className={page==='archive'?'nav active':'nav'} onClick={()=>setPage('archive')}><LayoutDashboard size={19}/>Archivio progetti<span className="count">{projects.length}</span></button><button className={page==='knowledge'?'nav active':'nav'} onClick={()=>setPage('knowledge')}><Library size={19}/>Casi a confronto</button><button className={page==='dashboard'?'nav active':'nav'} onClick={()=>setPage('dashboard')}><Gauge size={19}/>Quadro dell’ente</button><button className={page==='guide'?'nav active':'nav'} onClick={()=>setPage('guide')}><LifeBuoy size={19}/>Guida</button><button className={page==='settings'?'nav active':'nav'} onClick={()=>setPage('settings')}><ShieldCheck size={19}/>Metodo e impostazioni</button></nav><div className="sidebar-note"><span className="local-dot"/> Il tuo archivio è locale<p>Progetti, risposte e allegati rimangono su questo dispositivo.</p><button className="text-button" onClick={exportArchive}><Download size={15}/>Esporta una copia</button></div><div className="sidebar-foot"><span className="avatar">D</span><div>Il tuo workspace<small>Personale · senza account</small></div></div></aside>
-  <div className="main-shell"><header className="topbar"><span className="breadcrumb">Il tuo workspace <ChevronRight size={14}/> {page==='archive'?'Archivio progetti':page==='knowledge'?'Casi a confronto':page==='guide'?'Guida':page==='dashboard'?'Quadro dell’ente':page==='respond'?'Rispondi a una richiesta':page==='settings'?'Metodo e impostazioni':project?.name}</span><div className="topbar-actions"><button ref={a11yTriggerRef} type="button" className={activeA11y>0?'a11y-trigger active':'a11y-trigger'} aria-haspopup="dialog" aria-expanded={a11yOpen} onClick={()=>setA11yOpen(true)}><Accessibility size={16} aria-hidden="true"/>Accessibilità{activeA11y>0&&<span className="a11y-count" aria-label={activeA11y+' impostazioni attive'}>{activeA11y}</span>}</button><span className="save-status"><span className={saving==='saved'?'local-dot':'pending-dot'}/>{saveLabels[saving]}</span></div></header>
-  {error&&<div role="alert" className="error-banner">{error}<button aria-label="Chiudi messaggio" onClick={()=>setError('')}><X size={17}/></button></div>}
-  {pendingUpdate&&<Suspense fallback={null}><UpdateDialog update={pendingUpdate} onClose={()=>setPendingUpdate(null)}/></Suspense>}
-  <input ref={importInput} type="file" accept=".json,application/json" hidden onChange={e=>{const f=e.target.files?.[0];if(f)void importArchive(f);e.target.value='';}}/>
-  {loading?<main><p>Apro il tuo archivio…</p></main>:page==='archive'?<main>
-   <div className="page-heading"><div><div className="eyebrow">CANVAS AI ETHICS PER LA PA</div><h1>I tuoi progetti AI<span className="heading-dot">.</span></h1><div className="canvas-rule"/><p>Uno spazio per esplorare, valutare e far crescere le tue idee.</p></div><button className="primary" onClick={()=>setNewOpen(true)}><Plus size={18}/>Nuovo progetto</button></div>
-   <section className="welcome"><div className="welcome-copy"><div className="pill"><Sparkles size={14}/>UN PERCORSO, NON UN MODULO</div><h2>Le domande giuste.<br/>Un progetto più solido.</h2><p>Esplora il tuo progetto con l’AI Ethics Canvas.<br/>Un passo alla volta, insieme alle persone giuste.</p><button className="primary light" onClick={()=>setNewOpen(true)}>Dai forma alla tua idea <ArrowRight size={17}/></button></div><div className="canvas-art" aria-hidden="true"><div className="art-orbit"/><div className="art-note n1"><span className="art-icon">◒</span><b>Conosci i dati</b><i>Ogni buona idea parte da qui.</i><div className="art-line"/></div><div className="art-note n2"><Users size={20}/><b>Metti al centro le persone</b><div className="art-line"/><div className="art-line short"/></div><div className="art-note n3"><CheckCircle2 size={21}/><b>Trasforma i dubbi<br/>in prossimi passi.</b></div><div className="art-star">✳</div><div className="art-label">PICCOLI PASSI, GRANDI DOMANDE.</div></div></section>
-   <div className="stats"><div><span className="stat-icon"><FolderOpen size={20}/></span><div><strong>{projects.length}</strong><span>Progetti nel tuo archivio</span></div></div><div><span className="stat-icon amber"><Pause size={20}/></span><div><strong>{projects.filter(p=>evaluate(p).missing.length>0).length}</strong><span>Percorsi da completare</span></div></div><div><span className="stat-icon purple"><Users size={20}/></span><div><strong>{projects.reduce((n,p)=>n+evaluate(p).waiting.length,0)}</strong><span>Contributi da raccogliere</span></div></div></div>
-   <div className="archive-heading"><h2>Il tuo archivio <span>{projects.length}</span></h2><div className="button-row"><button className="text-button" onClick={()=>setPage('respond')}><Users size={16}/>Rispondi a una richiesta</button><button className="text-button" onClick={()=>importInput.current?.click()}><Upload size={16}/>Importa archivio</button></div></div><div className="archive-controls"><div className="tabs"><button className={filter==='all'?'selected':''} onClick={()=>setFilter('all')}>Tutti i progetti</button><button className={filter==='paused'?'selected':''} onClick={()=>setFilter('paused')}>In pausa</button><button className={filter==='complete'?'selected':''} onClick={()=>setFilter('complete')}>Compilati</button></div><label className="search"><Search size={17}/><input aria-label="Cerca nell’archivio" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Cerca progetti o risposte…"/></label></div>
-   <div className="project-grid">{shown.map(p=>{const r=evaluate(p);return <article className="project-card" key={p.id}><div className="card-top"><span className="project-symbol"><BookOpen size={21}/></span><span className={p.paused?'badge amber-badge':'badge'}>{p.demo?'Esempio':p.paused?'In pausa':statusLabels[r.status]}</span></div><h3>{p.name}</h3><p>{p.description}</p><span className="org">{p.organization||'Ente non indicato'}</span>{(()=>{const due=reviewDue(p.reviewPlan);return due&&<span className={'card-review'+(due.overdue?' overdue':'')}>{due.overdue||due.days<=30?dueLabel(due):'Riesame il '+new Date(p.reviewPlan!.nextAt+'T12:00:00').toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'})}</span>;})()}<div className="progress-label"><span>Percorso canvas</span><b>{r.percent}%</b></div><div className="progress"><span style={{width:r.percent+'%'}}/></div><div className="card-footer"><span>{date(p.updatedAt)}</span><div className="button-row"><button className="text-button" onClick={()=>open(p)}>Riprendi <ArrowUpRight size={17}/></button><button className="icon-button" aria-label={`Elimina ${p.name}`} title="Elimina progetto" onClick={()=>void removeArchivedProject(p)}><Trash2 size={16}/></button></div></div></article>})}<button className="new-card" onClick={()=>setNewOpen(true)}><span><Plus size={24}/></span><b>La prossima idea parte da qui</b><small>Crea un progetto e scopri il percorso.</small></button></div>
-   {!projects.length&&<div className="demo-invite"><Sparkles size={18}/><span>Vuoi prima dare un’occhiata? Esplora il caso di un chatbot per la Pubblica Amministrazione, oppure <button className="text-button" onClick={()=>setPage('guide')}>leggi la guida</button>.</span><button className="text-button" onClick={()=>start(demoProject())}>Apri l’esempio <ArrowRight size={15}/></button></div>}
-   <footer className="page-footer"><div className="logo-strip"><small>Il percorso si basa sull’AI Ethics Canvas, realizzato da</small><img className="pat-logo" src={patLogo} alt="Provincia autonoma di Trento"/><span className="logo-with">in collaborazione con</span><img src={fbkLogo} alt="Fondazione Bruno Kessler"/><img src={fundingLogos} alt="Finanziato dall’Unione europea NextGenerationEU, Repubblica Italiana, Dipartimento per la trasformazione digitale"/></div><span className="cc-line">Canvas AI Ethics © 2024 by Provincia Autonoma di Trento e Fondazione Bruno Kessler is licensed under CC BY-SA 4.0 · EthiCanvasAI © 2026 FBK, GNU AGPL v3</span></footer>
-  </main>:page==='respond'?<Suspense fallback={<main><p>Caricamento…</p></main>}><RespondPanel/></Suspense>:page==='dashboard'?<Suspense fallback={<main><p>Caricamento…</p></main>}><DashboardPanel projects={projects} onOpen={openAt}/></Suspense>:page==='guide'?<Suspense fallback={<main><p>Caricamento…</p></main>}><GuidePanel onAction={guideAction}/></Suspense>:page==='knowledge'?<Suspense fallback={<main><p>Caricamento…</p></main>}><KnowledgePanel projects={projects} settings={assistant} runtime={runtime} onCreate={start} onUpdate={persist} onOpen={open} onOpenSettings={()=>setPage('settings')}/></Suspense>:page==='settings'?<main className="reading"><div className="eyebrow">IL METODO DIETRO IL PERCORSO</div><h1>Trasparente, fin dall’inizio.</h1><p className="lead">Un archivio tuo. Domande tracciabili. Nessuna AI obbligatoria.</p><section className="panel"><h2>Il canvas e questa applicazione</h2><p>Percorso adattato dall’AI Ethics Canvas, © Provincia Autonoma di Trento e Fondazione Bruno Kessler, CC BY-SA 4.0. Le domande sono riformulate e integrate con approfondimenti su chatbot, inclusione e riesame. Ogni domanda riporta la sua origine tematica.</p><p>Le assegnazioni dei ruoli sono suggerimenti applicativi. Versione dell’app: <b>v{appVersion}</b> · Versione del questionario: <b>{questionnaireVersion}</b>.</p><a href="https://github.com/dclfbk/canvasaiethics" target="_blank" rel="noreferrer">Canvas originale e licenza ↗</a><p><a href="https://doi.org/10.1017/dap.2026.10088" target="_blank" rel="noreferrer">Articolo scientifico ↗</a></p></section><section className="panel"><h2>Licenza e autori</h2><p>EthiCanvasAI è software libero: puoi ridistribuirlo e modificarlo secondo i termini della GNU Affero General Public License, versione 3 o successiva. Chi offre una versione modificata come servizio in rete deve rendere disponibile agli utenti il relativo codice sorgente. Il questionario adattato resta distribuito con licenza CC BY-SA 4.0.</p><p>© 2026 FBK - Fondazione Bruno Kessler, Trento. Autore: Maurizio Napolitano.</p><a href="https://github.com/dclfbk/ethicanvasaitool" target="_blank" rel="noreferrer">Codice sorgente ↗</a><p><a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noreferrer">GNU Affero General Public License v3 ↗</a></p></section><section className="panel"><h2>Archivio locale e backup</h2><p>Nel browser i dati sono conservati in IndexedDB, separati per indirizzo e profilo del browser. Nel desktop Tauri l’archivio usa SQLite. In questa versione gli allegati sono inclusi nell’archivio come dati codificati, con limite di 10 MB per file.</p><p>Browser e desktop non si sincronizzano automaticamente. L’esportazione JSON comprende risposte e allegati; l’importazione crea copie senza sostituire i progetti esistenti. La cancellazione dei dati del browser può eliminare l’archivio.</p><div className="button-row"><button className="secondary" onClick={exportArchive}><Download size={16}/>Esporta archivio</button><button className="secondary" onClick={()=>{navigator.storage?.persist?.().then(ok=>setSaving(ok?'persisted':'notPersisted')).catch(()=>setError('Richiesta di persistenza non disponibile.'));}}>Richiedi persistenza browser</button></div></section><Suspense fallback={<section className="panel"><p>Caricamento impostazioni…</p></section>}><CloudSyncPanel projects={projects} onRestore={ps=>ps.forEach(persist)}/><AssistantSettingsPanel settings={assistant} onChange={updateAssistant} onReset={()=>{clearAssistantSettings();setAssistant(defaultAssistantSettings);}} runtime={runtime}/><UpdateSettingsPanel settings={updates} onChange={updateUpdates} onFound={setPendingUpdate}/></Suspense><section className="panel"><h2>AI e integrazioni future</h2><p>I suggerimenti predefiniti restano disponibili in ogni caso. L’assistente è facoltativo: si attiva con una chiave Gemini oppure con un modello locale.</p><div className="roadmap"><span>1 · App locale</span><span>2 · Gemini</span><span className="badge">3 · Modello locale — questa versione</span><span>Futuro · Microsoft Copilot</span></div><h3>Inquadramento AI Act</h3><p>La checklist di supporto è disponibile dentro ciascun progetto. È una bozza da verificare con un esperto legale; non assegna categorie giuridiche né certificazioni.</p></section></main>:project&&result?<main className="project-main">
-   <div className="project-toolbar"><button className="text-button muted" onClick={()=>setPage('archive')}><ArrowLeft size={16}/>Archivio</button><div className="button-row"><button className="text-button" onClick={()=>{change({paused:!project.paused});}}><Pause size={16}/>{project.paused?'Riprendi percorso':'Metti in pausa'}</button><button className="text-button" onClick={()=>setPage(page==='contributions'?'journey':'contributions')}><Users size={16}/>{page==='contributions'?'Torna al percorso':'Contributi'}</button><button className="text-button" onClick={()=>setPage(page==='history'?'journey':'history')}><HistoryIcon size={16}/>{page==='history'?'Torna al percorso':'Versioni e revisioni'}</button><button className="text-button" onClick={()=>setRegulatoryOpen(true)}><ShieldCheck size={16}/>Inquadramento normativo</button><button className="secondary" onClick={()=>setPage(page==='report'?'journey':'report')}><FileText size={16}/>{page==='report'?'Torna al percorso':'Vedi il risultato'}</button><button aria-label="Elimina progetto" className="icon-button" onClick={()=>void removeProject()}><Trash2 size={17}/></button></div></div>
-   <div className="project-title"><div className="eyebrow">{project.demo?'CASO DIMOSTRATIVO':'IL TUO PROGETTO'}{project.paused?' · IN PAUSA':''}</div><h1>{project.name}</h1><div className="canvas-rule"/><p>{project.description}</p></div>
-   {regulatoryOpen&&<Suspense fallback={null}><div className="regulatory-dialog" role="dialog" aria-modal="true" aria-label="Inquadramento normativo" onKeyDown={e=>{if(e.key==='Escape')setRegulatoryOpen(false);}}><div className="regulatory-dialog-body"><button className="secondary" autoFocus onClick={()=>setRegulatoryOpen(false)}>Chiudi inquadramento</button><RegulatoryPanel project={project} onUpdate={p=>persist({...p,updatedAt:new Date().toISOString()})} onError={setError}/></div></div></Suspense>}
-   {page==='report'&&<><style>{'.report-grid .panel:nth-child(2) p.notice{display:none}'}</style><section className="panel"><h2>Inquadramento normativo</h2><div className="metric-row"><span>Punti esaminati</span><b>{regulatoryStatus(project).answered} di {regulatoryStatus(project).total}</b></div><p>{project.regulatory?.expert?'Registrato da '+project.regulatory.expert.role+(project.regulatory.expert.name?' · '+project.regulatory.expert.name:'')+'.':'Nessuna registrazione di un esperto.'}</p>{project.regulatory?.conclusions&&<blockquote>{project.regulatory.conclusions}</blockquote>}<p className="notice">{checklistValidated?'La checklist è stata verificata da un esperto.':'La checklist è una bozza da verificare con un esperto legale. Non assegna categorie di rischio né determina la conformità.'}</p><div className="button-row"><button className="secondary" onClick={()=>setRegulatoryOpen(true)}>Apri l’inquadramento normativo</button><button className="text-button" onClick={()=>jump(questions.findIndex(x=>x.id==='risk'))}>Vai alla domanda dedicata</button></div></section></>}
-   {page==='contributions'?<Suspense fallback={<p className="muted">Caricamento…</p>}><ContributionsPanel key={project.id} project={project} onUpdate={p=>persist({...p,updatedAt:new Date().toISOString()})}/></Suspense>:page==='history'?<Suspense fallback={<p className="muted">Caricamento…</p>}><HistoryPanel key={project.id} project={project} onUpdate={p=>persist({...p,updatedAt:new Date().toISOString()})}/></Suspense>:page==='report'?<><div className="report-hero"><div><span className="badge">{statusLabels[result.status]}</span><h2>Un quadro chiaro.<br/>Anche di ciò che manca.</h2><p>{result.done.length} risposte completate su {questions.length}. La completezza non equivale a validazione.</p></div><div className="report-percent"><strong>{result.percent}%</strong><span>compilazione</span></div></div><div className="report-grid"><section className="panel"><h2>Profilo dichiarato</h2>{['type','audience','autonomy'].map(id=><div className="profile-item" key={id}><small>{questions.find(q=>q.id===id)!.title}</small><p>{project.answers[id]?.value||'Non ancora definito'}</p></div>)}<p className="notice">Profilo descrittivo basato sulle risposte, non classificazione giuridica.</p></section><section className="panel"><h2>La base della valutazione</h2><div className="metric-row"><span>Riferimenti raccolti</span><b>{project.references.length}</b></div><div className="metric-row"><span>Contributi in attesa</span><b>{result.waiting.length}</b></div><div className="metric-row"><span>Risposte senza riferimenti</span><b>{result.withoutEvidence.length}</b></div>{(()=>{const r=lastReview(project);return <div className="metric-row"><span>Ultima revisione</span><b>{r?`${new Date(r.at).toLocaleDateString('it-IT')} · ${r.role} · ${outcomeLabels[r.outcome]}`:'Nessuna'}</b></div>;})()}<div className="metric-row"><span>Prossimo riesame</span><b>{project.reviewPlan?.nextAt?new Date(project.reviewPlan.nextAt+'T12:00:00').toLocaleDateString('it-IT'):'Non pianificato'}</b></div><p>La presenza di un riferimento non ne certifica pertinenza o qualità. In questa versione non è previsto un processo formale di revisione.</p><p className="notice">Inquadramento normativo (AI Act): da esaminare e verificare. Modulo normativo non ancora implementato.</p></section></div><section className="panel"><h2>{result.missing.length?'Da qui si può proseguire':'Compilazione terminata. Ora serve la revisione.'}</h2><p>{result.critical.length} punti essenziali ancora da completare. Le priorità sono indicazioni del percorso, non obblighi normativi automatici.</p>{result.missing.map(item=>{const ans=project.answers[item.id];return <button className="missing-row" key={item.id} onClick={()=>jump(questions.indexOf(item))}><span className="missing-symbol">{ans?.state==='waiting'?<Users size={17}/>:<HelpCircle size={17}/>}</span><span><b>{item.title}</b><small>{ans?.person?'Da coinvolgere: '+ans.person:item.role}{ans?.request?' · '+ans.request:''}</small></span>{item.critical&&<span className="badge amber-badge">Essenziale</span>}<ChevronRight size={16}/></button>;})}{!result.missing.length&&<p>Le risposte sono presenti. Verifica evidenze, misure e responsabilità con le figure competenti prima di assumere decisioni sul progetto.</p>}<button className="secondary" onClick={reportExport}><Download size={17}/>Esporta rapporto Markdown</button></section><Suspense fallback={<section className="panel"><p className="muted">Caricamento esportazioni…</p></section>}><ReportExportPanel key={project.id} project={project} settings={assistant} runtime={runtime} onOpenSettings={()=>setPage('settings')} onError={setError}/></Suspense><section className="panel"><h2>Tutte le risposte</h2>{questions.map(item=><details key={item.id}><summary>{item.title}<span>{accepted(project.answers[item.id])?'Compilata':'Da completare'}</span></summary><p>{project.answers[item.id]?.value||'Nessuna risposta.'}</p><small>{item.source}</small></details>)}</section></>:<div className="journey-layout"><aside className="journey-map"><div className="progress-label"><b>Il tuo percorso</b><span>{result.percent}%</span></div><div className="progress"><span style={{width:result.percent+'%'}}/></div>{sections.map((s,i)=>{const qs=questions.filter(x=>x.section===s.id);const done=qs.filter(x=>accepted(project.answers[x.id])).length;return <button key={s.id} className={'stage '+(q.section===s.id?'current':'')} onClick={()=>jump(questions.indexOf(qs.find(x=>!accepted(project.answers[x.id]))??qs[0]))}><span className={'stage-number'+(done===qs.length?' mixed':'')}>{done===qs.length?<Check size={15}/>:i||<Compass size={14} aria-hidden="true"/>}</span><span><b>{s.name}</b><small>{done} di {qs.length} passi</small></span></button>})}<div className="profile-legend"><b>Legenda</b>{(Object.keys(profileLabels) as Profile[]).map(x=><span key={x}><Shape profile={x}/>{profileLabels[x]}</span>)}<span><i className="mixed" aria-hidden="true"/>Colori misti: tutti insieme</span></div><p className="map-note"><ShieldCheck size={16}/>Puoi fermarti quando vuoi. Il tuo lavoro rimane qui.</p></aside><section className="question-area"><div className="question-meta"><span className="eyebrow">{sections.find(s=>s.id===q.section)!.subtitle}</span><span>Passo {project.currentQuestion+1} di {questions.length}</span></div><div className="question-card" style={profileStyle(q.profiles)}><span className="role-label">{q.profiles.map(x=><Shape key={x} profile={x}/>)}<span className="sr-only">{q.profiles.map(x=>profileLabels[x]).join(', ')}: </span>{q.role}</span><h2>{q.title}</h2><p className="question-why">{q.why}</p><label className="field-label" htmlFor="answer">La tua risposta</label><textarea id="answer" value={a.value} placeholder="Raccontalo con parole tue…" onChange={e=>answer({value:e.target.value,state:'draft'})}/><div className="answer-tools"><button className={'text-button '+(help?'help-active':'')} onClick={()=>setHelp(!help)}><Sparkles size={16}/>Dammi uno spunto</button><button className={'text-button '+(a.state==='waiting'?'help-active':'')} aria-pressed={a.state==='waiting'} onClick={()=>answer({state:a.state==='waiting'?'draft':'waiting'})}><Users size={16}/>Serve un’altra figura</button></div>{help&&<div className="suggestions"><b>Un punto di partenza, da fare tuo</b><p>Esempi predefiniti per un chatbot nella PA. Non descrivono automaticamente il tuo progetto.</p>{q.suggestions.map(s=><button key={s} onClick={()=>{answer({value:s,state:'draft'});setHelp(false);}}>{s}<Plus size={17}/></button>)}</div>}{assistant.enabled&&<Suspense fallback={<p className="muted">Caricamento assistente…</p>}><AssistantPanel key={project.id+':'+q.id} project={project} question={q} settings={assistant} runtime={runtime} onApply={ans=>change({answers:{...project.answers,[q.id]:ans}})} onAddNote={text=>answer({note:(a.note.trim()?a.note.trimEnd()+'\n\n':'')+text})} onOpenSettings={()=>setPage('settings')}/></Suspense>}{provenanceLine(a)&&<p className="provenance">{provenanceLine(a)}</p>}{changedSinceReview(project,q.id)&&<p className="provenance">Modificata dopo l’ultima revisione del {new Date(lastReview(project)!.at).toLocaleDateString('it-IT')}.</p>}{q.id==='review'&&<div className="review-date-box"><label htmlFor="review-next-date">Data prevista per il prossimo riesame (facoltativa)</label><div className="review-date-row"><input id="review-next-date" type="date" value={project.reviewPlan?.nextAt??''} onChange={e=>change({reviewPlan:{nextAt:e.target.value,owner:project.reviewPlan?.owner??'',triggers:project.reviewPlan?.triggers??[],note:project.reviewPlan?.note??''}})}/><button type="button" className="text-button" onClick={()=>setPage('history')}>Apri Versioni e revisioni</button></div><p>La data viene sincronizzata con «Versioni e revisioni» e mostrata in «Quadro dell’ente».</p></div>}{a.state==='waiting'&&<div className="waiting-box"><div className="waiting-head"><h3><Users size={17}/>Coinvolgi la persona giusta</h3><button type="button" className="text-button" onClick={()=>answer({state:'draft'})}>Annulla richiesta</button></div><label>Figura o persona da coinvolgere<input value={a.person} onChange={e=>answer({person:e.target.value})} placeholder="Es. DPO, referente tecnico, fornitore…"/></label>{parsePeople(a.person).length>0&&<div className="person-chips">{parsePeople(a.person).map(p=><span className="person-chip" key={p}>{p}<button type="button" aria-label={'Rimuovi '+p} onClick={()=>removeWaitingPerson(p)}><X size={13}/></button></span>)}</div>}<div className="person-add-row"><input aria-label="Aggiungi un’altra figura" value={newPerson} onChange={e=>setNewPerson(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addWaitingPerson();}}} placeholder="Aggiungi un’altra figura…"/><button type="button" className="secondary" onClick={addWaitingPerson}><Plus size={15}/>Aggiungi figura</button></div><label>Che cosa deve chiarire?<textarea value={a.request} onChange={e=>answer({request:e.target.value})} placeholder="Scrivi la domanda da sottoporle…"/></label><p>La richiesta resta nel tuo archivio. Non viene inviata automaticamente.</p></div>}<div className="answer-state"><label>Stato della risposta<select value={a.state} onChange={e=>answer({state:e.target.value as Answer['state']})}><option value="draft">Bozza da approfondire</option><option value="answered">Risposta confermata</option><option value="waiting">In attesa di un contributo</option><option value="na">Non applicabile · motiva nella risposta</option></select></label></div><details className="notes"><summary>Motivazioni e note aggiuntive</summary><textarea aria-label="Motivazioni e note" value={a.note} onChange={e=>answer({note:e.target.value})}/></details><div className="reference-heading"><h3><Link size={16}/>Riferimenti <span>{project.references.filter(r=>r.questionId===q.id).length}</span></h3><button className="text-button" onClick={()=>setRefOpen(true)}><Plus size={15}/>Aggiungi</button></div>{project.references.filter(r=>r.questionId===q.id).map(r=><div className="reference" key={r.id}><FileText size={20}/><div><b>{r.title}</b><small>{refKinds[r.kind]}{r.fileName?' · '+r.fileName:''}</small>{r.note&&<p>{r.note}</p>}{safeUrl(r.url)&&<a href={safeUrl(r.url)} target="_blank" rel="noreferrer">Apri collegamento ↗</a>}{r.data&&<button className="text-button" onClick={()=>{const link=document.createElement('a');link.href=r.data!;link.download=r.fileName||'allegato';link.click();}}>Scarica allegato</button>}<details className="excerpt"><summary>Estratto testuale {r.excerpt?.trim()?'('+r.excerpt.length.toLocaleString('it-IT')+' caratteri)':'· nessuno'}</summary><textarea aria-label={'Estratto di '+r.title} maxLength={maxExcerptChars} value={r.excerpt??''} onChange={e=>updateReference(r.id,{excerpt:e.target.value})} placeholder="Incolla il passaggio pertinente. Solo questo testo può essere usato come fonte dall’assistente."/>{r.data&&canExtract(r)&&<button className="text-button" onClick={()=>void extractExcerpt(r)}>Estrai testo dal file (in locale)</button>}</details></div><button className="icon-button" aria-label={'Rimuovi '+r.title} onClick={()=>change({references:project.references.filter(x=>x.id!==r.id)})}><X size={15}/></button></div>)}{!project.references.some(r=>r.questionId===q.id)&&<p className="empty-ref">Un documento, una legge, un dataset o il contributo di un esperto: collega ciò che sostiene la risposta.</p>}<div className="source-note">Origine nel canvas: {q.source}. Domanda adattata per questa applicazione.</div></div><div className="journey-bottom"><button className="secondary" disabled={project.currentQuestion===0} onClick={()=>jump(project.currentQuestion-1)}><ArrowLeft size={16}/>Indietro</button><button className="text-button muted" onClick={()=>{change({paused:true});setPage('archive');}}>Salva e riprendi più avanti</button><button className="primary" onClick={advance}> {project.currentQuestion===questions.length-1?'Guarda il risultato':a.state==='draft'&&a.value.trim()?'Conferma e continua':a.state==='waiting'?'Continua, resta in attesa':'Prossimo passo'}<ArrowRight size={17}/></button></div></section></div>}
-  </main>:<main><p>Seleziona un progetto dall’archivio.</p><button className="primary" onClick={()=>setPage('archive')}>Apri archivio</button></main>}
-  </div>
-  {newOpen&&<div className="modal-backdrop" onClick={()=>setNewOpen(false)}><section role="dialog" aria-modal="true" aria-labelledby="new-title" className="modal" onClick={e=>e.stopPropagation()}><button className="modal-close icon-button" aria-label="Chiudi" onClick={()=>setNewOpen(false)}><X size={20}/></button><div className="eyebrow">OGNI PROGETTO COMINCIA CON UN’IDEA</div><h2 id="new-title">A cosa stai pensando?</h2><p>Non serve avere già tutte le risposte. Le troveremo lungo il percorso.</p><form onSubmit={e=>{e.preventDefault();if(!newName.trim())return;start(createProject(newName.trim(),newDescription.trim(),newOrg.trim()));setNewOpen(false);setNewName('');setNewDescription('');setNewOrg('');}}><label>Nome del progetto<input autoFocus required maxLength={140} value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Es. Un assistente per i cittadini"/></label><label>Ente o organizzazione<input value={newOrg} onChange={e=>setNewOrg(e.target.value)} placeholder="Es. Pubblica Amministrazione, ufficio o servizio…"/></label><label>Descrivi la tua idea<textarea value={newDescription} onChange={e=>setNewDescription(e.target.value)} placeholder="A chi servirà? Che cosa vorresti permettergli di fare?"/></label><button className="primary full" type="submit">Inizia il percorso <ArrowRight size={17}/></button></form></section></div>}
-  {refOpen&&<div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-labelledby="ref-title" className="modal"><button className="modal-close icon-button" aria-label="Chiudi" disabled={refBusy} onClick={()=>setRefOpen(false)}><X size={20}/></button><h2 id="ref-title">Dai una base alla risposta.</h2><p>Collega una fonte o conserva un allegato nel progetto.</p><form onSubmit={e=>void addReference(e)}><label>Tipo di riferimento<select value={refKind} onChange={e=>setRefKind(e.target.value as Reference['kind'])}>{Object.entries(refKinds).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label><label>Titolo<input autoFocus required value={refTitle} onChange={e=>setRefTitle(e.target.value)}/></label><label>Collegamento (facoltativo)<input type="url" value={refUrl} onChange={e=>setRefUrl(e.target.value)} placeholder="https://…"/></label><label>File locale (massimo 10 MB)<input type="file" onChange={e=>setRefFile(e.target.files?.[0]??null)}/></label><label>Passaggio, versione, data o note<textarea value={refNote} onChange={e=>setRefNote(e.target.value)}/></label><label>Estratto testuale (facoltativo)<textarea maxLength={maxExcerptChars} value={refExcerpt} onChange={e=>setRefExcerpt(e.target.value)} placeholder="Il passaggio del documento che sostiene la risposta. Per file TXT, MD, CSV e JSON potrai estrarlo anche dopo."/></label><button className="primary full" disabled={refBusy} type="submit">{refBusy?'Conservo il file…':'Aggiungi riferimento'}</button></form></section></div>}
-  {a11yOpen&&<Suspense fallback={null}><AccessibilityPanel settings={a11y} onChange={updateA11y} onReset={resetA11y} onClose={()=>{setA11yOpen(false);a11yTriggerRef.current?.focus();}}/></Suspense>}
- </div>;
+export default function App() {
+  const [projects, setProjects] = useState<Project[]>([]),
+    [activeId, setActiveId] = useState<string | null>(null),
+    [page, setPage] = useState<
+      | 'archive'
+      | 'journey'
+      | 'report'
+      | 'history'
+      | 'contributions'
+      | 'respond'
+      | 'dashboard'
+      | 'knowledge'
+      | 'guide'
+      | 'settings'
+    >('archive'),
+    [regulatoryOpen, setRegulatoryOpen] = useState(false);
+  const [loading, setLoading] = useState(true),
+    [error, setError] = useState(''),
+    [saving, setSaving] = useState<SaveState>('saved');
+  const [search, setSearch] = useState(''),
+    [filter, setFilter] = useState('all'),
+    [newOpen, setNewOpen] = useState(false),
+    [refOpen, setRefOpen] = useState(false),
+    [help, setHelp] = useState(false);
+  const [newName, setNewName] = useState(''),
+    [newDescription, setNewDescription] = useState(''),
+    [newOrg, setNewOrg] = useState('');
+  const [newPerson, setNewPerson] = useState('');
+  const [assistant, setAssistant] = useState<AssistantSettings>(loadAssistantSettings);
+  const runtime = useMemo(
+    () => assistantRuntime(assistant),
+    [assistant.provider, assistant.model, assistant.local.protocol, assistant.local.url, assistant.local.model],
+  );
+  // On desktop the Rust side keeps the local server address; it is aligned with the preferences at start-up.
+  useEffect(() => {
+    if (isTauri() && assistant.provider === 'local')
+      configureLocalServer(assistant.local.url, assistant.local.protocol).catch(() => {
+        /* shown when the assistant is used */
+      });
+  }, [assistant.provider, assistant.local.url, assistant.local.protocol]);
+  const [updates, setUpdates] = useState<UpdateSettings>(loadUpdateSettings),
+    [pendingUpdate, setPendingUpdate] = useState<PendingUpdate | null>(null);
+  const [a11y, setA11y] = useState<AccessibilitySettings>(loadAccessibilitySettings),
+    [a11yOpen, setA11yOpen] = useState(false);
+  const a11yTriggerRef = useRef<HTMLButtonElement>(null);
+  const activeA11y = countActiveAccessibilitySettings(a11y);
+  useEffect(() => {
+    applyAccessibilitySettings(a11y);
+  }, [a11y]);
+  function updateA11y(next: AccessibilitySettings) {
+    setA11y(next);
+    saveAccessibilitySettings(next);
+  }
+  function resetA11y() {
+    clearAccessibilitySettings();
+    setA11y(defaultAccessibilitySettings);
+  }
+  const [refExcerpt, setRefExcerpt] = useState(''),
+    [refTitle, setRefTitle] = useState(''),
+    [refUrl, setRefUrl] = useState(''),
+    [refNote, setRefNote] = useState(''),
+    [refKind, setRefKind] = useState<Reference['kind']>('document'),
+    [refFile, setRefFile] = useState<File | null>(null),
+    [refBusy, setRefBusy] = useState(false);
+  const queue = useRef(Promise.resolve()),
+    seq = useRef(0),
+    importInput = useRef<HTMLInputElement>(null);
+  const projectsRef = useRef(projects);
+  projectsRef.current = projects;
+  const project = projects.find(p => p.id === activeId),
+    q = questions[project?.currentQuestion ?? 0],
+    a = project?.answers[q.id] ?? emptyAnswer(),
+    result = project ? evaluate(project) : null;
+  useEffect(() => {
+    setNewPerson('');
+  }, [activeId, project?.currentQuestion]);
+  function updateAssistant(next: AssistantSettings) {
+    setAssistant(next);
+    saveAssistantSettings(next);
+  }
+  function updateUpdates(next: UpdateSettings) {
+    setUpdates(next);
+    saveUpdateSettings(next);
+  }
+  function updateReference(id: string, patch: Partial<Reference>) {
+    if (project) change({ references: project.references.map(r => (r.id === id ? { ...r, ...patch } : r)) });
+  }
+  // PDF extraction can take a while: the excerpt is applied to the latest copy of the project, if the reference is still there.
+  async function extractExcerpt(r: Reference) {
+    const owner = project?.id,
+      x = await extractText(r);
+    if (!x.ok) {
+      setError(extractionErrors[x.reason]);
+      return;
+    }
+    if (r.excerpt?.trim() && !confirm('Sostituire l’estratto attuale con il testo del file?')) return;
+    const latest = projectsRef.current.find(p => p.id === owner);
+    if (!latest?.references.some(ref => ref.id === r.id)) return;
+    persist({
+      ...latest,
+      references: latest.references.map(ref => (ref.id === r.id ? { ...ref, excerpt: x.text } : ref)),
+      updatedAt: new Date().toISOString(),
+    });
+    if (x.truncated)
+      setError(
+        'Il testo supera ' +
+          maxExcerptChars.toLocaleString('it-IT') +
+          ' caratteri: sono stati conservati i primi. Riducilo al passaggio pertinente prima di usarlo.',
+      );
+  }
+  useEffect(() => {
+    if (updatesSupported() && updates.checkOnStartup)
+      findUpdate()
+        .then(setPendingUpdate)
+        .catch(() => {
+          /* offline or no release yet: retry at next start */
+        });
+  }, []);
+  useEffect(() => {
+    storage
+      .list()
+      .then(setProjects)
+      .catch(() => setError('Impossibile aprire l’archivio locale. Verifica che il browser consenta l’archiviazione.'))
+      .finally(() => setLoading(false));
+  }, []);
+  useEffect(() => {
+    const f = (e: BeforeUnloadEvent) => {
+      if (saving === 'saving' || saving === 'failed') {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('beforeunload', f);
+    return () => window.removeEventListener('beforeunload', f);
+  }, [saving]);
+  function persist(p: Project) {
+    setProjects(prev => [p, ...prev.filter(x => x.id !== p.id)]);
+    setSaving('saving');
+    const ticket = ++seq.current;
+    queue.current = queue.current
+      .catch(() => {})
+      .then(() => storage.put(p))
+      .then(() => {
+        if (ticket === seq.current) setSaving('saved');
+      })
+      .catch(() => {
+        setSaving('failed');
+        setError(
+          'Salvataggio non riuscito. I cambiamenti sono ancora in memoria: esporta l’archivio prima di chiudere.',
+        );
+      });
+  }
+  function change(patch: Partial<Project>) {
+    if (project) persist({ ...project, ...patch, updatedAt: new Date().toISOString() });
+  }
+  function answer(patch: Partial<Answer>) {
+    if (project)
+      change({ answers: { ...project.answers, [q.id]: { ...a, ...patch, updatedAt: new Date().toISOString() } } });
+  }
+  function addWaitingPerson() {
+    const name = newPerson.trim();
+    if (!name) return;
+    const list = parsePeople(a.person);
+    if (!list.some(x => x.toLowerCase() === name.toLowerCase())) answer({ person: [...list, name].join(', ') });
+    setNewPerson('');
+  }
+  function removeWaitingPerson(name: string) {
+    answer({
+      person: parsePeople(a.person)
+        .filter(x => x !== name)
+        .join(', '),
+    });
+  }
+  function start(p: Project) {
+    persist(p);
+    setActiveId(p.id);
+    setPage('journey');
+    setHelp(false);
+  }
+  function open(p: Project) {
+    setActiveId(p.id);
+    setPage('journey');
+    setHelp(false);
+  }
+  function jump(index: number) {
+    change({ currentQuestion: index, paused: false });
+    setPage('journey');
+    setHelp(false);
+  }
+  function advance() {
+    if (!project) return;
+    const next = project.currentQuestion === questions.length - 1;
+    const answers =
+      a.state === 'draft' && a.value.trim()
+        ? { ...project.answers, [q.id]: { ...a, state: 'answered' as const, updatedAt: new Date().toISOString() } }
+        : project.answers;
+    change({ answers, currentQuestion: next ? project.currentQuestion : project.currentQuestion + 1, paused: false });
+    setHelp(false);
+    if (next) setPage('report');
+  }
+  // Opens a project at a question, for example from the organisation overview.
+  function openAt(p: Project, questionId?: string) {
+    const index = questionId ? questions.findIndex(q => q.id === questionId) : -1;
+    if (index >= 0) persist({ ...p, currentQuestion: index, paused: false });
+    setActiveId(p.id);
+    setPage('journey');
+    setHelp(false);
+  }
+  function guideAction(a: GuideAction) {
+    if (a === 'demo') start(demoProject());
+    else if (a === 'new') {
+      setPage('archive');
+      setNewOpen(true);
+    } else setPage(a);
+  }
+  function exportArchive() {
+    download('canvas-pa-archivio.json', JSON.stringify(createBackup(projects), null, 2));
+  }
+  async function importArchive(file: File) {
+    try {
+      if (file.size > 100 * 1024 * 1024) throw new Error('Il pacchetto supera 100 MB.');
+      const imported = readBackup(JSON.parse(await file.text()));
+      if (!imported) throw new Error('Formato o versione non compatibile. Nessun progetto è stato importato.');
+      for (const p of imported) {
+        const copy = {
+          ...p,
+          id: crypto.randomUUID(),
+          name: p.name + ' · importato',
+          updatedAt: new Date().toISOString(),
+        };
+        persist(copy);
+      }
+      setPage('archive');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Importazione non riuscita.');
+    }
+  }
+  async function addReference(e: React.FormEvent) {
+    e.preventDefault();
+    if (!project || !refTitle.trim()) return;
+    setRefBusy(true);
+    try {
+      if (refUrl && !safeUrl(refUrl)) throw new Error('Inserisci un collegamento http o https valido.');
+      let data: string | undefined;
+      if (refFile) {
+        if (refFile.size > 10 * 1024 * 1024) throw new Error('Per questa versione il limite è 10 MB per allegato.');
+        data = await new Promise<string>((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(String(r.result));
+          r.onerror = () => reject(new Error('Lettura del file non riuscita.'));
+          r.readAsDataURL(refFile);
+        });
+      }
+      change({
+        references: [
+          ...project.references,
+          {
+            id: crypto.randomUUID(),
+            questionId: q.id,
+            kind: refKind,
+            title: refTitle.trim(),
+            url: refUrl,
+            note: refNote,
+            fileName: refFile?.name,
+            mime: refFile?.type,
+            data,
+            excerpt: refExcerpt.trim().slice(0, maxExcerptChars) || undefined,
+          },
+        ],
+      });
+      setRefOpen(false);
+      setRefExcerpt('');
+      setRefTitle('');
+      setRefUrl('');
+      setRefNote('');
+      setRefFile(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setRefBusy(false);
+    }
+  }
+  async function removeProject() {
+    if (
+      !project ||
+      !confirm('Eliminare questo progetto e i suoi allegati locali? Esporta prima una copia se vuoi conservarli.')
+    )
+      return;
+    const id = project.id;
+    try {
+      await queue.current;
+      await storage.remove(id);
+      setProjects(ps => ps.filter(p => p.id !== id));
+      setActiveId(null);
+      setPage('archive');
+    } catch {
+      setError('Eliminazione non riuscita.');
+    }
+  }
+  async function removeArchivedProject(p: Project) {
+    if (!confirm(`Eliminare «${p.name}» e i suoi allegati locali? Esporta prima una copia se vuoi conservarli.`))
+      return;
+    try {
+      await queue.current;
+      await storage.remove(p.id);
+      setProjects(ps => ps.filter(x => x.id !== p.id));
+      if (activeId === p.id) setActiveId(null);
+    } catch {
+      setError('Eliminazione non riuscita.');
+    }
+  }
+  function reportExport() {
+    if (!project || !result) return;
+    const text = [
+      '# ' + project.name,
+      project.description,
+      'Ente: ' + project.organization,
+      'Questionario: ' + project.questionnaireVersion,
+      'Stato: ' + statusLabels[result.status],
+      'Completezza: ' + result.percent + '%',
+      'Questo rapporto documenta una autovalutazione. Non certifica conformità normativa o validazione indipendente.',
+      '## Profilo dichiarato',
+      ...['type', 'audience', 'autonomy'].map(
+        id => questions.find(x => x.id === id)!.title + ': ' + (project.answers[id]?.value || 'Non definito'),
+      ),
+      ...questions.flatMap(question => {
+        const ans = project.answers[question.id];
+        return [
+          '## ' + question.title,
+          'Fonte: ' + question.source,
+          'Stato: ' + (ans?.state || 'mancante'),
+          ans?.value || 'Risposta mancante',
+          ans?.note || '',
+          ans?.person ? 'Figura da coinvolgere: ' + ans.person : '',
+          ans?.request ? 'Richiesta: ' + ans.request : '',
+          provenanceLine(ans),
+          ...project.references
+            .filter(r => r.questionId === question.id)
+            .map(r => 'Riferimento: ' + r.title + ' ' + r.url + ' ' + r.note),
+        ];
+      }),
+      '## Mancano',
+      ...result.missing.map(x => '- ' + x.title),
+      '## Inquadramento normativo',
+      'L’applicazione non determina categorie di rischio né conformità normativa. Le conclusioni spettano alle persone competenti.',
+      ...regulatoryAssessmentLines(project),
+    ].join('\n\n');
+    download(project.name.replace(/[^\p{L}\p{N}-]/gu, '-') + '-valutazione.md', text, 'text/markdown;charset=utf-8');
+  }
+  const shown = projects.filter(
+    p =>
+      (
+        p.name +
+        ' ' +
+        p.description +
+        ' ' +
+        p.organization +
+        ' ' +
+        Object.values(p.answers)
+          .map(a => a.value)
+          .join(' ')
+      )
+        .toLocaleLowerCase()
+        .includes(search.toLocaleLowerCase()) &&
+      (filter === 'all' ||
+        (filter === 'paused' && p.paused) ||
+        (filter === 'complete' && evaluate(p).missing.length === 0)),
+  );
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <a
+          className="brand"
+          href="#"
+          onClick={e => {
+            e.preventDefault();
+            setPage('archive');
+          }}
+        >
+          <span className="brand-mark" aria-hidden="true">
+            <Shape profile="scientist" />
+            <Shape profile="engineer" />
+            <Shape profile="user" />
+          </span>
+          <span>
+            <span className="brand-name">
+              Canvas <span className="brand-ai">AI Ethics</span>
+            </span>
+            <span className="brand-pa">per la PA</span>
+            <small>Una guida per l’adozione etica dell’AI</small>
+          </span>
+        </a>
+        <div className="workspace-label">IL TUO SPAZIO DI LAVORO</div>
+        <nav>
+          <button className={page === 'archive' ? 'nav active' : 'nav'} onClick={() => setPage('archive')}>
+            <LayoutDashboard size={19} />
+            Archivio progetti<span className="count">{projects.length}</span>
+          </button>
+          <button className={page === 'knowledge' ? 'nav active' : 'nav'} onClick={() => setPage('knowledge')}>
+            <Library size={19} />
+            Casi a confronto
+          </button>
+          <button className={page === 'dashboard' ? 'nav active' : 'nav'} onClick={() => setPage('dashboard')}>
+            <Gauge size={19} />
+            Quadro dell’ente
+          </button>
+          <button className={page === 'guide' ? 'nav active' : 'nav'} onClick={() => setPage('guide')}>
+            <LifeBuoy size={19} />
+            Guida
+          </button>
+          <button className={page === 'settings' ? 'nav active' : 'nav'} onClick={() => setPage('settings')}>
+            <ShieldCheck size={19} />
+            Metodo e impostazioni
+          </button>
+        </nav>
+        <div className="sidebar-note">
+          <span className="local-dot" /> Il tuo archivio è locale
+          <p>Progetti, risposte e allegati rimangono su questo dispositivo.</p>
+          <button className="text-button" onClick={exportArchive}>
+            <Download size={15} />
+            Esporta una copia
+          </button>
+        </div>
+        <div className="sidebar-foot">
+          <span className="avatar">D</span>
+          <div>
+            Il tuo workspace<small>Personale · senza account</small>
+          </div>
+        </div>
+      </aside>
+      <div className="main-shell">
+        <header className="topbar">
+          <span className="breadcrumb">
+            Il tuo workspace <ChevronRight size={14} />{' '}
+            {page === 'archive'
+              ? 'Archivio progetti'
+              : page === 'knowledge'
+                ? 'Casi a confronto'
+                : page === 'guide'
+                  ? 'Guida'
+                  : page === 'dashboard'
+                    ? 'Quadro dell’ente'
+                    : page === 'respond'
+                      ? 'Rispondi a una richiesta'
+                      : page === 'settings'
+                        ? 'Metodo e impostazioni'
+                        : project?.name}
+          </span>
+          <div className="topbar-actions">
+            <button
+              ref={a11yTriggerRef}
+              type="button"
+              className={activeA11y > 0 ? 'a11y-trigger active' : 'a11y-trigger'}
+              aria-haspopup="dialog"
+              aria-expanded={a11yOpen}
+              onClick={() => setA11yOpen(true)}
+            >
+              <Accessibility size={16} aria-hidden="true" />
+              Accessibilità
+              {activeA11y > 0 && (
+                <span className="a11y-count" aria-label={activeA11y + ' impostazioni attive'}>
+                  {activeA11y}
+                </span>
+              )}
+            </button>
+            <span className="save-status">
+              <span className={saving === 'saved' ? 'local-dot' : 'pending-dot'} />
+              {saveLabels[saving]}
+            </span>
+          </div>
+        </header>
+        {error && (
+          <div role="alert" className="error-banner">
+            {error}
+            <button aria-label="Chiudi messaggio" onClick={() => setError('')}>
+              <X size={17} />
+            </button>
+          </div>
+        )}
+        {pendingUpdate && (
+          <Suspense fallback={null}>
+            <UpdateDialog update={pendingUpdate} onClose={() => setPendingUpdate(null)} />
+          </Suspense>
+        )}
+        <input
+          ref={importInput}
+          type="file"
+          accept=".json,application/json"
+          hidden
+          onChange={e => {
+            const f = e.target.files?.[0];
+            if (f) void importArchive(f);
+            e.target.value = '';
+          }}
+        />
+        {loading ? (
+          <main>
+            <p>Apro il tuo archivio…</p>
+          </main>
+        ) : page === 'archive' ? (
+          <main>
+            <div className="page-heading">
+              <div>
+                <div className="eyebrow">CANVAS AI ETHICS PER LA PA</div>
+                <h1>
+                  I tuoi progetti AI<span className="heading-dot">.</span>
+                </h1>
+                <div className="canvas-rule" />
+                <p>Uno spazio per esplorare, valutare e far crescere le tue idee.</p>
+              </div>
+              <button className="primary" onClick={() => setNewOpen(true)}>
+                <Plus size={18} />
+                Nuovo progetto
+              </button>
+            </div>
+            <section className="welcome">
+              <div className="welcome-copy">
+                <div className="pill">
+                  <Sparkles size={14} />
+                  UN PERCORSO, NON UN MODULO
+                </div>
+                <h2>
+                  Le domande giuste.
+                  <br />
+                  Un progetto più solido.
+                </h2>
+                <p>
+                  Esplora il tuo progetto con l’AI Ethics Canvas.
+                  <br />
+                  Un passo alla volta, insieme alle persone giuste.
+                </p>
+                <button className="primary light" onClick={() => setNewOpen(true)}>
+                  Dai forma alla tua idea <ArrowRight size={17} />
+                </button>
+              </div>
+              <div className="canvas-art" aria-hidden="true">
+                <div className="art-orbit" />
+                <div className="art-note n1">
+                  <span className="art-icon">◒</span>
+                  <b>Conosci i dati</b>
+                  <i>Ogni buona idea parte da qui.</i>
+                  <div className="art-line" />
+                </div>
+                <div className="art-note n2">
+                  <Users size={20} />
+                  <b>Metti al centro le persone</b>
+                  <div className="art-line" />
+                  <div className="art-line short" />
+                </div>
+                <div className="art-note n3">
+                  <CheckCircle2 size={21} />
+                  <b>
+                    Trasforma i dubbi
+                    <br />
+                    in prossimi passi.
+                  </b>
+                </div>
+                <div className="art-star">✳</div>
+                <div className="art-label">PICCOLI PASSI, GRANDI DOMANDE.</div>
+              </div>
+            </section>
+            <div className="stats">
+              <div>
+                <span className="stat-icon">
+                  <FolderOpen size={20} />
+                </span>
+                <div>
+                  <strong>{projects.length}</strong>
+                  <span>Progetti nel tuo archivio</span>
+                </div>
+              </div>
+              <div>
+                <span className="stat-icon amber">
+                  <Pause size={20} />
+                </span>
+                <div>
+                  <strong>{projects.filter(p => evaluate(p).missing.length > 0).length}</strong>
+                  <span>Percorsi da completare</span>
+                </div>
+              </div>
+              <div>
+                <span className="stat-icon purple">
+                  <Users size={20} />
+                </span>
+                <div>
+                  <strong>{projects.reduce((n, p) => n + evaluate(p).waiting.length, 0)}</strong>
+                  <span>Contributi da raccogliere</span>
+                </div>
+              </div>
+            </div>
+            <div className="archive-heading">
+              <h2>
+                Il tuo archivio <span>{projects.length}</span>
+              </h2>
+              <div className="button-row">
+                <button className="text-button" onClick={() => setPage('respond')}>
+                  <Users size={16} />
+                  Rispondi a una richiesta
+                </button>
+                <button className="text-button" onClick={() => importInput.current?.click()}>
+                  <Upload size={16} />
+                  Importa archivio
+                </button>
+              </div>
+            </div>
+            <div className="archive-controls">
+              <div className="tabs">
+                <button className={filter === 'all' ? 'selected' : ''} onClick={() => setFilter('all')}>
+                  Tutti i progetti
+                </button>
+                <button className={filter === 'paused' ? 'selected' : ''} onClick={() => setFilter('paused')}>
+                  In pausa
+                </button>
+                <button className={filter === 'complete' ? 'selected' : ''} onClick={() => setFilter('complete')}>
+                  Compilati
+                </button>
+              </div>
+              <label className="search">
+                <Search size={17} />
+                <input
+                  aria-label="Cerca nell’archivio"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Cerca progetti o risposte…"
+                />
+              </label>
+            </div>
+            <div className="project-grid">
+              {shown.map(p => {
+                const r = evaluate(p);
+                return (
+                  <article className="project-card" key={p.id}>
+                    <div className="card-top">
+                      <span className="project-symbol">
+                        <BookOpen size={21} />
+                      </span>
+                      <span className={p.paused ? 'badge amber-badge' : 'badge'}>
+                        {p.demo ? 'Esempio' : p.paused ? 'In pausa' : statusLabels[r.status]}
+                      </span>
+                    </div>
+                    <h3>{p.name}</h3>
+                    <p>{p.description}</p>
+                    <span className="org">{p.organization || 'Ente non indicato'}</span>
+                    {(() => {
+                      const due = reviewDue(p.reviewPlan);
+                      return (
+                        due && (
+                          <span className={'card-review' + (due.overdue ? ' overdue' : '')}>
+                            {due.overdue || due.days <= 30
+                              ? dueLabel(due)
+                              : 'Riesame il ' +
+                                new Date(p.reviewPlan!.nextAt + 'T12:00:00').toLocaleDateString('it-IT', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })}
+                          </span>
+                        )
+                      );
+                    })()}
+                    <div className="progress-label">
+                      <span>Percorso canvas</span>
+                      <b>{r.percent}%</b>
+                    </div>
+                    <div className="progress">
+                      <span style={{ width: r.percent + '%' }} />
+                    </div>
+                    <div className="card-footer">
+                      <span>{date(p.updatedAt)}</span>
+                      <div className="button-row">
+                        <button className="text-button" onClick={() => open(p)}>
+                          Riprendi <ArrowUpRight size={17} />
+                        </button>
+                        <button
+                          className="icon-button"
+                          aria-label={`Elimina ${p.name}`}
+                          title="Elimina progetto"
+                          onClick={() => void removeArchivedProject(p)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+              <button className="new-card" onClick={() => setNewOpen(true)}>
+                <span>
+                  <Plus size={24} />
+                </span>
+                <b>La prossima idea parte da qui</b>
+                <small>Crea un progetto e scopri il percorso.</small>
+              </button>
+            </div>
+            {!projects.length && (
+              <div className="demo-invite">
+                <Sparkles size={18} />
+                <span>
+                  Vuoi prima dare un’occhiata? Esplora il caso di un chatbot per la Pubblica Amministrazione, oppure{' '}
+                  <button className="text-button" onClick={() => setPage('guide')}>
+                    leggi la guida
+                  </button>
+                  .
+                </span>
+                <button className="text-button" onClick={() => start(demoProject())}>
+                  Apri l’esempio <ArrowRight size={15} />
+                </button>
+              </div>
+            )}
+            <footer className="page-footer">
+              <div className="logo-strip">
+                <small>Il percorso si basa sull’AI Ethics Canvas, realizzato da</small>
+                <img className="pat-logo" src={patLogo} alt="Provincia autonoma di Trento" />
+                <span className="logo-with">in collaborazione con</span>
+                <img src={fbkLogo} alt="Fondazione Bruno Kessler" />
+                <img
+                  src={fundingLogos}
+                  alt="Finanziato dall’Unione europea NextGenerationEU, Repubblica Italiana, Dipartimento per la trasformazione digitale"
+                />
+              </div>
+              <span className="cc-line">
+                Canvas AI Ethics © 2024 by Provincia Autonoma di Trento e Fondazione Bruno Kessler is licensed under CC
+                BY-SA 4.0 · EthiCanvasAI © 2026 FBK, GNU AGPL v3
+              </span>
+            </footer>
+          </main>
+        ) : page === 'respond' ? (
+          <Suspense
+            fallback={
+              <main>
+                <p>Caricamento…</p>
+              </main>
+            }
+          >
+            <RespondPanel />
+          </Suspense>
+        ) : page === 'dashboard' ? (
+          <Suspense
+            fallback={
+              <main>
+                <p>Caricamento…</p>
+              </main>
+            }
+          >
+            <DashboardPanel projects={projects} onOpen={openAt} />
+          </Suspense>
+        ) : page === 'guide' ? (
+          <Suspense
+            fallback={
+              <main>
+                <p>Caricamento…</p>
+              </main>
+            }
+          >
+            <GuidePanel onAction={guideAction} />
+          </Suspense>
+        ) : page === 'knowledge' ? (
+          <Suspense
+            fallback={
+              <main>
+                <p>Caricamento…</p>
+              </main>
+            }
+          >
+            <KnowledgePanel
+              projects={projects}
+              settings={assistant}
+              runtime={runtime}
+              onCreate={start}
+              onUpdate={persist}
+              onOpen={open}
+              onOpenSettings={() => setPage('settings')}
+            />
+          </Suspense>
+        ) : page === 'settings' ? (
+          <main className="reading">
+            <div className="eyebrow">IL METODO DIETRO IL PERCORSO</div>
+            <h1>Trasparente, fin dall’inizio.</h1>
+            <p className="lead">Un archivio tuo. Domande tracciabili. Nessuna AI obbligatoria.</p>
+            <section className="panel">
+              <h2>Il canvas e questa applicazione</h2>
+              <p>
+                Percorso adattato dall’AI Ethics Canvas, © Provincia Autonoma di Trento e Fondazione Bruno Kessler, CC
+                BY-SA 4.0. Le domande sono riformulate e integrate con approfondimenti su chatbot, inclusione e riesame.
+                Ogni domanda riporta la sua origine tematica.
+              </p>
+              <p>
+                Le assegnazioni dei ruoli sono suggerimenti applicativi. Versione dell’app: <b>v{appVersion}</b> ·
+                Versione del questionario: <b>{questionnaireVersion}</b>.
+              </p>
+              <a href="https://github.com/dclfbk/canvasaiethics" target="_blank" rel="noreferrer">
+                Canvas originale e licenza ↗
+              </a>
+              <p>
+                <a href="https://doi.org/10.1017/dap.2026.10088" target="_blank" rel="noreferrer">
+                  Articolo scientifico ↗
+                </a>
+              </p>
+            </section>
+            <section className="panel">
+              <h2>Licenza e autori</h2>
+              <p>
+                EthiCanvasAI è software libero: puoi ridistribuirlo e modificarlo secondo i termini della GNU Affero
+                General Public License, versione 3 o successiva. Chi offre una versione modificata come servizio in rete
+                deve rendere disponibile agli utenti il relativo codice sorgente. Il questionario adattato resta
+                distribuito con licenza CC BY-SA 4.0.
+              </p>
+              <p>© 2026 FBK - Fondazione Bruno Kessler, Trento. Autore: Maurizio Napolitano.</p>
+              <a href="https://github.com/dclfbk/ethicanvasaitool" target="_blank" rel="noreferrer">
+                Codice sorgente ↗
+              </a>
+              <p>
+                <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noreferrer">
+                  GNU Affero General Public License v3 ↗
+                </a>
+              </p>
+            </section>
+            <section className="panel">
+              <h2>Archivio locale e backup</h2>
+              <p>
+                Nel browser i dati sono conservati in IndexedDB, separati per indirizzo e profilo del browser. Nel
+                desktop Tauri l’archivio usa SQLite. In questa versione gli allegati sono inclusi nell’archivio come
+                dati codificati, con limite di 10 MB per file.
+              </p>
+              <p>
+                Browser e desktop non si sincronizzano automaticamente. L’esportazione JSON comprende risposte e
+                allegati; l’importazione crea copie senza sostituire i progetti esistenti. La cancellazione dei dati del
+                browser può eliminare l’archivio.
+              </p>
+              <div className="button-row">
+                <button className="secondary" onClick={exportArchive}>
+                  <Download size={16} />
+                  Esporta archivio
+                </button>
+                <button
+                  className="secondary"
+                  onClick={() => {
+                    navigator.storage
+                      ?.persist?.()
+                      .then(ok => setSaving(ok ? 'persisted' : 'notPersisted'))
+                      .catch(() => setError('Richiesta di persistenza non disponibile.'));
+                  }}
+                >
+                  Richiedi persistenza browser
+                </button>
+              </div>
+            </section>
+            <Suspense
+              fallback={
+                <section className="panel">
+                  <p>Caricamento impostazioni…</p>
+                </section>
+              }
+            >
+              <CloudSyncPanel projects={projects} onRestore={ps => ps.forEach(persist)} />
+              <AssistantSettingsPanel
+                settings={assistant}
+                onChange={updateAssistant}
+                onReset={() => {
+                  clearAssistantSettings();
+                  setAssistant(defaultAssistantSettings);
+                }}
+                runtime={runtime}
+              />
+              <UpdateSettingsPanel settings={updates} onChange={updateUpdates} onFound={setPendingUpdate} />
+            </Suspense>
+            <section className="panel">
+              <h2>AI e integrazioni future</h2>
+              <p>
+                I suggerimenti predefiniti restano disponibili in ogni caso. L’assistente è facoltativo: si attiva con
+                una chiave Gemini oppure con un modello locale.
+              </p>
+              <div className="roadmap">
+                <span>1 · App locale</span>
+                <span>2 · Gemini</span>
+                <span className="badge">3 · Modello locale — questa versione</span>
+                <span>Futuro · Microsoft Copilot</span>
+              </div>
+              <h3>Inquadramento AI Act</h3>
+              <p>
+                La checklist di supporto è disponibile dentro ciascun progetto. È una bozza da verificare con un esperto
+                legale; non assegna categorie giuridiche né certificazioni.
+              </p>
+            </section>
+          </main>
+        ) : project && result ? (
+          <main className="project-main">
+            <div className="project-toolbar">
+              <button className="text-button muted" onClick={() => setPage('archive')}>
+                <ArrowLeft size={16} />
+                Archivio
+              </button>
+              <div className="button-row">
+                <button
+                  className="text-button"
+                  onClick={() => {
+                    change({ paused: !project.paused });
+                  }}
+                >
+                  <Pause size={16} />
+                  {project.paused ? 'Riprendi percorso' : 'Metti in pausa'}
+                </button>
+                <button
+                  className="text-button"
+                  onClick={() => setPage(page === 'contributions' ? 'journey' : 'contributions')}
+                >
+                  <Users size={16} />
+                  {page === 'contributions' ? 'Torna al percorso' : 'Contributi'}
+                </button>
+                <button className="text-button" onClick={() => setPage(page === 'history' ? 'journey' : 'history')}>
+                  <HistoryIcon size={16} />
+                  {page === 'history' ? 'Torna al percorso' : 'Versioni e revisioni'}
+                </button>
+                <button className="text-button" onClick={() => setRegulatoryOpen(true)}>
+                  <ShieldCheck size={16} />
+                  Inquadramento normativo
+                </button>
+                <button className="secondary" onClick={() => setPage(page === 'report' ? 'journey' : 'report')}>
+                  <FileText size={16} />
+                  {page === 'report' ? 'Torna al percorso' : 'Vedi il risultato'}
+                </button>
+                <button aria-label="Elimina progetto" className="icon-button" onClick={() => void removeProject()}>
+                  <Trash2 size={17} />
+                </button>
+              </div>
+            </div>
+            <div className="project-title">
+              <div className="eyebrow">
+                {project.demo ? 'CASO DIMOSTRATIVO' : 'IL TUO PROGETTO'}
+                {project.paused ? ' · IN PAUSA' : ''}
+              </div>
+              <h1>{project.name}</h1>
+              <div className="canvas-rule" />
+              <p>{project.description}</p>
+            </div>
+            {regulatoryOpen && (
+              <Suspense fallback={null}>
+                <div
+                  className="regulatory-dialog"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Inquadramento normativo"
+                  onKeyDown={e => {
+                    if (e.key === 'Escape') setRegulatoryOpen(false);
+                  }}
+                >
+                  <div className="regulatory-dialog-body">
+                    <button className="secondary" autoFocus onClick={() => setRegulatoryOpen(false)}>
+                      Chiudi inquadramento
+                    </button>
+                    <RegulatoryPanel
+                      project={project}
+                      onUpdate={p => persist({ ...p, updatedAt: new Date().toISOString() })}
+                      onError={setError}
+                    />
+                  </div>
+                </div>
+              </Suspense>
+            )}
+            {page === 'report' && (
+              <>
+                <style>{'.report-grid .panel:nth-child(2) p.notice{display:none}'}</style>
+                <section className="panel">
+                  <h2>Inquadramento normativo</h2>
+                  <div className="metric-row">
+                    <span>Punti esaminati</span>
+                    <b>
+                      {regulatoryStatus(project).answered} di {regulatoryStatus(project).total}
+                    </b>
+                  </div>
+                  <p>
+                    {project.regulatory?.expert
+                      ? 'Registrato da ' +
+                        project.regulatory.expert.role +
+                        (project.regulatory.expert.name ? ' · ' + project.regulatory.expert.name : '') +
+                        '.'
+                      : 'Nessuna registrazione di un esperto.'}
+                  </p>
+                  {project.regulatory?.conclusions && <blockquote>{project.regulatory.conclusions}</blockquote>}
+                  <p className="notice">
+                    {checklistValidated
+                      ? 'La checklist è stata verificata da un esperto.'
+                      : 'La checklist è una bozza da verificare con un esperto legale. Non assegna categorie di rischio né determina la conformità.'}
+                  </p>
+                  <div className="button-row">
+                    <button className="secondary" onClick={() => setRegulatoryOpen(true)}>
+                      Apri l’inquadramento normativo
+                    </button>
+                    <button className="text-button" onClick={() => jump(questions.findIndex(x => x.id === 'risk'))}>
+                      Vai alla domanda dedicata
+                    </button>
+                  </div>
+                </section>
+              </>
+            )}
+            {page === 'contributions' ? (
+              <Suspense fallback={<p className="muted">Caricamento…</p>}>
+                <ContributionsPanel
+                  key={project.id}
+                  project={project}
+                  onUpdate={p => persist({ ...p, updatedAt: new Date().toISOString() })}
+                />
+              </Suspense>
+            ) : page === 'history' ? (
+              <Suspense fallback={<p className="muted">Caricamento…</p>}>
+                <HistoryPanel
+                  key={project.id}
+                  project={project}
+                  onUpdate={p => persist({ ...p, updatedAt: new Date().toISOString() })}
+                />
+              </Suspense>
+            ) : page === 'report' ? (
+              <>
+                <div className="report-hero">
+                  <div>
+                    <span className="badge">{statusLabels[result.status]}</span>
+                    <h2>
+                      Un quadro chiaro.
+                      <br />
+                      Anche di ciò che manca.
+                    </h2>
+                    <p>
+                      {result.done.length} risposte completate su {questions.length}. La completezza non equivale a
+                      validazione.
+                    </p>
+                  </div>
+                  <div className="report-percent">
+                    <strong>{result.percent}%</strong>
+                    <span>compilazione</span>
+                  </div>
+                </div>
+                <div className="report-grid">
+                  <section className="panel">
+                    <h2>Profilo dichiarato</h2>
+                    {['type', 'audience', 'autonomy'].map(id => (
+                      <div className="profile-item" key={id}>
+                        <small>{questions.find(q => q.id === id)!.title}</small>
+                        <p>{project.answers[id]?.value || 'Non ancora definito'}</p>
+                      </div>
+                    ))}
+                    <p className="notice">Profilo descrittivo basato sulle risposte, non classificazione giuridica.</p>
+                  </section>
+                  <section className="panel">
+                    <h2>La base della valutazione</h2>
+                    <div className="metric-row">
+                      <span>Riferimenti raccolti</span>
+                      <b>{project.references.length}</b>
+                    </div>
+                    <div className="metric-row">
+                      <span>Contributi in attesa</span>
+                      <b>{result.waiting.length}</b>
+                    </div>
+                    <div className="metric-row">
+                      <span>Risposte senza riferimenti</span>
+                      <b>{result.withoutEvidence.length}</b>
+                    </div>
+                    {(() => {
+                      const r = lastReview(project);
+                      return (
+                        <div className="metric-row">
+                          <span>Ultima revisione</span>
+                          <b>
+                            {r
+                              ? `${new Date(r.at).toLocaleDateString('it-IT')} · ${r.role} · ${outcomeLabels[r.outcome]}`
+                              : 'Nessuna'}
+                          </b>
+                        </div>
+                      );
+                    })()}
+                    <div className="metric-row">
+                      <span>Prossimo riesame</span>
+                      <b>
+                        {project.reviewPlan?.nextAt
+                          ? new Date(project.reviewPlan.nextAt + 'T12:00:00').toLocaleDateString('it-IT')
+                          : 'Non pianificato'}
+                      </b>
+                    </div>
+                    <p>
+                      La presenza di un riferimento non ne certifica pertinenza o qualità. In questa versione non è
+                      previsto un processo formale di revisione.
+                    </p>
+                    <p className="notice">
+                      Inquadramento normativo (AI Act): da esaminare e verificare. Modulo normativo non ancora
+                      implementato.
+                    </p>
+                  </section>
+                </div>
+                <section className="panel">
+                  <h2>
+                    {result.missing.length
+                      ? 'Da qui si può proseguire'
+                      : 'Compilazione terminata. Ora serve la revisione.'}
+                  </h2>
+                  <p>
+                    {result.critical.length} punti essenziali ancora da completare. Le priorità sono indicazioni del
+                    percorso, non obblighi normativi automatici.
+                  </p>
+                  {result.missing.map(item => {
+                    const ans = project.answers[item.id];
+                    return (
+                      <button className="missing-row" key={item.id} onClick={() => jump(questions.indexOf(item))}>
+                        <span className="missing-symbol">
+                          {ans?.state === 'waiting' ? <Users size={17} /> : <HelpCircle size={17} />}
+                        </span>
+                        <span>
+                          <b>{item.title}</b>
+                          <small>
+                            {ans?.person ? 'Da coinvolgere: ' + ans.person : item.role}
+                            {ans?.request ? ' · ' + ans.request : ''}
+                          </small>
+                        </span>
+                        {item.critical && <span className="badge amber-badge">Essenziale</span>}
+                        <ChevronRight size={16} />
+                      </button>
+                    );
+                  })}
+                  {!result.missing.length && (
+                    <p>
+                      Le risposte sono presenti. Verifica evidenze, misure e responsabilità con le figure competenti
+                      prima di assumere decisioni sul progetto.
+                    </p>
+                  )}
+                  <button className="secondary" onClick={reportExport}>
+                    <Download size={17} />
+                    Esporta rapporto Markdown
+                  </button>
+                </section>
+                <Suspense
+                  fallback={
+                    <section className="panel">
+                      <p className="muted">Caricamento esportazioni…</p>
+                    </section>
+                  }
+                >
+                  <ReportExportPanel
+                    key={project.id}
+                    project={project}
+                    settings={assistant}
+                    runtime={runtime}
+                    onOpenSettings={() => setPage('settings')}
+                    onError={setError}
+                  />
+                </Suspense>
+                <section className="panel">
+                  <h2>Tutte le risposte</h2>
+                  {questions.map(item => (
+                    <details key={item.id}>
+                      <summary>
+                        {item.title}
+                        <span>{accepted(project.answers[item.id]) ? 'Compilata' : 'Da completare'}</span>
+                      </summary>
+                      <p>{project.answers[item.id]?.value || 'Nessuna risposta.'}</p>
+                      <small>{item.source}</small>
+                    </details>
+                  ))}
+                </section>
+              </>
+            ) : (
+              <div className="journey-layout">
+                <aside className="journey-map">
+                  <div className="progress-label">
+                    <b>Il tuo percorso</b>
+                    <span>{result.percent}%</span>
+                  </div>
+                  <div className="progress">
+                    <span style={{ width: result.percent + '%' }} />
+                  </div>
+                  {sections.map((s, i) => {
+                    const qs = questions.filter(x => x.section === s.id);
+                    const done = qs.filter(x => accepted(project.answers[x.id])).length;
+                    return (
+                      <button
+                        key={s.id}
+                        className={'stage ' + (q.section === s.id ? 'current' : '')}
+                        onClick={() => jump(questions.indexOf(qs.find(x => !accepted(project.answers[x.id])) ?? qs[0]))}
+                      >
+                        <span className={'stage-number' + (done === qs.length ? ' mixed' : '')}>
+                          {done === qs.length ? <Check size={15} /> : i || <Compass size={14} aria-hidden="true" />}
+                        </span>
+                        <span>
+                          <b>{s.name}</b>
+                          <small>
+                            {done} di {qs.length} passi
+                          </small>
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <div className="profile-legend">
+                    <b>Legenda</b>
+                    {(Object.keys(profileLabels) as Profile[]).map(x => (
+                      <span key={x}>
+                        <Shape profile={x} />
+                        {profileLabels[x]}
+                      </span>
+                    ))}
+                    <span>
+                      <i className="mixed" aria-hidden="true" />
+                      Colori misti: tutti insieme
+                    </span>
+                  </div>
+                  <p className="map-note">
+                    <ShieldCheck size={16} />
+                    Puoi fermarti quando vuoi. Il tuo lavoro rimane qui.
+                  </p>
+                </aside>
+                <section className="question-area">
+                  <div className="question-meta">
+                    <span className="eyebrow">{sections.find(s => s.id === q.section)!.subtitle}</span>
+                    <span>
+                      Passo {project.currentQuestion + 1} di {questions.length}
+                    </span>
+                  </div>
+                  <div className="question-card" style={profileStyle(q.profiles)}>
+                    <span className="role-label">
+                      {q.profiles.map(x => (
+                        <Shape key={x} profile={x} />
+                      ))}
+                      <span className="sr-only">{q.profiles.map(x => profileLabels[x]).join(', ')}: </span>
+                      {q.role}
+                    </span>
+                    <h2>{q.title}</h2>
+                    <p className="question-why">{q.why}</p>
+                    <label className="field-label" htmlFor="answer">
+                      La tua risposta
+                    </label>
+                    <textarea
+                      id="answer"
+                      value={a.value}
+                      placeholder="Raccontalo con parole tue…"
+                      onChange={e => answer({ value: e.target.value, state: 'draft' })}
+                    />
+                    <div className="answer-tools">
+                      <button className={'text-button ' + (help ? 'help-active' : '')} onClick={() => setHelp(!help)}>
+                        <Sparkles size={16} />
+                        Dammi uno spunto
+                      </button>
+                      <button
+                        className={'text-button ' + (a.state === 'waiting' ? 'help-active' : '')}
+                        aria-pressed={a.state === 'waiting'}
+                        onClick={() => answer({ state: a.state === 'waiting' ? 'draft' : 'waiting' })}
+                      >
+                        <Users size={16} />
+                        Serve un’altra figura
+                      </button>
+                    </div>
+                    {help && (
+                      <div className="suggestions">
+                        <b>Un punto di partenza, da fare tuo</b>
+                        <p>
+                          Esempi predefiniti per un chatbot nella PA. Non descrivono automaticamente il tuo progetto.
+                        </p>
+                        {q.suggestions.map(s => (
+                          <button
+                            key={s}
+                            onClick={() => {
+                              answer({ value: s, state: 'draft' });
+                              setHelp(false);
+                            }}
+                          >
+                            {s}
+                            <Plus size={17} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {assistant.enabled && (
+                      <Suspense fallback={<p className="muted">Caricamento assistente…</p>}>
+                        <AssistantPanel
+                          key={project.id + ':' + q.id}
+                          project={project}
+                          question={q}
+                          settings={assistant}
+                          runtime={runtime}
+                          onApply={ans => change({ answers: { ...project.answers, [q.id]: ans } })}
+                          onAddNote={text => answer({ note: (a.note.trim() ? a.note.trimEnd() + '\n\n' : '') + text })}
+                          onOpenSettings={() => setPage('settings')}
+                        />
+                      </Suspense>
+                    )}
+                    {provenanceLine(a) && <p className="provenance">{provenanceLine(a)}</p>}
+                    {changedSinceReview(project, q.id) && (
+                      <p className="provenance">
+                        Modificata dopo l’ultima revisione del{' '}
+                        {new Date(lastReview(project)!.at).toLocaleDateString('it-IT')}.
+                      </p>
+                    )}
+                    {q.id === 'review' && (
+                      <div className="review-date-box">
+                        <label htmlFor="review-next-date">Data prevista per il prossimo riesame (facoltativa)</label>
+                        <div className="review-date-row">
+                          <input
+                            id="review-next-date"
+                            type="date"
+                            value={project.reviewPlan?.nextAt ?? ''}
+                            onChange={e =>
+                              change({
+                                reviewPlan: {
+                                  nextAt: e.target.value,
+                                  owner: project.reviewPlan?.owner ?? '',
+                                  triggers: project.reviewPlan?.triggers ?? [],
+                                  note: project.reviewPlan?.note ?? '',
+                                },
+                              })
+                            }
+                          />
+                          <button type="button" className="text-button" onClick={() => setPage('history')}>
+                            Apri Versioni e revisioni
+                          </button>
+                        </div>
+                        <p>La data viene sincronizzata con «Versioni e revisioni» e mostrata in «Quadro dell’ente».</p>
+                      </div>
+                    )}
+                    {a.state === 'waiting' && (
+                      <div className="waiting-box">
+                        <div className="waiting-head">
+                          <h3>
+                            <Users size={17} />
+                            Coinvolgi la persona giusta
+                          </h3>
+                          <button type="button" className="text-button" onClick={() => answer({ state: 'draft' })}>
+                            Annulla richiesta
+                          </button>
+                        </div>
+                        <label>
+                          Figura o persona da coinvolgere
+                          <input
+                            value={a.person}
+                            onChange={e => answer({ person: e.target.value })}
+                            placeholder="Es. DPO, referente tecnico, fornitore…"
+                          />
+                        </label>
+                        {parsePeople(a.person).length > 0 && (
+                          <div className="person-chips">
+                            {parsePeople(a.person).map(p => (
+                              <span className="person-chip" key={p}>
+                                {p}
+                                <button
+                                  type="button"
+                                  aria-label={'Rimuovi ' + p}
+                                  onClick={() => removeWaitingPerson(p)}
+                                >
+                                  <X size={13} />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="person-add-row">
+                          <input
+                            aria-label="Aggiungi un’altra figura"
+                            value={newPerson}
+                            onChange={e => setNewPerson(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                addWaitingPerson();
+                              }
+                            }}
+                            placeholder="Aggiungi un’altra figura…"
+                          />
+                          <button type="button" className="secondary" onClick={addWaitingPerson}>
+                            <Plus size={15} />
+                            Aggiungi figura
+                          </button>
+                        </div>
+                        <label>
+                          Che cosa deve chiarire?
+                          <textarea
+                            value={a.request}
+                            onChange={e => answer({ request: e.target.value })}
+                            placeholder="Scrivi la domanda da sottoporle…"
+                          />
+                        </label>
+                        <p>La richiesta resta nel tuo archivio. Non viene inviata automaticamente.</p>
+                      </div>
+                    )}
+                    <div className="answer-state">
+                      <label>
+                        Stato della risposta
+                        <select value={a.state} onChange={e => answer({ state: e.target.value as Answer['state'] })}>
+                          <option value="draft">Bozza da approfondire</option>
+                          <option value="answered">Risposta confermata</option>
+                          <option value="waiting">In attesa di un contributo</option>
+                          <option value="na">Non applicabile · motiva nella risposta</option>
+                        </select>
+                      </label>
+                    </div>
+                    <details className="notes">
+                      <summary>Motivazioni e note aggiuntive</summary>
+                      <textarea
+                        aria-label="Motivazioni e note"
+                        value={a.note}
+                        onChange={e => answer({ note: e.target.value })}
+                      />
+                    </details>
+                    <div className="reference-heading">
+                      <h3>
+                        <Link size={16} />
+                        Riferimenti <span>{project.references.filter(r => r.questionId === q.id).length}</span>
+                      </h3>
+                      <button className="text-button" onClick={() => setRefOpen(true)}>
+                        <Plus size={15} />
+                        Aggiungi
+                      </button>
+                    </div>
+                    {project.references
+                      .filter(r => r.questionId === q.id)
+                      .map(r => (
+                        <div className="reference" key={r.id}>
+                          <FileText size={20} />
+                          <div>
+                            <b>{r.title}</b>
+                            <small>
+                              {refKinds[r.kind]}
+                              {r.fileName ? ' · ' + r.fileName : ''}
+                            </small>
+                            {r.note && <p>{r.note}</p>}
+                            {safeUrl(r.url) && (
+                              <a href={safeUrl(r.url)} target="_blank" rel="noreferrer">
+                                Apri collegamento ↗
+                              </a>
+                            )}
+                            {r.data && (
+                              <button
+                                className="text-button"
+                                onClick={() => {
+                                  const link = document.createElement('a');
+                                  link.href = r.data!;
+                                  link.download = r.fileName || 'allegato';
+                                  link.click();
+                                }}
+                              >
+                                Scarica allegato
+                              </button>
+                            )}
+                            <details className="excerpt">
+                              <summary>
+                                Estratto testuale{' '}
+                                {r.excerpt?.trim()
+                                  ? '(' + r.excerpt.length.toLocaleString('it-IT') + ' caratteri)'
+                                  : '· nessuno'}
+                              </summary>
+                              <textarea
+                                aria-label={'Estratto di ' + r.title}
+                                maxLength={maxExcerptChars}
+                                value={r.excerpt ?? ''}
+                                onChange={e => updateReference(r.id, { excerpt: e.target.value })}
+                                placeholder="Incolla il passaggio pertinente. Solo questo testo può essere usato come fonte dall’assistente."
+                              />
+                              {r.data && canExtract(r) && (
+                                <button className="text-button" onClick={() => void extractExcerpt(r)}>
+                                  Estrai testo dal file (in locale)
+                                </button>
+                              )}
+                            </details>
+                          </div>
+                          <button
+                            className="icon-button"
+                            aria-label={'Rimuovi ' + r.title}
+                            onClick={() => change({ references: project.references.filter(x => x.id !== r.id) })}
+                          >
+                            <X size={15} />
+                          </button>
+                        </div>
+                      ))}
+                    {!project.references.some(r => r.questionId === q.id) && (
+                      <p className="empty-ref">
+                        Un documento, una legge, un dataset o il contributo di un esperto: collega ciò che sostiene la
+                        risposta.
+                      </p>
+                    )}
+                    <div className="source-note">
+                      Origine nel canvas: {q.source}. Domanda adattata per questa applicazione.
+                    </div>
+                  </div>
+                  <div className="journey-bottom">
+                    <button
+                      className="secondary"
+                      disabled={project.currentQuestion === 0}
+                      onClick={() => jump(project.currentQuestion - 1)}
+                    >
+                      <ArrowLeft size={16} />
+                      Indietro
+                    </button>
+                    <button
+                      className="text-button muted"
+                      onClick={() => {
+                        change({ paused: true });
+                        setPage('archive');
+                      }}
+                    >
+                      Salva e riprendi più avanti
+                    </button>
+                    <button className="primary" onClick={advance}>
+                      {' '}
+                      {project.currentQuestion === questions.length - 1
+                        ? 'Guarda il risultato'
+                        : a.state === 'draft' && a.value.trim()
+                          ? 'Conferma e continua'
+                          : a.state === 'waiting'
+                            ? 'Continua, resta in attesa'
+                            : 'Prossimo passo'}
+                      <ArrowRight size={17} />
+                    </button>
+                  </div>
+                </section>
+              </div>
+            )}
+          </main>
+        ) : (
+          <main>
+            <p>Seleziona un progetto dall’archivio.</p>
+            <button className="primary" onClick={() => setPage('archive')}>
+              Apri archivio
+            </button>
+          </main>
+        )}
+      </div>
+      {newOpen && (
+        <div className="modal-backdrop" onClick={() => setNewOpen(false)}>
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-title"
+            className="modal"
+            onClick={e => e.stopPropagation()}
+          >
+            <button className="modal-close icon-button" aria-label="Chiudi" onClick={() => setNewOpen(false)}>
+              <X size={20} />
+            </button>
+            <div className="eyebrow">OGNI PROGETTO COMINCIA CON UN’IDEA</div>
+            <h2 id="new-title">A cosa stai pensando?</h2>
+            <p>Non serve avere già tutte le risposte. Le troveremo lungo il percorso.</p>
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                if (!newName.trim()) return;
+                start(createProject(newName.trim(), newDescription.trim(), newOrg.trim()));
+                setNewOpen(false);
+                setNewName('');
+                setNewDescription('');
+                setNewOrg('');
+              }}
+            >
+              <label>
+                Nome del progetto
+                <input
+                  autoFocus
+                  required
+                  maxLength={140}
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  placeholder="Es. Un assistente per i cittadini"
+                />
+              </label>
+              <label>
+                Ente o organizzazione
+                <input
+                  value={newOrg}
+                  onChange={e => setNewOrg(e.target.value)}
+                  placeholder="Es. Pubblica Amministrazione, ufficio o servizio…"
+                />
+              </label>
+              <label>
+                Descrivi la tua idea
+                <textarea
+                  value={newDescription}
+                  onChange={e => setNewDescription(e.target.value)}
+                  placeholder="A chi servirà? Che cosa vorresti permettergli di fare?"
+                />
+              </label>
+              <button className="primary full" type="submit">
+                Inizia il percorso <ArrowRight size={17} />
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
+      {refOpen && (
+        <div className="modal-backdrop">
+          <section role="dialog" aria-modal="true" aria-labelledby="ref-title" className="modal">
+            <button
+              className="modal-close icon-button"
+              aria-label="Chiudi"
+              disabled={refBusy}
+              onClick={() => setRefOpen(false)}
+            >
+              <X size={20} />
+            </button>
+            <h2 id="ref-title">Dai una base alla risposta.</h2>
+            <p>Collega una fonte o conserva un allegato nel progetto.</p>
+            <form onSubmit={e => void addReference(e)}>
+              <label>
+                Tipo di riferimento
+                <select value={refKind} onChange={e => setRefKind(e.target.value as Reference['kind'])}>
+                  {Object.entries(refKinds).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Titolo
+                <input autoFocus required value={refTitle} onChange={e => setRefTitle(e.target.value)} />
+              </label>
+              <label>
+                Collegamento (facoltativo)
+                <input type="url" value={refUrl} onChange={e => setRefUrl(e.target.value)} placeholder="https://…" />
+              </label>
+              <label>
+                File locale (massimo 10 MB)
+                <input type="file" onChange={e => setRefFile(e.target.files?.[0] ?? null)} />
+              </label>
+              <label>
+                Passaggio, versione, data o note
+                <textarea value={refNote} onChange={e => setRefNote(e.target.value)} />
+              </label>
+              <label>
+                Estratto testuale (facoltativo)
+                <textarea
+                  maxLength={maxExcerptChars}
+                  value={refExcerpt}
+                  onChange={e => setRefExcerpt(e.target.value)}
+                  placeholder="Il passaggio del documento che sostiene la risposta. Per file TXT, MD, CSV e JSON potrai estrarlo anche dopo."
+                />
+              </label>
+              <button className="primary full" disabled={refBusy} type="submit">
+                {refBusy ? 'Conservo il file…' : 'Aggiungi riferimento'}
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
+      {a11yOpen && (
+        <Suspense fallback={null}>
+          <AccessibilityPanel
+            settings={a11y}
+            onChange={updateA11y}
+            onReset={resetA11y}
+            onClose={() => {
+              setA11yOpen(false);
+              a11yTriggerRef.current?.focus();
+            }}
+          />
+        </Suspense>
+      )}
+    </div>
+  );
 }

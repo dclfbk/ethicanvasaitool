@@ -1,0 +1,8 @@
+dist/
+node_modules/
+src-tauri/
+docs/
+public/
+test-results/
+package-lock.json
+*.md

@@ -27,32 +27,70 @@
  * source code to users who interact with the software over a network.
  */
 
-import {useEffect,useRef,useState} from 'react';
-import type {LlmRuntime} from './llm';
-import type {GenerateProgress} from './llm/provider';
+import { useEffect, useRef, useState } from 'react';
+import type { LlmRuntime } from './llm';
+import type { GenerateProgress } from './llm/provider';
 
 // Shown while a request is running. A streaming provider reports its phase and the summary of its reasoning, shown as it arrives;
 // otherwise the elapsed time is measured against the timeout. The status line stays fixed for screen readers: the counter and the
 // reasoning are not announced as they change.
-const slowAfterSeconds=20;
+const slowAfterSeconds = 20;
 
 // Gemini marks the headings of its summaries with **bold**: shown as bold text, everything else stays plain text.
-const withBold=(text:string)=>text.split(/\*\*([^*\n]+)\*\*/).map((part,i)=>i%2?<b key={i}>{part}</b>:part);
+const withBold = (text: string) =>
+  text.split(/\*\*([^*\n]+)\*\*/).map((part, i) => (i % 2 ? <b key={i}>{part}</b> : part));
 
-export function AssistantWaiting({runtime,activity,progress,onCancel}:{runtime:LlmRuntime;activity:string;progress?:GenerateProgress;onCancel:()=>void}){
- const [seconds,setSeconds]=useState(0),thoughts=useRef<HTMLParagraphElement>(null);
- useEffect(()=>{const start=Date.now();const t=setInterval(()=>setSeconds(Math.floor((Date.now()-start)/1000)),1000);return()=>clearInterval(t);},[]);
- useEffect(()=>{const el=thoughts.current;if(el)el.scrollTop=el.scrollHeight;},[progress?.thoughts]);
- const limit=Math.round(runtime.provider.timeoutMs/1000),streams=runtime.provider.streams;
- const detail=progress?.phase==='writing'?`Sta scrivendo la risposta: ${progress.outputChars.toLocaleString('it-IT')} caratteri ricevuti. In corso da ${seconds} s.`
-  :progress?.phase==='thinking'?`Sta ragionando sulla richiesta. In corso da ${seconds} s.`
-  :`Richiesta inviata${runtime.model?` al modello ${runtime.model}`:''}. In attesa della risposta da ${seconds} s, `+(streams?`si interrompe se per ${limit} s non arriva nulla.`:`al massimo ${limit} s.`);
- return <div className="assistant-box assistant-waiting" aria-busy="true">
-  <p role="status" className="assist-status busy">{runtime.texts.busy} {activity}…</p>
-  <div className={'wait-progress'+(streams?' indeterminate':'')} aria-hidden="true"><span style={streams?undefined:{width:Math.min(100,seconds/limit*100)+'%'}}/></div>
-  <p className="wait-detail">{detail}</p>
-  {progress?.thoughts&&<div className="wait-thoughts"><h4>Il ragionamento, in sintesi</h4><p ref={thoughts}>{withBold(progress.thoughts)}</p><small>Riassunto fornito da {runtime.texts.subject} mentre lavora: non viene salvato.</small></div>}
-  {!progress&&seconds>=slowAfterSeconds&&<p className="wait-detail">{runtime.texts.slow}</p>}
-  <button className="stop-button" onClick={onCancel}>Annulla richiesta</button>
- </div>;
+export function AssistantWaiting({
+  runtime,
+  activity,
+  progress,
+  onCancel,
+}: {
+  runtime: LlmRuntime;
+  activity: string;
+  progress?: GenerateProgress;
+  onCancel: () => void;
+}) {
+  const [seconds, setSeconds] = useState(0),
+    thoughts = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    const start = Date.now();
+    const t = setInterval(() => setSeconds(Math.floor((Date.now() - start) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => {
+    const el = thoughts.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [progress?.thoughts]);
+  const limit = Math.round(runtime.provider.timeoutMs / 1000),
+    streams = runtime.provider.streams;
+  const detail =
+    progress?.phase === 'writing'
+      ? `Sta scrivendo la risposta: ${progress.outputChars.toLocaleString('it-IT')} caratteri ricevuti. In corso da ${seconds} s.`
+      : progress?.phase === 'thinking'
+        ? `Sta ragionando sulla richiesta. In corso da ${seconds} s.`
+        : `Richiesta inviata${runtime.model ? ` al modello ${runtime.model}` : ''}. In attesa della risposta da ${seconds} s, ` +
+          (streams ? `si interrompe se per ${limit} s non arriva nulla.` : `al massimo ${limit} s.`);
+  return (
+    <div className="assistant-box assistant-waiting" aria-busy="true">
+      <p role="status" className="assist-status busy">
+        {runtime.texts.busy} {activity}…
+      </p>
+      <div className={'wait-progress' + (streams ? ' indeterminate' : '')} aria-hidden="true">
+        <span style={streams ? undefined : { width: Math.min(100, (seconds / limit) * 100) + '%' }} />
+      </div>
+      <p className="wait-detail">{detail}</p>
+      {progress?.thoughts && (
+        <div className="wait-thoughts">
+          <h4>Il ragionamento, in sintesi</h4>
+          <p ref={thoughts}>{withBold(progress.thoughts)}</p>
+          <small>Riassunto fornito da {runtime.texts.subject} mentre lavora: non viene salvato.</small>
+        </div>
+      )}
+      {!progress && seconds >= slowAfterSeconds && <p className="wait-detail">{runtime.texts.slow}</p>}
+      <button className="stop-button" onClick={onCancel}>
+        Annulla richiesta
+      </button>
+    </div>
+  );
 }
