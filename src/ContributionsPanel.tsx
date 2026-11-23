@@ -27,6 +27,7 @@
  * source code to users who interact with the software over a network.
  */
 
+import { requestFor, stateOf } from './answers';
 import { useState } from 'react';
 import { ClipboardCopy, FileDown, FileUp, Send } from 'lucide-react';
 import {
@@ -213,8 +214,8 @@ export default function ContributionsPanel({
                   {q.title}
                   <small>
                     {a?.state === 'waiting'
-                      ? `In attesa${a.person ? ' · ' + a.person : ''}${a.request ? ' · ' + a.request : ''}`
-                      : answerStateLabels[a?.value.trim() ? a.state : 'missing']}
+                      ? `In attesa${a.person ? ' · ' + a.person : ''}${requestFor(a, recipient) ? ' · ' + requestFor(a, recipient) : ''}`
+                      : answerStateLabels[stateOf(a, q)]}
                   </small>
                 </span>
               </label>

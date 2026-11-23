@@ -27,6 +27,7 @@
  * source code to users who interact with the software over a network.
  */
 
+import { answerText, hasContent } from './answers';
 import type { AiProvenance, Answer, AssistAction, Project, Question } from './model';
 import { questions, sections } from './model';
 import type { GenerateRequest } from './llm/provider';
@@ -44,7 +45,7 @@ export interface ContextSelection {
 export function defaultSelection(project: Project, question: Question): ContextSelection {
   return {
     description: !!project.description.trim(),
-    currentAnswer: !!project.answers[question.id]?.value.trim(),
+    currentAnswer: hasContent(question, project.answers[question.id]),
     answerIds: [],
     referenceIds: [],
   };
@@ -78,18 +79,18 @@ export function buildContext(project: Project, question: Question, selection: Co
       text: `Nome: ${project.name}\nEnte: ${project.organization || 'non indicato'}\n${project.description}`,
     });
   const current = project.answers[question.id];
-  if (selection.currentAnswer && current?.value.trim())
+  if (selection.currentAnswer && hasContent(question, current))
     items.push({
       id: 'A:' + question.id,
       label: 'Risposta attuale a questa domanda',
       source: 'declared',
-      text: current.value,
+      text: answerText(question, current),
     });
   for (const id of selection.answerIds) {
     const q = questions.find(x => x.id === id),
       a = project.answers[id];
-    if (q && id !== question.id && a?.value.trim())
-      items.push({ id: 'A:' + id, label: 'Risposta: ' + q.title, source: 'declared', text: a.value });
+    if (q && id !== question.id && hasContent(q, a))
+      items.push({ id: 'A:' + id, label: 'Risposta: ' + q.title, source: 'declared', text: answerText(q, a) });
   }
   project.references.forEach((r, index) => {
     if (!selection.referenceIds.includes(r.id)) return;

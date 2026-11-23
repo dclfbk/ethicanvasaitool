@@ -41,7 +41,16 @@ import {
   wordDiff,
 } from './history';
 import { dueLabel } from './historyText';
-import { createBackup, createProject, evaluate, readBackup, validateProject, type Answer, type Project } from './model';
+import {
+  backupFormatVersion,
+  createBackup,
+  createProject,
+  evaluate,
+  readBackup,
+  validateProject,
+  type Answer,
+  type Project,
+} from './model';
 import { buildReportBlocks } from './report';
 
 const answer = (
@@ -208,7 +217,7 @@ describe('Archive format 6', () => {
       reviewPlan: { nextAt: '2027-03-12', owner: 'Referente', triggers: ['model' as const], note: '' },
     };
     const backup = JSON.parse(JSON.stringify(createBackup([p])));
-    expect(backup.version).toBe(6);
+    expect(backup.version).toBe(backupFormatVersion);
     expect(readBackup(backup)).toEqual([p]);
     expect(validateProject({ ...p, reviews: [{ ...p.reviews![0], versionId: 'missing' }] })).toBe(false);
     expect(validateProject({ ...p, reviewPlan: { ...p.reviewPlan, nextAt: '12/03/2027' } })).toBe(false);

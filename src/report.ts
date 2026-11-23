@@ -27,6 +27,7 @@
  * source code to users who interact with the software over a network.
  */
 
+import { answerText, requestLines, stateOf } from './answers';
 import { fence, italianSpelling, maxContextChars, maxExcerptChars } from './assistant';
 import type { DocBlock } from './documents';
 import type { GenerateRequest } from './llm/provider';
@@ -175,14 +176,17 @@ export function buildReportContext(project: Project, selection: ReportSelection)
   ];
   for (const q of questions) {
     const a = project.answers[q.id];
-    if (!a?.value.trim() && !a?.request.trim()) continue;
+    const text = answerText(q, a),
+      requests = requestLines(a);
+    if (!a || (!text && !requests.length)) continue;
     const lines = [
       `Sezione: ${sections.find(s => s.id === q.section)!.name}`,
       `Domanda: ${q.title}`,
       `Stato: ${answerStateLabels[a.state]}`,
-      a.value.trim() ? `Risposta:\n${clip(a.value.trim(), maxAnswerChars)}` : 'Risposta: non ancora scritta',
+      text ? `Risposta:\n${clip(text, maxAnswerChars)}` : 'Risposta: non ancora scritta',
     ];
-    if (a.request.trim()) lines.push(`Contributo richiesto: ${clip(a.request.trim(), 1_000)}`);
+    // Names of the people involved never leave the device: only what is asked of them.
+    for (const r of requests) lines.push(`Contributo richiesto: ${clip(r.request, 1_000)}`);
     if (selection.notes && a.note.trim()) lines.push(`Note: ${clip(a.note.trim(), 1_000)}`);
     if (a.aiProvenance?.length) lines.push('Contiene testo proposto da un assistente AI.');
     items.push({ id: 'A:' + q.id, label: 'Risposta: ' + q.title, text: lines.join('\n') });
@@ -509,11 +513,15 @@ export function buildReportBlocks(project: Project, draft: ReportDraft | null, o
   }
   blocks.push({ type: 'h1', text: 'Inquadramento normativo' }, { type: 'p', text: regulatoryNote });
   blocks.push(...regulatoryAssessmentBlocks(project));
-  const risk = project.answers.risk;
-  if (risk?.value.trim())
+  const risk = project.answers.risk,
+    riskText = answerText(
+      questions.find(q => q.id === 'risk'),
+      risk,
+    );
+  if (risk && riskText)
     blocks.push(
       { type: 'p', text: 'Quanto registrato nel percorso (' + answerStateLabels[risk.state].toLowerCase() + '):' },
-      { type: 'note', text: risk.value.trim() },
+      { type: 'note', text: riskText },
     );
   if (options.includeAnswers) {
     blocks.push({ type: 'h1', text: 'Allegato: risposte al questionario' });
@@ -525,7 +533,7 @@ export function buildReportBlocks(project: Project, draft: ReportDraft | null, o
           { type: 'h3', text: q.title },
           {
             type: 'p',
-            text: `Stato: ${answerStateLabels[a?.value.trim() || a?.state === 'waiting' ? a.state : 'missing']}\n${a?.value.trim() || 'Nessuna risposta.'}`,
+            text: `Stato: ${answerStateLabels[stateOf(a, q)]}\n${answerText(q, a) || 'Nessuna risposta.'}`,
           },
         );
         if (a?.aiProvenance?.length)

@@ -27,6 +27,7 @@
  * source code to users who interact with the software over a network.
  */
 
+import { requestLines } from './answers';
 import { lastReview, reviewDue } from './history';
 import { parsePeople } from './contributions';
 import {
@@ -105,7 +106,9 @@ export function buildDashboard(all: Project[], today = new Date(), includeDemo =
             project: p,
             questionId: q.id,
             person: a.person.trim(),
-            request: a.request.trim(),
+            request: requestLines(a)
+              .map(r => (r.person ? r.person + ': ' : '') + r.request)
+              .join(' · '),
             since: a.updatedAt,
             days: Math.max(0, Math.floor((startOfDay(today) - startOfDay(new Date(a.updatedAt))) / dayMs)),
           },
@@ -134,7 +137,7 @@ export function buildDashboard(all: Project[], today = new Date(), includeDemo =
       .sort((a, b) => b.count - a.count || a.person.localeCompare(b.person)),
     sections: sections.map(s => {
       const qs = questions.filter(q => q.section === s.id);
-      const shares = projects.map(p => qs.filter(q => accepted(p.answers[q.id])).length / qs.length);
+      const shares = projects.map(p => qs.filter(q => accepted(p.answers[q.id], q)).length / qs.length);
       return {
         id: s.id,
         average: shares.length ? shares.reduce((a, b) => a + b, 0) / shares.length : 0,

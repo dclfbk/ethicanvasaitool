@@ -330,7 +330,13 @@ export default function DashboardPanel({
                   label="Progetti in cui la domanda è da completare"
                   max={n}
                   rows={d.gaps.slice(0, 10).map(g => {
-                    const first = d.projects.find(p => !accepted(p.answers[g.questionId]));
+                    const first = d.projects.find(
+                      p =>
+                        !accepted(
+                          p.answers[g.questionId],
+                          questions.find(q => q.id === g.questionId)!,
+                        ),
+                    );
                     return {
                       key: g.questionId,
                       name: title(g.questionId),

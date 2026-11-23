@@ -2902,3 +2902,106 @@ button.bar-row:focus-visible {
   border-radius: 18px;
   background: #f7f8fb;
 }
+
+/* Structured answers (questionnaire canvas-pa-0.2) */
+.answer-fields {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.answer-fields fieldset {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px 12px;
+  margin: 0;
+}
+.answer-fields legend {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 4px;
+}
+.answer-fields .field-row textarea,
+.answer-fields .field-other textarea,
+textarea.answer-details {
+  min-height: 64px;
+}
+.field-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 18px 4px 0;
+  font-size: 12px;
+  color: inherit;
+}
+.field-check input {
+  width: auto;
+  margin: 0;
+}
+.field-done {
+  display: flex;
+  align-items: flex-start;
+}
+.field-done input {
+  margin-top: 3px;
+}
+.field-done b {
+  margin-left: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.yesno-choices {
+  display: flex;
+  flex-wrap: wrap;
+}
+.field-hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  font-style: italic;
+  color: #8a2be2;
+}
+.field-ranking ol {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.field-ranking li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.rank-position {
+  min-width: 26px;
+  font-weight: 700;
+}
+.rank-label {
+  flex: 1;
+}
+.field-other {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.field-other-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 8px;
+  width: 100%;
+  align-items: start;
+}
+.field-other-row > textarea,
+.field-other-row > fieldset {
+  grid-column: 1;
+}
+.field-other-row > .icon-button {
+  grid-column: 2;
+  grid-row: 1;
+}
+.answer-text {
+  white-space: pre-line;
+}
+html[data-a11y-contrast='dark'] .field-hint {
+  color: #d4a6ff;
+}

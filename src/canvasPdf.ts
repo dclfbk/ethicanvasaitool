@@ -27,6 +27,7 @@
  * source code to users who interact with the software over a network.
  */
 
+import { answerText, requestLines } from './answers';
 import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
 import {
@@ -154,7 +155,7 @@ function poster(w: Writer, logos: Logos, project: Project, now: Date) {
     const x = m + (i % cols) * (boxW + gap),
       y = top + Math.floor(i / cols) * (boxH + gap);
     const qs = questions.filter(q => q.section === s.id),
-      done = qs.filter(q => accepted(project.answers[q.id])).length;
+      done = qs.filter(q => accepted(project.answers[q.id], q)).length;
     sectionBadge(w, page, i, x + 13, y + 14, 12);
     text(w, page, w.lines(s.name, fonts.display, 21, boxW - 110)[0], x + 34, y + 21, fonts.display, 21, navy);
     const count = `${done} di ${qs.length}`;
@@ -228,13 +229,25 @@ function notes(
     pad = 8,
     gap = 6,
     inner = width - 2 * pad;
+  // Sections with many questions are drawn in two columns of notes.
+  const minimum = qs.length * (2 * pad + titleLead + 3 + lead) + gap * (qs.length - 1);
+  if (qs.length > 3 && minimum > height) {
+    const half = Math.ceil(qs.length / 2),
+      colW = (width - gap) / 2;
+    notes(w, page, project, qs.slice(0, half), x, top, colW, height);
+    notes(w, page, project, qs.slice(half), x + colW + gap, top, colW, height);
+    return;
+  }
   const parts = qs.map(q => {
     const a = project.answers[q.id],
-      state = stateOf(a);
+      state = stateOf(a, q),
+      asked = requestLines(a)
+        .map(r => r.request)
+        .join(' · ');
     const status = [
       state === 'answered' || state === 'missing'
         ? ''
-        : answerStateLabels[state] + (state === 'waiting' && a?.request.trim() ? ': ' + a.request.trim() : ''),
+        : answerStateLabels[state] + (state === 'waiting' && asked ? ': ' + asked : ''),
       a?.aiProvenance?.length ? 'testo proposto dall’AI, da verificare' : '',
     ]
       .filter(Boolean)
@@ -242,9 +255,11 @@ function notes(
       .toUpperCase();
     return {
       q,
-      title: w.lines(q.title.toUpperCase(), fonts.display, titleSize, inner - shapesWidth(q)).slice(0, 2),
+      title: w
+        .lines(q.title.toUpperCase(), fonts.display, titleSize, inner - shapesWidth(q))
+        .slice(0, width < 180 ? 3 : 2),
       status: status ? w.lines(status, fonts.display, statusSize, inner).slice(0, 2) : [],
-      body: a?.value.trim() ? w.lines(a.value.trim(), fonts.condensed, size, inner) : [],
+      body: answerText(q, a) ? w.lines(answerText(q, a), fonts.condensed, size, inner) : [],
     };
   });
   const fixed =
@@ -351,7 +366,8 @@ function details(w: Writer, project: Project) {
     f.space(46);
     for (const q of questions.filter(x => x.section === s.id)) {
       const a = project.answers[q.id],
-        state = stateOf(a);
+        state = stateOf(a, q),
+        answer = answerText(q, a);
       f.profiles = undefined;
       f.ensure(70);
       f.profiles = q.profiles;
@@ -364,15 +380,17 @@ function details(w: Writer, project: Project) {
         12,
       );
       f.space(3);
-      f.paragraph(
-        a?.value.trim() || 'Nessuna risposta.',
-        a?.value.trim() ? fonts.regular : fonts.italic,
-        9.5,
-        a?.value.trim() ? ink : grey,
-        13.5,
-      );
+      for (const line of (answer || 'Nessuna risposta.').split('\n'))
+        f.paragraph(line, answer ? fonts.regular : fonts.italic, 9.5, answer ? ink : grey, 13.5);
       if (a?.person.trim()) f.paragraph('Figura da coinvolgere: ' + a.person.trim(), fonts.regular, 8.5, grey, 12);
-      if (a?.request.trim()) f.paragraph('Contributo richiesto: ' + a.request.trim(), fonts.regular, 8.5, grey, 12);
+      for (const r of requestLines(a))
+        f.paragraph(
+          'Contributo richiesto' + (r.person ? ' a ' + r.person : '') + ': ' + r.request,
+          fonts.regular,
+          8.5,
+          grey,
+          12,
+        );
       if (a?.note.trim()) f.paragraph('Note: ' + a.note.trim(), fonts.regular, 8.5, grey, 12);
       if (a?.aiProvenance?.length)
         f.paragraph(

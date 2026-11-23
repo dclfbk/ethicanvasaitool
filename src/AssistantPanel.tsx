@@ -27,6 +27,7 @@
  * source code to users who interact with the software over a network.
  */
 
+import { hasContent } from './answers';
 import { useEffect, useRef, useState } from 'react';
 import { Bot, Send, X } from 'lucide-react';
 import {
@@ -88,7 +89,7 @@ export default function AssistantPanel({
     action = phase.name === 'idle' ? 'draft' : phase.action,
     request = buildRequest(action, items, question),
     tooLarge = request.input.length > maxContextChars;
-  const otherAnswers = questions.filter(x => x.id !== question.id && project.answers[x.id]?.value.trim());
+  const otherAnswers = questions.filter(x => x.id !== question.id && hasContent(x, project.answers[x.id]));
   function choose(a: AssistAction) {
     if (inFlight.current) return;
     setSelection(defaultSelection(project, question));

@@ -49,11 +49,16 @@ async function sql() {
 }
 export const storage = {
   async list(): Promise<Project[]> {
-    if (isTauri()) {
-      const rows = await (await sql()).select<{ payload: string }[]>('SELECT payload FROM projects');
-      return rows.map(r => migrateProject(JSON.parse(r.payload)));
-    }
-    return ((await webDb()).getAll('projects') as Promise<Project[]>).then(ps => ps.map(migrateProject));
+    const raw: Project[] = isTauri()
+      ? (await (await sql()).select<{ payload: string }[]>('SELECT payload FROM projects')).map(r =>
+          JSON.parse(r.payload),
+        )
+      : ((await (await webDb()).getAll('projects')) as Project[]);
+    const projects = raw.map(p => migrateProject(p));
+    // Projects of an earlier questionnaire are saved once migrated, so the version kept before the migration is stored.
+    for (const [i, p] of projects.entries())
+      if (raw[i].questionnaireVersion !== p.questionnaireVersion) await storage.put(p);
+    return projects;
   },
   async put(project: Project) {
     const p = portableProject(project);

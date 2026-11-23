@@ -27,6 +27,7 @@
  * source code to users who interact with the software over a network.
  */
 
+import { answerText, hasContent } from './answers';
 import { fence, italianSpelling, maxContextChars } from './assistant';
 import type { GenerateRequest } from './llm/provider';
 import { questions, type AiProvenance, type Answer, type AnswerState, type Project } from './model';
@@ -67,9 +68,9 @@ function counts(text: string) {
 const norm = (v: Map<string, number>) => Math.sqrt([...v.values()].reduce((s, x) => s + x * x, 0));
 
 export function caseText(p: Project) {
-  return [p.name, p.description, ...questions.map(q => p.answers[q.id]?.value ?? '')].join('\n');
+  return [p.name, p.description, ...questions.map(q => answerText(q, p.answers[q.id]))].join('\n');
 }
-const hasAnswers = (p: Project) => questions.some(q => p.answers[q.id]?.value.trim());
+const hasAnswers = (p: Project) => questions.some(q => hasContent(q, p.answers[q.id]));
 // Demo projects hold illustrative answers and are not real experience, so they stay out of the knowledge base.
 export function knowledgeBase(projects: Project[], excludeId?: string) {
   return projects.filter(p => !p.demo && p.id !== excludeId && hasAnswers(p));
@@ -137,7 +138,7 @@ export function scenarioText(s: Scenario) {
   return s.project ? caseText(s.project) : [s.name, s.description].join('\n');
 }
 export function prefillTargets(s: Scenario) {
-  return prefillQuestions.filter(q => !s.project?.answers[q.id]?.value.trim());
+  return prefillQuestions.filter(q => !hasContent(q, s.project?.answers[q.id]));
 }
 
 const stateLabels: Record<AnswerState, string> = {
@@ -150,8 +151,8 @@ const clip = (s: string, max: number) => (s.length > max ? s.slice(0, max) + ' [
 function answerLines(p: Project, max: number) {
   return questions.flatMap(q => {
     const a = p.answers[q.id];
-    return a?.value.trim()
-      ? [`[${q.id}] ${q.title} (stato: ${stateLabels[a.state]})\n${clip(a.value.trim(), max)}`]
+    return a && hasContent(q, a)
+      ? [`[${q.id}] ${q.title} (stato: ${stateLabels[a.state]})\n${clip(answerText(q, a), max)}`]
       : [];
   });
 }
@@ -407,7 +408,12 @@ export function prefillAnswers(
   for (const { questionId, text, basedOn } of proposals) {
     const current = answers[questionId];
     if (!text.trim() || prefillExcluded.includes(questionId) || !questions.some(q => q.id === questionId)) continue;
-    if (current?.value.trim()) {
+    if (
+      hasContent(
+        questions.find(q => q.id === questionId),
+        current,
+      )
+    ) {
       skipped.push(questionId);
       continue;
     }

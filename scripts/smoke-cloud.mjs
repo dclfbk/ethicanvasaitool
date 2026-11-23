@@ -223,7 +223,7 @@ try {
   });
   const a = await device(browser);
   await a.page.getByRole('button', { name: /Apri l’esempio/ }).click();
-  await a.page.getByRole('heading', { name: 'Quali dati e documenti entrano in gioco?' }).waitFor();
+  await a.page.getByRole('heading', { name: 'Quali dati e attori entrano in gioco?' }).waitFor();
   await openSettings(a.page);
 
   // Sign-in in a popup; the token never reaches storage.

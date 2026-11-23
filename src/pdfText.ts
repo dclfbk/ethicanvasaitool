@@ -29,7 +29,6 @@
 
 import type { PDFDocument, PDFFont, PDFPage, RGB } from 'pdf-lib';
 import { rgb } from 'pdf-lib';
-import type { Answer } from './model';
 
 // Text helpers shared by the two canvas PDF layouts.
 export const ink = rgb(0x23 / 255, 0x1f / 255, 0x20 / 255);
@@ -80,9 +79,7 @@ export function truncate(lines: string[], max: number, width: number, measure: (
   return kept;
 }
 
-export function stateOf(a?: Answer) {
-  return a?.value.trim() || a?.state === 'waiting' ? a.state : 'missing';
-}
+export { stateOf } from './answers';
 export const dateLabel = (d: Date) => d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
 
 export class Writer<F extends Record<string, PDFFont>> {

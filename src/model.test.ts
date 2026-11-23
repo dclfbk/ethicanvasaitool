@@ -29,6 +29,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import {
+  backupFormatVersion,
   accepted,
   createBackup,
   createProject,
@@ -56,7 +57,9 @@ describe('Evaluation based on available information', () => {
     expect(evaluate(p).critical.map(q => q.id)).toContain('privacy');
   });
   it('requires a justification for not-applicable answers too', () => {
-    expect(accepted({ value: ' ', state: 'na', person: '', request: '', note: '', updatedAt: '' })).toBe(false);
+    expect(accepted({ value: ' ', state: 'na', person: '', request: '', note: '', updatedAt: '' }, questions[0])).toBe(
+      false,
+    );
   });
   it('distinguishes full completion from evidence and validation', () => {
     const p = createProject('Completo', '', '');
@@ -124,7 +127,7 @@ describe('Backup compatibility', () => {
       },
     ];
     const backup = JSON.parse(JSON.stringify(createBackup([p])));
-    expect(backup.version).toBe(6);
+    expect(backup.version).toBe(backupFormatVersion);
     expect(readBackup(backup)).toEqual([p]);
   });
   it('round-trips prefill provenance with the cases it was based on in version 3', () => {
@@ -151,7 +154,7 @@ describe('Backup compatibility', () => {
   });
   it('rejects unknown versions and malformed provenance', () => {
     const p = legacy();
-    expect(readBackup({ format: 'canvas-pa', version: 7, projects: [p] })).toBeNull();
+    expect(readBackup({ format: 'canvas-pa', version: backupFormatVersion + 1, projects: [p] })).toBeNull();
     expect(
       validateProject({ ...p, answers: { purpose: { ...p.answers.purpose, aiProvenance: [{ provider: 'gemini' }] } } }),
     ).toBe(false);

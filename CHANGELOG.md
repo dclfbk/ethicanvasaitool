@@ -5,6 +5,24 @@ All notable changes to EthiCanvasAI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-11-23
+
+### Added
+- Questionnaire `canvas-pa-0.2`, aligned cell by cell with the AI Ethics Canvas: 39 questions instead of 20, following the schema reviewed with the canvas authors. Questions now have structured fields: sub-questions, yes/no rows with advice on "no", single or multiple options, "done" ticks, a priority order and "Altro" rows that can be added (`src/AnswerFields.tsx`, `src/answers.ts`). The free text becomes "Ulteriori dettagli".
+- One request per person involved: each person added with "Serve un’altra figura" has their own "Che cosa deve chiarire" field, and contribution files carry only the recipient's request.
+- AI Product Card export (`src/aiCards.ts`): a ZIP with the descriptive cards (AI product, domain problem, data, model, adaptation, optimization) in Markdown and the declarative specifications in YAML, following Celepija et al., Data & Policy 7:e1 (2025). The cards are filled from the canvas; technical parts are left for AI scientists and engineers. Names of people involved and internal notes are left out.
+- ESLint and Prettier (`npm run lint`, `npm run format`), and a test that keeps the cloud endpoint allowlists in TypeScript and Rust identical.
+
+### Changed
+- The canvas PDF in the original style writes each field in its own cell and ticks the printed check boxes; answers without a place on the canvas continue in the final pages. The poster lays out sections with many questions in several columns.
+- Reports, comparisons between versions, the assistant context, the case knowledge base and contribution files use the whole structured answer as text.
+- Backup format 7. Projects, backups and contribution files of `canvas-pa-0.1` are migrated when read: answers keep their place, the answers to the two removed questions ("Come capirete se funziona davvero?" and "Chi rischia di rimanere fuori?") move to the notes of related questions, and a version "Prima dell’aggiornamento del questionario" keeps the original.
+- User guide and screenshots updated.
+
+### Fixed
+- Semicolons in the exported iCalendar review event are escaped as RFC 5545 requires.
+- The report sent to the assistant never includes the names of people involved.
+
 ## [0.4.1] - 2026-11-18
 
 ### Added

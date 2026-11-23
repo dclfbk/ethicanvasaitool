@@ -27,10 +27,21 @@
  * source code to users who interact with the software over a network.
  */
 
-import { questions, questionnaireVersion } from './questionnaire';
+import { questions, questionnaireVersion, previousQuestionnaireVersions, retiredQuestions } from './questionnaire';
+import { hasContent, parsePeople, type ExtraRow, type FieldValues } from './answers';
 import type { RegulatoryValue } from './regulatoryChecklist';
 export type { RegulatoryValue } from './regulatoryChecklist';
-export { sections, questions, questionnaireVersion, type Section, type Question, type Profile } from './questionnaire';
+export {
+  sections,
+  questions,
+  questionnaireVersion,
+  type Section,
+  type Question,
+  type Profile,
+  type Field,
+  type FieldKind,
+} from './questionnaire';
+export type { ExtraRow, FieldValues } from './answers';
 export type AnswerState = 'draft' | 'answered' | 'waiting' | 'na';
 export type AssistAction = 'explain' | 'draft' | 'gaps';
 // 'prefill' marks answers proposed from a comparison with other projects; basedOn keeps the names of those projects.
@@ -48,9 +59,14 @@ export interface Answer {
   state: AnswerState;
   note: string;
   person: string;
+  // Shared request; requests holds the ones addressed to a single person, keyed by the name in person.
   request: string;
+  requests?: Record<string, string>;
   updatedAt: string;
   aiProvenance?: AiProvenance[];
+  // Structured questions: values of the fields and rows added with "Altro". value holds the further details.
+  fields?: FieldValues;
+  extras?: ExtraRow[];
 }
 export interface Reference {
   id: string;
@@ -147,12 +163,12 @@ export const statusLabels: Record<EvaluationStatus, string> = {
   preliminary: 'Valutazione preliminare',
   draft: 'Bozza',
 };
-export function accepted(a?: Answer) {
-  return !!a && (a.state === 'answered' || a.state === 'na') && !!a.value.trim();
+export function accepted(a: Answer | undefined, q: (typeof questions)[number]) {
+  return !!a && (a.state === 'answered' || a.state === 'na') && hasContent(q, a);
 }
 export function evaluate(p: Project) {
-  const done = questions.filter(q => accepted(p.answers[q.id]));
-  const missing = questions.filter(q => !accepted(p.answers[q.id]));
+  const done = questions.filter(q => accepted(p.answers[q.id], q));
+  const missing = questions.filter(q => !accepted(p.answers[q.id], q));
   const waiting = questions.filter(q => p.answers[q.id]?.state === 'waiting');
   const withoutEvidence = done.filter(
     q => p.answers[q.id]?.state !== 'na' && !p.references.some(r => r.questionId === q.id),
@@ -222,8 +238,8 @@ export function validateProject(v: unknown): v is Project {
     typeof p.demo === 'boolean' &&
     Number.isInteger(p.currentQuestion) &&
     p.currentQuestion >= 0 &&
-    p.currentQuestion < questions.length &&
-    p.questionnaireVersion === questionnaireVersion &&
+    p.currentQuestion < Math.max(questions.length, legacyOrder.length) &&
+    knownVersion(p.questionnaireVersion) &&
     !!p.answers &&
     typeof p.answers === 'object' &&
     !Array.isArray(p.answers) &&
@@ -238,8 +254,16 @@ const validAnswers = (answers: Record<string, Answer>) =>
       a &&
       ['draft', 'answered', 'waiting', 'na'].includes(a.state) &&
       ['value', 'note', 'person', 'request', 'updatedAt'].every(k => typeof a[k as keyof Answer] === 'string') &&
-      (a.aiProvenance === undefined || (Array.isArray(a.aiProvenance) && a.aiProvenance.every(validProvenance))),
+      (a.aiProvenance === undefined || (Array.isArray(a.aiProvenance) && a.aiProvenance.every(validProvenance))) &&
+      (a.fields === undefined || stringRecord(a.fields)) &&
+      (a.requests === undefined || stringRecord(a.requests)) &&
+      (a.extras === undefined ||
+        (Array.isArray(a.extras) &&
+          a.extras.every(x => !!x && typeof x.label === 'string' && typeof x.value === 'string'))),
   );
+const stringRecord = (v: unknown) =>
+  !!v && typeof v === 'object' && !Array.isArray(v) && Object.values(v).every(x => typeof x === 'string');
+const knownVersion = (v: string) => v === questionnaireVersion || previousQuestionnaireVersions.includes(v);
 const validReference = (r: Reference) =>
   !!r &&
   ['id', 'title', 'url', 'note', 'questionId'].every(k => typeof r[k as keyof Reference] === 'string') &&
@@ -323,7 +347,8 @@ function validProvenance(v: unknown) {
 // Format 3 adds the 'prefill' provenance action and its optional basedOn list, which format 2 readers would reject.
 // Format 4 adds versions, reviews and the review plan. Format 5 adds the regulatory framing checklist.
 // Format 6 allows checklist items that are not examined yet (empty value), which format 5 readers would reject.
-export const backupFormatVersion = 6;
+// Format 7 carries questionnaire canvas-pa-0.2: structured fields, rows added with "Altro" and requests per person.
+export const backupFormatVersion = 7;
 const answerKeys = ['value', 'state', 'note', 'person', 'request', 'updatedAt', 'aiProvenance'] as const;
 const referenceKeys = [
   'id',
@@ -350,6 +375,9 @@ export function portableAnswers(source: Record<string, Answer>) {
     answers[id] = {
       ...pick(a, answerKeys),
       ...(a.aiProvenance ? { aiProvenance: a.aiProvenance.map(x => pick(x, provenanceKeys)) } : {}),
+      ...(a.requests && Object.keys(a.requests).length ? { requests: { ...a.requests } } : {}),
+      ...(a.fields && Object.keys(a.fields).length ? { fields: { ...a.fields } } : {}),
+      ...(a.extras?.length ? { extras: a.extras.map(x => ({ label: x.label, value: x.value })) } : {}),
     } as Answer;
   return answers;
 }
@@ -417,8 +445,96 @@ export function portableRegulatory(r: RegulatoryAssessment): RegulatoryAssessmen
     ...(r.expert ? { expert: { role: r.expert.role, name: r.expert.name, at: r.expert.at } } : {}),
   };
 }
-export function migrateProject(p: Project): Project {
-  return portableProject(p);
+// Question order of canvas-pa-0.1, to keep the current question when a project is migrated.
+const legacyOrder = [
+  'purpose',
+  'audience',
+  'type',
+  'autonomy',
+  'sources',
+  'privacy',
+  'steward',
+  'data-bias',
+  'model',
+  'explain',
+  'risk',
+  'tests',
+  'owner',
+  'training',
+  'communication',
+  'inclusion',
+  'reuse',
+  'requirements',
+  'priorities',
+  'review',
+];
+// Where the content of a retired question is kept as a note, besides the version saved before the migration.
+const retiredTarget: Record<string, string> = { tests: 'explain', inclusion: 'social-requirements' };
+export interface MigrationLabels {
+  version: string;
+  note: string;
+  retired: (title: string) => string;
+}
+export const migrationLabels: MigrationLabels = {
+  version: 'Prima dell’aggiornamento del questionario',
+  note: 'Versione salvata automaticamente prima del passaggio al questionario canvas-pa-0.2.',
+  retired: title => `Dalla domanda «${title}», non più presente nel questionario:`,
+};
+// canvas-pa-0.1 → 0.2: ids are kept, so answers stay where they are and their text becomes the further details of
+// questions that are now structured. Answers of retired questions move to a note; a version keeps the original.
+function migrateFrom01(p: Project, now: string): Project {
+  if (p.questionnaireVersion === questionnaireVersion) return p;
+  const answers: Record<string, Answer> = {};
+  for (const [id, a] of Object.entries(p.answers)) if (!retiredQuestions[id]) answers[id] = { ...a };
+  for (const [id, target] of Object.entries(retiredTarget)) {
+    const old = p.answers[id];
+    const parts = [old?.value.trim(), old?.note.trim()].filter(Boolean);
+    if (!parts.length) continue;
+    const t = answers[target] ?? { value: '', state: 'draft', note: '', person: '', request: '', updatedAt: now };
+    t.note = [t.note.trim(), migrationLabels.retired(retiredQuestions[id]) + ' ' + parts.join(' — ')]
+      .filter(Boolean)
+      .join('\n\n');
+    answers[target] = t;
+  }
+  // A shared request becomes the request of each person already involved.
+  for (const a of Object.values(answers)) {
+    const people = parsePeople(a.person);
+    if (people.length && a.request.trim() && !a.requests) {
+      a.requests = Object.fromEntries(people.map(x => [x, a.request.trim()]));
+      a.request = '';
+    }
+  }
+  const references = p.references.map(r =>
+    retiredTarget[r.questionId] ? { ...r, questionId: retiredTarget[r.questionId] } : r,
+  );
+  const current = questions.findIndex(q => q.id === legacyOrder[p.currentQuestion]);
+  const before: ProjectVersion = {
+    id: crypto.randomUUID(),
+    label: migrationLabels.version,
+    reason: 'other',
+    note: migrationLabels.note,
+    createdAt: now,
+    snapshot: {
+      name: p.name,
+      description: p.description,
+      organization: p.organization,
+      answers: p.answers,
+      references: p.references.map(({ data: _data, ...r }) => r),
+      ...(p.regulatory ? { regulatory: p.regulatory } : {}),
+    },
+  };
+  const hasWork = Object.keys(p.answers).length > 0;
+  return {
+    ...p,
+    questionnaireVersion,
+    currentQuestion: current >= 0 ? current : 0,
+    answers,
+    references,
+    versions: hasWork ? [...(p.versions ?? []), before] : p.versions,
+  };
+}
+export function migrateProject(p: Project, now = new Date().toISOString()): Project {
+  return portableProject(migrateFrom01(p, now));
 }
 export function createBackup(projects: Project[], exportedAt = new Date().toISOString()) {
   return { format: 'canvas-pa', version: backupFormatVersion, exportedAt, projects: projects.map(portableProject) };
@@ -428,10 +544,10 @@ export function readBackup(value: unknown): Project[] | null {
   if (
     !v ||
     v.format !== 'canvas-pa' ||
-    ![1, 2, 3, 4, 5, 6].includes(v.version as number) ||
+    ![1, 2, 3, 4, 5, 6, 7].includes(v.version as number) ||
     !Array.isArray(v.projects) ||
     !v.projects.every(validateProject)
   )
     return null;
-  return (v.projects as Project[]).map(migrateProject);
+  return (v.projects as Project[]).map(p => migrateProject(p));
 }

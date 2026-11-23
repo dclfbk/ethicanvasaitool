@@ -82,7 +82,7 @@ try {
   page.on('dialog', d => void d.accept());
   await page.goto('http://127.0.0.1:' + server.address().port);
   await page.getByRole('button', { name: /Apri l’esempio/ }).click();
-  await page.getByRole('heading', { name: 'Quali dati e documenti entrano in gioco?' }).waitFor();
+  await page.getByRole('heading', { name: 'Quali dati e attori entrano in gioco?' }).waitFor();
   await page.locator('#answer').fill('Documenti pubblici del servizio');
 
   // Plan a review already overdue, then save a first version.
@@ -170,7 +170,7 @@ try {
   wait = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Esporta una copia' }).click();
   const backup = JSON.parse(await readFile(await save(await wait, 'archivio.json'), 'utf8'));
-  assert.equal(backup.version, 6);
+  assert.equal(backup.version, 7);
   const p = backup.projects[0];
   assert.equal(p.versions.length, 3);
   assert.equal(p.reviews.length, 1);

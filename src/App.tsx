@@ -83,7 +83,8 @@ import {
   saveAccessibilitySettings,
   type AccessibilitySettings,
 } from './accessibility';
-import { parsePeople } from './contributions';
+import { answerText, hasContent, parsePeople, requestLines } from './answers';
+import AnswerFields from './AnswerFields';
 import { type GuideAction } from './GuidePanel';
 import { changedSinceReview, lastReview, reviewDue } from './history';
 import { dueLabel, outcomeLabels } from './historyText';
@@ -364,18 +365,28 @@ export default function App() {
     if (project)
       change({ answers: { ...project.answers, [q.id]: { ...a, ...patch, updatedAt: new Date().toISOString() } } });
   }
+  // Each person gets their own request; a shared request written before anyone was named goes to the first person.
   function addWaitingPerson() {
     const name = newPerson.trim();
     if (!name) return;
     const list = parsePeople(a.person);
-    if (!list.some(x => x.toLowerCase() === name.toLowerCase())) answer({ person: [...list, name].join(', ') });
+    if (!list.some(x => x.toLowerCase() === name.toLowerCase())) {
+      const moved = !list.length && a.request.trim();
+      answer({
+        person: [...list, name].join(', '),
+        ...(moved ? { request: '', requests: { ...a.requests, [name]: a.request.trim() } } : {}),
+      });
+    }
     setNewPerson('');
   }
   function removeWaitingPerson(name: string) {
+    const requests = { ...a.requests };
+    delete requests[name];
     answer({
       person: parsePeople(a.person)
         .filter(x => x !== name)
         .join(', '),
+      requests,
     });
   }
   function start(p: Project) {
@@ -398,7 +409,7 @@ export default function App() {
     if (!project) return;
     const next = project.currentQuestion === questions.length - 1;
     const answers =
-      a.state === 'draft' && a.value.trim()
+      a.state === 'draft' && hasContent(q, a)
         ? { ...project.answers, [q.id]: { ...a, state: 'answered' as const, updatedAt: new Date().toISOString() } }
         : project.answers;
     change({ answers, currentQuestion: next ? project.currentQuestion : project.currentQuestion + 1, paused: false });
@@ -527,19 +538,20 @@ export default function App() {
       'Completezza: ' + result.percent + '%',
       'Questo rapporto documenta una autovalutazione. Non certifica conformità normativa o validazione indipendente.',
       '## Profilo dichiarato',
-      ...['type', 'audience', 'autonomy'].map(
-        id => questions.find(x => x.id === id)!.title + ': ' + (project.answers[id]?.value || 'Non definito'),
-      ),
+      ...['type', 'audience', 'autonomy'].map(id => {
+        const qq = questions.find(x => x.id === id)!;
+        return qq.title + ': ' + (answerText(qq, project.answers[id]) || 'Non definito');
+      }),
       ...questions.flatMap(question => {
         const ans = project.answers[question.id];
         return [
           '## ' + question.title,
           'Fonte: ' + question.source,
           'Stato: ' + (ans?.state || 'mancante'),
-          ans?.value || 'Risposta mancante',
+          answerText(question, ans) || 'Risposta mancante',
           ans?.note || '',
           ans?.person ? 'Figura da coinvolgere: ' + ans.person : '',
-          ans?.request ? 'Richiesta: ' + ans.request : '',
+          ...requestLines(ans).map(r => 'Richiesta' + (r.person ? ' a ' + r.person : '') + ': ' + r.request),
           provenanceLine(ans),
           ...project.references
             .filter(r => r.questionId === question.id)
@@ -563,9 +575,7 @@ export default function App() {
         ' ' +
         p.organization +
         ' ' +
-        Object.values(p.answers)
-          .map(a => a.value)
-          .join(' ')
+        questions.map(x => answerText(x, p.answers[x.id])).join(' ')
       )
         .toLocaleLowerCase()
         .includes(search.toLocaleLowerCase()) &&
@@ -1242,7 +1252,12 @@ export default function App() {
                     {['type', 'audience', 'autonomy'].map(id => (
                       <div className="profile-item" key={id}>
                         <small>{questions.find(q => q.id === id)!.title}</small>
-                        <p>{project.answers[id]?.value || 'Non ancora definito'}</p>
+                        <p className="answer-text">
+                          {answerText(
+                            questions.find(q => q.id === id),
+                            project.answers[id],
+                          ) || 'Non ancora definito'}
+                        </p>
                       </div>
                     ))}
                     <p className="notice">Profilo descrittivo basato sulle risposte, non classificazione giuridica.</p>
@@ -1313,7 +1328,12 @@ export default function App() {
                           <b>{item.title}</b>
                           <small>
                             {ans?.person ? 'Da coinvolgere: ' + ans.person : item.role}
-                            {ans?.request ? ' · ' + ans.request : ''}
+                            {requestLines(ans).length
+                              ? ' · ' +
+                                requestLines(ans)
+                                  .map(r => r.request)
+                                  .join(' · ')
+                              : ''}
                           </small>
                         </span>
                         {item.critical && <span className="badge amber-badge">Essenziale</span>}
@@ -1354,9 +1374,9 @@ export default function App() {
                     <details key={item.id}>
                       <summary>
                         {item.title}
-                        <span>{accepted(project.answers[item.id]) ? 'Compilata' : 'Da completare'}</span>
+                        <span>{accepted(project.answers[item.id], item) ? 'Compilata' : 'Da completare'}</span>
                       </summary>
-                      <p>{project.answers[item.id]?.value || 'Nessuna risposta.'}</p>
+                      <p className="answer-text">{answerText(item, project.answers[item.id]) || 'Nessuna risposta.'}</p>
                       <small>{item.source}</small>
                     </details>
                   ))}
@@ -1374,12 +1394,14 @@ export default function App() {
                   </div>
                   {sections.map((s, i) => {
                     const qs = questions.filter(x => x.section === s.id);
-                    const done = qs.filter(x => accepted(project.answers[x.id])).length;
+                    const done = qs.filter(x => accepted(project.answers[x.id], x)).length;
                     return (
                       <button
                         key={s.id}
                         className={'stage ' + (q.section === s.id ? 'current' : '')}
-                        onClick={() => jump(questions.indexOf(qs.find(x => !accepted(project.answers[x.id])) ?? qs[0]))}
+                        onClick={() =>
+                          jump(questions.indexOf(qs.find(x => !accepted(project.answers[x.id], x)) ?? qs[0]))
+                        }
                       >
                         <span className={'stage-number' + (done === qs.length ? ' mixed' : '')}>
                           {done === qs.length ? <Check size={15} /> : i || <Compass size={14} aria-hidden="true" />}
@@ -1428,13 +1450,17 @@ export default function App() {
                     </span>
                     <h2>{q.title}</h2>
                     <p className="question-why">{q.why}</p>
+                    {q.fields && <AnswerFields question={q} answer={a} onChange={answer} />}
                     <label className="field-label" htmlFor="answer">
-                      La tua risposta
+                      {q.fields ? 'Ulteriori dettagli' : 'La tua risposta'}
                     </label>
                     <textarea
                       id="answer"
+                      className={q.fields ? 'answer-details' : undefined}
                       value={a.value}
-                      placeholder="Raccontalo con parole tue…"
+                      placeholder={
+                        q.fields ? 'Facoltativo: motiva o completa le scelte…' : 'Raccontalo con parole tue…'
+                      }
                       onChange={e => answer({ value: e.target.value, state: 'draft' })}
                     />
                     <div className="answer-tools">
@@ -1571,14 +1597,28 @@ export default function App() {
                             Aggiungi figura
                           </button>
                         </div>
-                        <label>
-                          Che cosa deve chiarire?
-                          <textarea
-                            value={a.request}
-                            onChange={e => answer({ request: e.target.value })}
-                            placeholder="Scrivi la domanda da sottoporle…"
-                          />
-                        </label>
+                        {parsePeople(a.person).length === 0 || a.request.trim() ? (
+                          <label>
+                            {parsePeople(a.person).length
+                              ? 'Che cosa devono chiarire tutte le figure?'
+                              : 'Che cosa deve chiarire?'}
+                            <textarea
+                              value={a.request}
+                              onChange={e => answer({ request: e.target.value })}
+                              placeholder="Scrivi la domanda da sottoporle…"
+                            />
+                          </label>
+                        ) : null}
+                        {parsePeople(a.person).map(p => (
+                          <label key={p}>
+                            Che cosa deve chiarire {p}?
+                            <textarea
+                              value={a.requests?.[p] ?? ''}
+                              onChange={e => answer({ requests: { ...a.requests, [p]: e.target.value } })}
+                              placeholder={'Scrivi la domanda per ' + p + '…'}
+                            />
+                          </label>
+                        ))}
                         <p>La richiesta resta nel tuo archivio. Non viene inviata automaticamente.</p>
                       </div>
                     )}
@@ -1703,7 +1743,7 @@ export default function App() {
                       {' '}
                       {project.currentQuestion === questions.length - 1
                         ? 'Guarda il risultato'
-                        : a.state === 'draft' && a.value.trim()
+                        : a.state === 'draft' && hasContent(q, a)
                           ? 'Conferma e continua'
                           : a.state === 'waiting'
                             ? 'Continua, resta in attesa'

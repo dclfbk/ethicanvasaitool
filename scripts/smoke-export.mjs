@@ -132,7 +132,7 @@ try {
   });
   await page.goto('http://127.0.0.1:' + server.address().port);
   await page.getByRole('button', { name: /Apri l’esempio/ }).click();
-  await page.getByRole('heading', { name: 'Quali dati e documenti entrano in gioco?' }).waitFor();
+  await page.getByRole('heading', { name: 'Quali dati e attori entrano in gioco?' }).waitFor();
   await page.locator('#answer').fill('Documenti pubblici del servizio');
   await page.getByRole('button', { name: 'Vedi il risultato' }).click();
   await page.getByRole('heading', { name: 'Esporta il progetto' }).waitFor();

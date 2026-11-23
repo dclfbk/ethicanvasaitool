@@ -136,7 +136,7 @@ try {
   await page.getByRole('button', { name: 'Quadro dell’ente' }).click();
 
   const stats = await page.locator('.dashboard-stats strong').allTextContents();
-  assert.deepEqual(stats, ['2', '5%', '2', '1']);
+  assert.deepEqual(stats, ['2', '3%', '2', '1']);
   await page.locator('.plain li').filter({ hasText: 'Chatbot tributi' }).filter({ hasText: 'da 5 giorni' }).waitFor();
   await page
     .locator('.plain li')
@@ -173,9 +173,9 @@ try {
   // A recurring gap opens the first project where the answer is missing, at that question.
   await page
     .getByRole('list', { name: 'Progetti in cui la domanda è da completare' })
-    .getByRole('button', { name: /Possono entrare dati personali\?/ })
+    .getByRole('button', { name: /Qual è la base giuridica del trattamento dei dati personali\?/ })
     .click();
-  await page.getByRole('heading', { name: 'Possono entrare dati personali?' }).waitFor();
+  await page.getByRole('heading', { name: 'Qual è la base giuridica del trattamento dei dati personali?' }).waitFor();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Quadro dell’ente' }).click();

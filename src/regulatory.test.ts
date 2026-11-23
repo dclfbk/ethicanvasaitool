@@ -29,7 +29,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { addVersion, diffSnapshots, restoreVersion, snapshotOf } from './history';
-import { createBackup, createProject, evaluate, readBackup, validateProject } from './model';
+import { backupFormatVersion, createBackup, createProject, evaluate, readBackup, validateProject } from './model';
 import { conclusionsToAnswer, registerExpert, regulatoryStatus, setAnswer, setText } from './regulatory';
 import { buildReportBlocks, regulatoryAssessmentLines } from './report';
 
@@ -133,7 +133,7 @@ describe('Regulatory framing', () => {
     project = setAnswer(project, 'public-benefits', { note: '' });
     expect(project.regulatory?.answers).toEqual({});
     const backup = JSON.parse(JSON.stringify(createBackup([setAnswer(project, 'ai-system', { note: 'Nota' })])));
-    expect(backup.version).toBe(6);
+    expect(backup.version).toBe(backupFormatVersion);
     expect(readBackup(backup)?.[0].regulatory?.answers['ai-system'].value).toBe('');
   });
 

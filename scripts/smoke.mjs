@@ -81,7 +81,9 @@ try {
   await page.getByRole('heading', { name: 'Chi utilizzerà lo strumento?' }).waitFor();
   await page.getByRole('button', { name: 'Serve un’altra figura' }).click();
   await page.getByLabel('Figura o persona da coinvolgere').fill('Referente del servizio');
-  await page.getByLabel('Che cosa deve chiarire?').fill('Verificare i destinatari del servizio.');
+  await page
+    .getByLabel('Che cosa deve chiarire Referente del servizio?')
+    .fill('Verificare i destinatari del servizio.');
   await page.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await page.getByLabel('Titolo', { exact: true }).fill('Nota sui destinatari');
   await page

@@ -145,7 +145,7 @@ try {
   });
   await page.goto('http://127.0.0.1:' + server.address().port);
   await page.getByRole('button', { name: /Apri l’esempio/ }).click();
-  await page.getByRole('heading', { name: 'Quali dati e documenti entrano in gioco?' }).waitFor();
+  await page.getByRole('heading', { name: 'Quali dati e attori entrano in gioco?' }).waitFor();
 
   // Without Gemini configured the journey has no assistant and works as before.
   assert.equal(await page.getByRole('button', { name: 'Aiutami a formulare una risposta' }).count(), 0);
@@ -169,7 +169,7 @@ try {
   // Back to the question; add a text reference and extract its content locally.
   await page.getByRole('button', { name: 'Archivio progetti' }).click();
   await page.getByRole('button', { name: 'Riprendi', exact: true }).first().click();
-  await page.getByRole('heading', { name: 'Quali dati e documenti entrano in gioco?' }).waitFor();
+  await page.getByRole('heading', { name: 'Quali dati e attori entrano in gioco?' }).waitFor();
   await page.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await page.getByLabel('Titolo', { exact: true }).fill('Inventario fonti');
   await page.getByLabel('File locale').setInputFiles({
@@ -277,7 +277,7 @@ try {
   await page.getByRole('button', { name: 'Esporta una copia' }).click();
   const backup = await readFile(await (await downloadPromise).path(), 'utf8');
   assert.ok(!backup.includes(KEY));
-  assert.equal(JSON.parse(backup).version, 6);
+  assert.equal(JSON.parse(backup).version, 7);
   assert.ok(!consoleText.join('\n').includes(KEY));
 
   // Reload forgets the session key; the app keeps working without it.

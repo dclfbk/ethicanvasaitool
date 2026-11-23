@@ -142,7 +142,7 @@ try {
   await page.goto('http://127.0.0.1:' + server.address().port);
   // The example is offered only while the archive is empty, so it is opened before importing the other cases.
   await page.getByRole('button', { name: /Apri l’esempio/ }).click();
-  await page.getByRole('heading', { name: 'Quali dati e documenti entrano in gioco?' }).waitFor();
+  await page.getByRole('heading', { name: 'Quali dati e attori entrano in gioco?' }).waitFor();
   await page.getByRole('button', { name: 'Archivio progetti' }).click();
   await page.locator('input[type=file]').first().setInputFiles(archiveFile);
   await page.getByText('Assistente virtuale tributi · importato').waitFor();
@@ -162,20 +162,22 @@ try {
   await page.getByRole('button', { name: 'Chiudi' }).click();
 
   await demo().getByRole('button', { name: 'Riprendi', exact: true }).click();
-  await page.getByRole('heading', { name: 'Quali dati e documenti entrano in gioco?' }).waitFor();
+  await page.getByRole('heading', { name: 'Quali dati e attori entrano in gioco?' }).waitFor();
   await page
-    .locator('#answer')
-    .fill(
-      'Documenti pubblici approvati dall’ente (FAQ, regolamenti, moduli), domande degli utenti e log tecnici delle conversazioni.',
-    );
+    .getByLabel('Quali sono i dati raccolti?')
+    .fill('Documenti pubblici approvati dall’ente (FAQ, regolamenti, moduli), domande degli utenti e log tecnici.');
+  await page
+    .getByLabel('Chi raccoglie i dati?')
+    .fill('L’ufficio comunicazione per i documenti; il fornitore per i log.');
   await shot(page, 'domanda');
 
   await page.getByRole('button', { name: 'Conferma e continua' }).click();
-  await page.getByRole('heading', { name: 'Possono entrare dati personali?' }).waitFor();
+  for (let i = 0; i < 2; i++) await page.getByRole('button', { name: 'Prossimo passo' }).click();
+  await page.getByRole('heading', { name: 'Qual è la base giuridica del trattamento dei dati personali?' }).waitFor();
   await page.getByRole('button', { name: 'Serve un’altra figura' }).click();
   await page.getByLabel('Figura o persona da coinvolgere').fill('DPO');
   await page
-    .getByLabel('Che cosa deve chiarire?')
+    .getByLabel(/^Che cosa deve chiarire/)
     .fill('Per quanto tempo conserviamo i log delle conversazioni e con quale base giuridica?');
   await shot(page.locator('.question-card'), 'attesa');
 
@@ -196,7 +198,7 @@ try {
   await page.getByRole('button', { name: 'Rispondi a una richiesta' }).click();
   await page.getByLabel('Carica il file di richiesta').setInputFiles(requestFile);
   await page
-    .getByLabel('Risposta: Possono entrare dati personali?')
+    .getByLabel('Risposta: Qual è la base giuridica del trattamento dei dati personali?')
     .fill(
       'I log delle conversazioni sono conservati per 30 giorni e poi cancellati. Base giuridica: esecuzione di un compito di interesse pubblico.',
     );

@@ -90,23 +90,29 @@ try {
   }
   await coord.goto(url);
   await coord.getByRole('button', { name: /Apri l’esempio/ }).click();
-  await coord.getByRole('heading', { name: 'Quali dati e documenti entrano in gioco?' }).waitFor();
+  await coord.getByRole('heading', { name: 'Quali dati e attori entrano in gioco?' }).waitFor();
   await coord.getByRole('button', { name: 'Conferma e continua' }).isVisible();
   // Mark the privacy question as waiting for the DPO.
   await coord.locator('#answer').fill('Le fonti sono pubbliche.');
   await coord.getByRole('button', { name: 'Conferma e continua' }).click();
-  await coord.getByRole('heading', { name: 'Possono entrare dati personali?' }).waitFor();
+  // Two data questions come before the legal basis.
+  for (let i = 0; i < 2; i++) await coord.getByRole('button', { name: 'Prossimo passo' }).click();
+  await coord.getByRole('heading', { name: 'Qual è la base giuridica del trattamento dei dati personali?' }).waitFor();
   await coord.locator('#answer').fill('Da chiarire');
   await coord.getByRole('button', { name: 'Serve un’altra figura' }).click();
   await coord.getByLabel('Figura o persona da coinvolgere').fill('DPO');
-  await coord.getByLabel('Che cosa deve chiarire?').fill('Per quanto tempo conserviamo i log?');
+  await coord.getByLabel(/^Che cosa deve chiarire/).fill('Per quanto tempo conserviamo i log?');
   await coord.getByText('Motivazioni e note aggiuntive').click();
   await coord.getByLabel('Motivazioni e note').fill('nota interna riservata');
 
   await coord.getByRole('button', { name: 'Contributi', exact: true }).click();
   await coord.getByRole('heading', { name: /Chiedi un contributo/ }).waitFor();
   assert.equal(await coord.getByLabel('Destinatario').inputValue(), 'DPO');
-  assert.ok(await coord.getByRole('checkbox', { name: /Possono entrare dati personali\?/ }).isChecked());
+  assert.ok(
+    await coord
+      .getByRole('checkbox', { name: /Qual è la base giuridica del trattamento dei dati personali\?/ })
+      .isChecked(),
+  );
   assert.equal(await coord.locator('.contribution-questions input:checked').count(), 1);
   await coord.getByLabel('Il tuo ruolo o nome').fill('Referente del progetto');
   await coord.getByLabel('Passphrase', { exact: true }).fill(PASS);
@@ -134,13 +140,15 @@ try {
   await dpo.getByText('Passphrase errata', { exact: false }).waitFor();
   await dpo.getByLabel('Passphrase', { exact: true }).fill(PASS);
   await dpo.getByRole('button', { name: 'Apri la richiesta' }).click();
-  await dpo.getByRole('heading', { name: 'Possono entrare dati personali?' }).waitFor();
+  await dpo.getByRole('heading', { name: 'Qual è la base giuridica del trattamento dei dati personali?' }).waitFor();
   await dpo.getByText('Per quanto tempo conserviamo i log?').waitFor();
   assert.equal(await dpo.getByText('nota interna riservata').count(), 0, 'notes are not sent');
   await dpo
-    .getByLabel('Risposta: Possono entrare dati personali?')
+    .getByLabel('Risposta: Qual è la base giuridica del trattamento dei dati personali?')
     .fill('I log sono conservati per 30 giorni e poi cancellati.');
-  await dpo.getByLabel('Note: Possono entrare dati personali?').fill('Verificare il contratto con il fornitore.');
+  await dpo
+    .getByLabel('Note: Qual è la base giuridica del trattamento dei dati personali?')
+    .fill('Verificare il contratto con il fornitore.');
   await dpo.getByLabel('Il tuo ruolo').fill('DPO');
   await dpo.locator('.respond').screenshot({ path: join(dir, 'respond.png') });
   wait = dpo.waitForEvent('download');

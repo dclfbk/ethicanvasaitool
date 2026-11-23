@@ -37,13 +37,15 @@ import {
   statusLabels,
   type Profile,
   type Project,
+  type Field,
   type Question,
 } from './model';
+import { answerText, hasStructuredContent, rankedRows, requestLines } from './answers';
 import { pdfCanvasTemplate, pdfFonts, pdfLogos } from './pdfAssets';
 import { dateLabel, ink, stateOf, truncate, Writer as TextWriter } from './pdfText';
 import { answerStateLabels, regulatoryNote, selfAssessmentNote } from './report';
 import { blue, canvasLicense as license, drawNote, grey, navy, white } from './canvasStyle';
-import { placements, templatePageCount, templatePages, withoutCell, type Box } from './canvasTemplate';
+import { placements, templatePageCount, templatePages, withoutCell, type Box, type Placement } from './canvasTemplate';
 
 // Canvas export on the pages of the original AI Ethics Canvas (A4 landscape, Canva template, CC BY-SA 4.0): the
 // template pages are copied as they are and the answers are written in the free space of their cells (canvasTemplate.ts).
@@ -133,20 +135,22 @@ const answerSize = 10.4,
   answerLead = 12.6;
 function answerLines(c: Canvas, q: Question, width: number) {
   const a = c.project.answers[q.id],
-    state = stateOf(a),
-    { fonts } = c;
+    state = stateOf(a, q),
+    { fonts } = c,
+    asked = requestLines(a)
+      .map(r => r.request)
+      .join(' · ');
   const status =
     state === 'answered'
       ? []
       : c.w.lines(
-          (
-            answerStateLabels[state] + (state === 'waiting' && a?.request.trim() ? ': ' + a.request.trim() : '')
-          ).toUpperCase(),
+          (answerStateLabels[state] + (state === 'waiting' && asked ? ': ' + asked : '')).toUpperCase(),
           fonts.display,
           9,
           width,
         );
-  const body = a?.value.trim() ? c.w.lines(a.value.trim(), fonts.condensed, answerSize, width) : [];
+  const text = answerText(q, a),
+    body = text ? c.w.lines(text, fonts.condensed, answerSize, width) : [];
   return { status, body, ai: !!a?.aiProvenance?.length };
 }
 
@@ -349,10 +353,13 @@ function take(tokens: Token[], start: number, width: number, max: number, measur
 // The state of an answer that is not simply complete, and whether it contains text proposed by the AI.
 function statusOf(c: Canvas, q: Question) {
   const a = c.project.answers[q.id],
-    state = stateOf(a),
-    parts: string[] = [];
+    state = stateOf(a, q),
+    parts: string[] = [],
+    asked = requestLines(a)
+      .map(r => r.request)
+      .join(' · ');
   if (state !== 'answered' && state !== 'missing')
-    parts.push(answerStateLabels[state] + (state === 'waiting' && a?.request.trim() ? ': ' + a.request.trim() : ''));
+    parts.push(answerStateLabels[state] + (state === 'waiting' && asked ? ': ' + asked : ''));
   if (a?.aiProvenance?.length) parts.push('testo proposto dall’AI, da verificare');
   return parts.join(' · ').toUpperCase();
 }
@@ -370,7 +377,11 @@ function layoutCells(c: Canvas, q: Question, boxes: Box[], continuesAt?: number)
     a = c.project.answers[q.id],
     out: CellText[] = [];
   const measure = (s: string) => fonts.condensed.widthOfTextAtSize(s, cellSize);
-  const value = c.w.text(fonts.condensed, a?.value.trim() ?? '');
+  // Structured questions write their fields in their own cells: the boxes get only the further details.
+  const value = c.w.text(
+    fonts.condensed,
+    placements[q.id]?.cells || q.fields ? (a?.value.trim() ?? '') : answerText(q, a),
+  );
   const status = statusOf(c, q);
   if (!value && !status) return { cells: out, overflow: false };
   const inner = boxes.map(([x0, y0, x1, y1]) => ({
@@ -425,6 +436,96 @@ function layoutCells(c: Canvas, q: Question, boxes: Box[], continuesAt?: number)
   return { cells: r.cells, overflow: true };
 }
 
+// Text of one field in its canvas cell.
+function fieldCellText(f: Field, v: string | undefined, rank: number) {
+  const x = v?.trim() ?? '';
+  if (f.kind === 'text') return x;
+  if (f.kind === 'yesNo') return x === 'yes' ? 'Sì' : x === 'no' ? 'No' : '';
+  if (f.kind === 'done') return x === 'yes' ? 'FATTO' : '';
+  if (f.kind === 'rank') return rank > 0 ? rank + '°' : '';
+  return '';
+}
+// Fields of a structured question: text in their cells and crosses in the printed check boxes. Whatever has no
+// place on the canvas, or does not fit, makes the whole answer continue in the final pages.
+function layoutFields(c: Canvas, q: Question, pl: Placement) {
+  const { fonts } = c,
+    a = c.project.answers[q.id],
+    values = a?.fields ?? {},
+    extras = (a?.extras ?? []).filter(x => x.label.trim() || x.value.trim()),
+    cells: CellText[] = [],
+    marks: [number, number][] = [];
+  let overflow = false;
+  const order = rankedRows(q, a).filter(r => Number(r.rank) > 0);
+  const rankOf = (key: string) => order.findIndex(r => r.key === key) + 1;
+  const yesNo = (v: string) => (v === 'yes' ? 'Sì' : v === 'no' ? 'No' : '');
+  // Options ticked without a box of their own are written next to "Altro".
+  const unmarked = (q.fields ?? [])
+    .filter(f => f.kind === 'option' && values[f.id] === 'yes' && !pl.marks?.[f.id])
+    .map(f => f.label);
+  const otherText = (() => {
+    const k = q.other?.kind;
+    if (k === 'option' || (!k && unmarked.length)) return [...unmarked, ...extras.map(x => x.label.trim())].join(', ');
+    if (k === 'text') return extras.map(x => [x.label.trim(), x.value.trim()].filter(Boolean).join(': ')).join('; ');
+    if (k === 'yesNo') return extras.map(x => [x.label.trim(), yesNo(x.value)].filter(Boolean).join(': ')).join('; ');
+    if (k === 'rank')
+      return extras
+        .map((x, i) =>
+          [x.label.trim(), rankOf('extra:' + i) ? rankOf('extra:' + i) + '°' : ''].filter(Boolean).join(': '),
+        )
+        .join('; ');
+    return '';
+  })();
+  if ((extras.length || unmarked.length) && !pl.cells?.other) overflow = true;
+  const measure = (s: string) => fonts.condensed.widthOfTextAtSize(s, cellSize);
+  for (const [key, [x0, y0, x1, y1]] of Object.entries(pl.cells ?? {})) {
+    const f = q.fields?.find(x => x.id === key);
+    const value = c.w.text(
+      fonts.condensed,
+      key === 'other' ? otherText : f ? fieldCellText(f, values[f.id], rankOf(f.id)) : '',
+    );
+    if (!value) continue;
+    const width = x1 - x0 - 2 * cellPad,
+      lines = Math.max(1, Math.floor((y1 - y0 - 2 * cellPad - 2) / cellLead));
+    const r = take(tokensOf(value), 0, width, lines, measure);
+    if (r.next < tokensOf(value).length) overflow = true;
+    r.lines.forEach((l, i) =>
+      cells.push({
+        x: x0 + cellPad,
+        baseline: y0 + cellPad + 7 + i * cellLead,
+        text: l,
+        font: fonts.condensed,
+        size: cellSize,
+      }),
+    );
+  }
+  for (const f of q.fields ?? []) {
+    const v = values[f.id];
+    if (f.kind === 'option' && v === 'yes' && pl.marks?.[f.id]) marks.push(pl.marks[f.id]);
+    if (f.kind === 'yesNo' && (v === 'yes' || v === 'no')) {
+      const m = pl.marks?.[`${f.id}:${v}`];
+      if (m) marks.push(m);
+      else if (!pl.cells?.[f.id]) overflow = true;
+    }
+    if (f.kind !== 'option' && f.kind !== 'yesNo' && v?.trim() && !pl.cells?.[f.id]) overflow = true;
+  }
+  if (q.other?.kind === 'option' && extras.length && pl.marks?.other) marks.push(pl.marks.other);
+  // Further details need a box of their own.
+  if (a?.value.trim() && !textBoxes(c, q, pl).length) overflow = true;
+  return { cells, marks, overflow };
+}
+// Where the free text goes: its own boxes, or the cells of the fields when none of them is filled, as in projects
+// written before the questionnaire had fields.
+function textBoxes(c: Canvas, q: Question, pl: Placement): Box[] {
+  if (pl.boxes.length) return pl.boxes;
+  return hasStructuredContent(q, c.project.answers[q.id]) ? [] : Object.values(pl.cells ?? {});
+}
+function drawMark(page: PDFPage, [x, y]: [number, number]) {
+  const r = 3.2,
+    thickness = 1.3;
+  page.drawLine({ start: { x: x - r, y: T(y - r) }, end: { x: x + r, y: T(y + r) }, thickness, color: ink });
+  page.drawLine({ start: { x: x - r, y: T(y + r) }, end: { x: x + r, y: T(y - r) }, thickness, color: ink });
+}
+
 // Project line on the cover of the template, between the subtitle and the page thumbnails; the self-assessment note
 // goes in the free band above the licence.
 function coverOverlay(c: Canvas, page: PDFPage) {
@@ -452,7 +553,7 @@ function extrasLines(c: Canvas, q: Question): Chunk['lines'] {
     for (const l of c.w.lines(s, font, 9, width)) out.push({ text: l, font, size: 9, lead: 12 });
   };
   if (a?.person.trim()) add('Figura da coinvolgere: ' + a.person.trim());
-  if (a?.request.trim()) add('Contributo richiesto: ' + a.request.trim());
+  for (const r of requestLines(a)) add('Contributo richiesto' + (r.person ? ' a ' + r.person : '') + ': ' + r.request);
   if (a?.note.trim()) add('Note: ' + a.note.trim());
   for (const r of c.project.references.filter(x => x.questionId === q.id))
     add('Riferimento: ' + r.title + (r.url ? ' — ' + r.url : '') + (r.note.trim() ? ' — ' + r.note.trim() : ''));
@@ -495,14 +596,20 @@ export async function canvasOriginalPdf(project: Project, now = new Date()): Pro
     firstFinal = templatePageCount + 1;
   const toTemplate = (page: number) => (page < useCasePage ? page : page + 1);
   const placed = questions.filter(q => placements[q.id]);
-  const long = [...overflowing(c, useCase), ...placed.filter(q => layoutCells(c, q, placements[q.id].boxes).overflow)];
+  const long = [
+    ...overflowing(c, useCase),
+    ...placed.filter(
+      q =>
+        layoutCells(c, q, textBoxes(c, q, placements[q.id])).overflow || layoutFields(c, q, placements[q.id]).overflow,
+    ),
+  ];
   const shown = questions.filter(
-    q => long.includes(q) || (withoutCell.includes(q.id) && stateOf(project.answers[q.id]) !== 'missing'),
+    q => long.includes(q) || (withoutCell.includes(q.id) && stateOf(project.answers[q.id], q) !== 'missing'),
   );
   const fullWidth = area.right - area.left - 24;
   const fullLines = (q: Question) => {
     const status = statusOf(c, q),
-      value = project.answers[q.id]?.value.trim() ?? '';
+      value = answerText(q, project.answers[q.id]);
     return [
       ...(status
         ? c.w.lines(status, fonts.display, 9, fullWidth).map(text => ({ text, font: fonts.display, size: 9, lead: 12 }))
@@ -545,9 +652,15 @@ export async function canvasOriginalPdf(project: Project, now = new Date()): Pro
   });
   coverOverlay(c, pages[templatePages.cover]);
   for (const q of placed) {
-    const { page, boxes } = placements[q.id];
-    for (const t of layoutCells(c, q, boxes, overflowPage.get(q.id)).cells)
-      c.text(pages[toTemplate(page)], t.text, t.x, t.baseline, t.font, t.size);
+    const { page } = placements[q.id],
+      target = pages[toTemplate(page)],
+      fields = layoutFields(c, q, placements[q.id]);
+    for (const t of [
+      ...layoutCells(c, q, textBoxes(c, q, placements[q.id]), overflowPage.get(q.id)).cells,
+      ...fields.cells,
+    ])
+      c.text(target, t.text, t.x, t.baseline, t.font, t.size);
+    for (const m of fields.marks) drawMark(target, m);
   }
   for (let i = 0; i < continuationPages; i++)
     c.header(add(), {

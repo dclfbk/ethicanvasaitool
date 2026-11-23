@@ -21,7 +21,7 @@ Con «Torna al percorso» riprendi la compilazione.
 
 Nel riquadro «Esporta il progetto» scegli uno dei due formati:
 
-- «Canvas in PDF · stile originale»: il canvas originale, con copertina, istruzioni, glossario e le cinque pagine di sezione, e le tue risposte scritte nei riquadri a cui si riferiscono. Il caso d’uso, che nell’originale ha solo il riquadro in copertina, ha una pagina nello stesso stile. Le risposte che non entrano nei riquadri, e quelle che nel canvas non hanno un riquadro («Chi rischia di rimanere fuori?» e «Quando sarà necessario tornare su questa valutazione?»), proseguono nelle pagine «Risposte complete»; un’ultima pagina raccoglie note, contributi e riferimenti;
+- «Canvas in PDF · stile originale»: il canvas originale, con copertina, istruzioni, glossario e le cinque pagine di sezione, e le tue risposte scritte nei riquadri a cui si riferiscono. Il caso d’uso, che nell’originale ha solo il riquadro in copertina, ha una pagina nello stesso stile. Le risposte che non entrano nei riquadri, e quelle che nel canvas non hanno un riquadro («Quando sarà necessario tornare su questa valutazione?»), proseguono nelle pagine «Risposte complete»; un’ultima pagina raccoglie note, contributi e riferimenti;
 - «Canvas in PDF · poster e dettaglio»: un poster A3 con le sei sezioni, da appendere o proiettare, nello stile del canvas originale: sezioni numerate, foglietti colorati per profilo con le loro forme, legenda. Seguono le pagine con tutte le risposte per intero.
 
 ![Il riquadro delle esportazioni](img/esporta.png)
@@ -36,6 +36,15 @@ Il PDF viene generato sul dispositivo: nessun dato viene inviato.
 - punti essenziali ancora da completare e contributi in attesa;
 - una nota fissa sull’inquadramento normativo;
 - in allegato, se lasci spuntato «Allega al rapporto le risposte complete», tutte le risposte.
+
+## Esportare le AI Product Card
+
+Il canvas raccomanda di documentare lo strumento anche con le AI Product Card, la documentazione tecnica pensata per la Pubblica Amministrazione (Celepija e altri, Data & Policy, 2025). «AI Product Card · ZIP» scarica una cartella con:
+
+- le schede descrittive in Markdown: prodotto AI, problema di dominio, dati, modello, adattamento e ottimizzazione;
+- le specifiche in YAML, leggibili dalle macchine, per problema, soluzione, task, dati, modello, validazione, adattamento e ottimizzazione.
+
+Le schede sono già compilate con le risposte del canvas: ad esempio i bias, la protezione dei dati e il data steward vanno nella scheda dei dati, l’addestramento e la spiegabilità in quella del modello. Le parti tecniche, come script, metriche e schemi dei dati, restano da completare a cura di AI scientist e AI engineer e sono segnate come «[More Information Needed]». La categoria di rischio è riportata come dichiarata dal gruppo di lavoro. Nomi delle persone coinvolte e note interne non vengono inclusi.
 
 C’è anche «Esporta rapporto Markdown», un file di testo semplice utile per archiviare o confrontare versioni.
 

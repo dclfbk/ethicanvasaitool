@@ -1,6 +1,6 @@
 # Compilare il percorso
 
-Il percorso è fatto di venti domande in sei sezioni: Caso d’uso, Dati, Algoritmi, Metodi di analisi, Elementi sociali e culturali, Requisiti funzionali. A sinistra vedi a che punto sei; ogni sezione indica quante risposte hai completato.
+Il percorso è fatto di trentanove domande in sei sezioni: Caso d’uso, Dati, Algoritmi, Metodi di analisi, Elementi sociali e culturali, Requisiti funzionali. A sinistra vedi a che punto sei; ogni sezione indica quante risposte hai completato.
 
 ![Una domanda del percorso](img/domanda.png)
 
@@ -16,7 +16,14 @@ Nella colonna «Il tuo percorso» ogni sezione ha un bollo. Quando hai completat
 
 ## Rispondere
 
-1. Scrivi la risposta con parole tue nel campo sotto la domanda.
+1. Scrivi la risposta con parole tue nel campo sotto la domanda. Molte domande seguono le celle dell’AI Ethics Canvas e hanno campi propri:
+   - sottodomande, ciascuna con il suo campo di testo;
+   - righe «Sì» / «No», ad esempio per i bias su etnia, genere e classe sociale. Per alcune righe una risposta «No» mostra un’indicazione, come nel canvas;
+   - opzioni da spuntare, una o più a seconda della domanda. La categoria di rischio AI Act ne ammette una sola ed è quella che indica il gruppo di lavoro: l’applicazione non la calcola e non la verifica;
+   - attività da segnare come fatte, e principi da mettere in ordine di priorità con le frecce;
+   - «Aggiungi «Altro»» per inserire voci non previste, come un altro tipo di bias o un altro ambito di responsabilità.
+
+   Sotto i campi resta «Ulteriori dettagli», per motivare o completare le scelte. Una risposta conta come scritta se è compilato almeno un campo o il testo.
 2. Se non sai da dove cominciare, premi «Dammi uno spunto»: compaiono esempi già pronti. Sceglierne uno lo inserisce come bozza, da adattare al tuo progetto.
 3. Scegli lo stato della risposta in «Stato della risposta»:
    - «Bozza da approfondire»: hai scritto qualcosa ma va ancora verificato;
@@ -34,7 +41,7 @@ Con «Indietro» torni alla domanda precedente; con «Salva e riprendi più avan
 Spesso una risposta richiede chi conosce i dati, il contratto con il fornitore o la normativa.
 
 1. Premi «Serve un’altra figura».
-2. Nel riquadro «Coinvolgi la persona giusta» aggiungi una o più figure con «Aggiungi figura» e scrivi che cosa devono chiarire.
+2. Nel riquadro «Coinvolgi la persona giusta» aggiungi una o più figure con «Aggiungi figura». Per ogni figura compare un campo «Che cosa deve chiarire», seguito dal suo nome: scrivi lì la domanda per quella persona. Ogni figura riceve solo la sua richiesta, anche nei file creati dalla scheda «Contributi».
 3. La risposta passa allo stato «In attesa di un contributo» e compare tra i contributi in attesa nel riepilogo.
 4. Se cambi idea, premi «Annulla richiesta» (oppure premi di nuovo «Serve un’altra figura») per tornare a «Bozza da approfondire».
 

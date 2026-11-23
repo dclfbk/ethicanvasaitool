@@ -112,7 +112,7 @@ try {
   });
   const a = await device(browser);
   await a.page.getByRole('button', { name: /Apri l’esempio/ }).click();
-  await a.page.getByRole('heading', { name: 'Quali dati e documenti entrano in gioco?' }).waitFor();
+  await a.page.getByRole('heading', { name: 'Quali dati e attori entrano in gioco?' }).waitFor();
   await settings(a.page);
   // Without OAuth identifiers only the folder is offered, and it is the default.
   assert.equal(await a.page.getByRole('group', { name: 'Servizio di archiviazione' }).count(), 0);

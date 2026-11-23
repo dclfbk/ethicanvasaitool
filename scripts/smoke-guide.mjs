@@ -103,7 +103,7 @@ try {
   await page.getByRole('button', { name: 'Guida', exact: true }).click();
   await page.getByRole('heading', { name: 'Primi passi', level: 1 }).waitFor();
   await page.locator('.guide-article').getByRole('button', { name: 'Apri l’esempio' }).first().click();
-  await page.getByRole('heading', { name: 'Quali dati e documenti entrano in gioco?' }).waitFor();
+  await page.getByRole('heading', { name: 'Quali dati e attori entrano in gioco?' }).waitFor();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('button', { name: 'Guida', exact: true }).click();

@@ -109,6 +109,14 @@ export default function ReportExportPanel({
       setBusy(false);
     }
   }
+  async function cards() {
+    try {
+      const { aiProductCardsZip } = await import('./aiCards');
+      download(name + '-ai-product-card.zip', aiProductCardsZip(project), 'application/zip');
+    } catch {
+      onError('Non è stato possibile generare le AI Product Card.');
+    }
+  }
   function report(format: 'docx' | 'odt') {
     const blocks = buildReportBlocks(project, draft, { includeAnswers }),
       meta = {
@@ -194,7 +202,16 @@ export default function ReportExportPanel({
           <FileText size={16} />
           Rapporto ODT{draft ? ' con sintesi' : ''}
         </button>
+        <button className="secondary" onClick={() => void cards()}>
+          <FileDown size={16} />
+          AI Product Card · ZIP
+        </button>
       </div>
+      <p className="muted">
+        Le AI Product Card sono la documentazione tecnica che il canvas raccomanda per chi sviluppa lo strumento: il
+        file ZIP contiene le schede in Markdown e le specifiche in YAML, già compilate con le risposte del canvas. Le
+        parti tecniche restano da completare a cura di AI scientist e AI engineer.
+      </p>
       {settings.enabled && (
         <div className="assistant">
           {!draft && phase.name === 'idle' && (

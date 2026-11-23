@@ -69,7 +69,7 @@ describe('Organisation overview', () => {
     expect(d.projects).toHaveLength(3);
     expect(d.byStatus).toEqual({ complete: 1, preliminary: 1, draft: 1 });
     expect(d.paused).toBe(1);
-    expect(d.averagePercent).toBe(Math.round((100 + 5 + 0) / 3));
+    expect(d.averagePercent).toBe(Math.round((100 + Math.round(100 / questions.length) + 0) / 3));
     expect(buildDashboard([...archive(), demoProject()], today, true).projects).toHaveLength(4);
   });
   it('lists overdue, upcoming and unplanned reviews and the last outcomes', () => {
@@ -122,7 +122,7 @@ describe('CSV export', () => {
     const lines = csv.trim().split('\r\n');
     expect(lines).toHaveLength(4);
     expect(lines[1]).toContain(
-      'Completo;;Compilazione completa;100;20/20;0;2026-10-10;Condivisa con condizioni;2026-10-20',
+      `Completo;;Compilazione completa;100;${questions.length}/${questions.length};0;2026-10-10;Condivisa con condizioni;2026-10-20`,
     );
     expect(lines[3].startsWith("'=Vuoto;")).toBe(true);
   });

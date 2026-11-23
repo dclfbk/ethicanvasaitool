@@ -27,6 +27,7 @@
  * source code to users who interact with the software over a network.
  */
 
+import { answerText } from './answers';
 import {
   portableAnswers,
   portableRegulatory,
@@ -287,8 +288,8 @@ export function diffSnapshots(before: ProjectSnapshot, after: ProjectSnapshot): 
     questions: questions.map(q => {
       const a = before.answers[q.id],
         b = after.answers[q.id],
-        va = a?.value.trim() ?? '',
-        vb = b?.value.trim() ?? '';
+        va = answerText(q, a),
+        vb = answerText(q, b);
       const titles = (s: ProjectSnapshot) =>
         new Map(s.references.filter(r => r.questionId === q.id).map(r => [r.id, r.title]));
       const ra = titles(before),

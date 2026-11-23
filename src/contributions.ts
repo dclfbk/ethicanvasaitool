@@ -28,7 +28,13 @@
  */
 
 import { addVersion } from './history';
+import { answerText, parsePeople, requestFor } from './answers';
 import { questionnaireVersion, questions, type Project } from './model';
+import { previousQuestionnaireVersions } from './questionnaire';
+export { parsePeople } from './answers';
+// Files of the previous questionnaire keep the same question ids, so they can still be read.
+const readableVersion = (v: unknown) =>
+  v === questionnaireVersion || previousQuestionnaireVersions.includes(v as string);
 
 // Contributions without a server: the coordinator exports a request file with some questions, the person
 // involved answers in the web app without an archive and returns a response file, the coordinator imports it.
@@ -95,17 +101,17 @@ export function createRequest(p: Project, o: RequestOptions, now = new Date().to
     message: o.message.trim(),
     questions: ids.map(id => ({
       id,
-      request: p.answers[id]?.request.trim() ?? '',
-      answer: o.includeAnswers ? (p.answers[id]?.value.trim() ?? '') : '',
+      request: requestFor(p.answers[id], o.recipient),
+      answer: o.includeAnswers
+        ? answerText(
+            questions.find(q => q.id === id),
+            p.answers[id],
+          )
+        : '',
     })),
   };
 }
 // Questions that are waiting for someone, optionally only for one person: the default selection of a request.
-export const parsePeople = (person: string) =>
-  person
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean);
 export const waitingFor = (p: Project, person?: string) =>
   questions
     .filter(q => {
@@ -133,8 +139,7 @@ function validIds(items: { id: unknown }[]) {
 }
 export function readRequest(v: unknown): ContributionRequest | null {
   const r = v as ContributionRequest;
-  if (!r || r.format !== requestFormat || r.version !== 1 || r.questionnaireVersion !== questionnaireVersion)
-    return null;
+  if (!r || r.format !== requestFormat || r.version !== 1 || !readableVersion(r.questionnaireVersion)) return null;
   const ok =
     [r.id, r.projectId, r.createdAt, r.project?.name, r.project?.organization, r.from, r.recipient].every(x =>
       str(x, limits.short),
@@ -150,8 +155,7 @@ export function readRequest(v: unknown): ContributionRequest | null {
 }
 export function readResponse(v: unknown): ContributionResponse | null {
   const r = v as ContributionResponse;
-  if (!r || r.format !== responseFormat || r.version !== 1 || r.questionnaireVersion !== questionnaireVersion)
-    return null;
+  if (!r || r.format !== responseFormat || r.version !== 1 || !readableVersion(r.questionnaireVersion)) return null;
   const ok =
     [r.requestId, r.projectId, r.createdAt, r.contributor?.role, r.contributor?.name].every(x =>
       str(x, limits.short),

@@ -34,9 +34,16 @@
 // drawing of the template; an answer flows through its boxes in order and continues in the final pages.
 
 export type Box = [x0: number, y0: number, x1: number, y1: number];
+export type Point = [x: number, y: number];
+// boxes: where the free text goes (the whole answer for plain questions, the further details for structured ones).
+// cells: one cell per field of a structured question; "other" holds the rows added with "Altro".
+// marks: centre of the printed check box of an option ("other" is ticked when rows were added with "Altro";
+// "<field>:yes" and "<field>:no" for a yes/no printed as two boxes).
 export interface Placement {
   page: number;
   boxes: Box[];
+  cells?: Record<string, Box>;
+  marks?: Record<string, Point>;
 }
 
 export const templatePageCount = 8;
@@ -54,145 +61,264 @@ export const templatePages = {
 
 // Right-hand cells of a table: x range of the free column, then the top and bottom of each row.
 const column = (x0: number, x1: number, rows: [number, number][]): Box[] => rows.map(([y0, y1]) => [x0, y0, x1, y1]);
+// Positions measured on a rendering of the template: its media box starts 7.6 points above the origin used here.
+const shift = 7.6;
+const v = ([x0, y0, x1, y1]: Box): Box => [x0, y0 - shift, x1, y1 - shift];
+const vp = ([x, y]: Point): Point => [x, y - shift];
+const marks = (m: Record<string, Point>) => Object.fromEntries(Object.entries(m).map(([k, p]) => [k, vp(p)]));
+const cells = (ids: string[], boxes: Box[]) => Object.fromEntries(ids.map((id, i) => [id, boxes[i]]));
+const biasRows: [number, number][] = (
+  [
+    [249, 299],
+    [302, 353],
+    [356, 412],
+    [416, 475],
+  ] as [number, number][]
+).map(([a, b]) => [a - shift, b - shift]);
 
 export const placements: Record<string, Placement> = {
-  // Dati: actors of the collection and goals; legal basis, anonymisation and precautions; data stewardship.
+  // Dati
   sources: {
     page: templatePages.data,
-    boxes: [
-      ...column(107, 172, [
+    boxes: [],
+    cells: cells(
+      ['data', 'subjects', 'collectors', 'overlap'],
+      column(107, 172, [
         [193, 244],
         [246, 321],
         [324, 375],
         [377, 464],
       ]),
-      [28, 524, 172, 571],
-    ],
+    ),
   },
-  privacy: {
+  'data-goals': { page: templatePages.data, boxes: [[28, 524, 172, 571]] },
+  // The "Altro" row of the bias table already holds a printed example: added rows go to the final pages.
+  'data-bias': {
     page: templatePages.data,
-    boxes: [
-      [192, 533, 327, 571],
-      [351, 215, 486, 306],
-      [350, 490, 485, 570],
-    ],
+    boxes: [],
+    cells: cells(
+      ['ethnicity', 'gender', 'class'],
+      column(259, 320, [
+        [222, 274],
+        [276, 329],
+        [331, 397],
+      ]),
+    ),
+  },
+  privacy: { page: templatePages.data, boxes: [[192, 533, 327, 571]] },
+  anonymisation: { page: templatePages.data, boxes: [[351, 215, 486, 306]] },
+  unintended: {
+    page: templatePages.data,
+    boxes: [],
+    cells: {
+      datasets: v([350, 398, 485, 452]),
+      precautions: [350, 490, 485, 570],
+    },
+  },
+  protection: {
+    page: templatePages.data,
+    boxes: [],
+    cells: cells(
+      ['anonymisation', 'obfuscation', 'clustering', 'other'],
+      column(601, 644, [
+        [186, 224],
+        [228, 266],
+        [270, 309],
+        [313, 352],
+      ]).map(v),
+    ),
+  },
+  access: {
+    page: templatePages.data,
+    boxes: [],
+    cells: cells(
+      ['encryption', 'segregation', 'mfa'],
+      column(594, 644, [
+        [384, 431],
+        [437, 499],
+        [505, 570],
+      ]).map(v),
+    ),
   },
   steward: {
     page: templatePages.data,
-    boxes: column(755, 807, [
-      [208, 261],
-      [263, 341],
-      [343, 421],
-      [424, 502],
-      [504, 570],
-    ]),
+    boxes: [],
+    cells: cells(
+      ['steward', 'open', 'documented', 'updates', 'backup'],
+      column(755, 807, [
+        [208, 261],
+        [263, 341],
+        [343, 421],
+        [424, 502],
+        [504, 570],
+      ]),
+    ),
   },
-  // Bias in the collected data: the "Altro" row already holds a printed example.
-  'data-bias': {
-    page: templatePages.data,
-    boxes: column(259, 320, [
-      [222, 274],
-      [276, 329],
-      [331, 397],
-    ]),
-  },
-  // Algoritmi: training and its goals; originality and explainability of the result; risk category and certification.
-  model: {
+  // Algoritmi
+  function: {
     page: templatePages.algorithm,
-    boxes: [
-      [65, 424, 225, 485],
-      [65, 535, 225, 580],
-    ],
+    boxes: [],
+    cells: { other: v([440, 171, 552, 184]) },
+    marks: marks({
+      prediction: [289, 165],
+      recommendation: [350, 165],
+      exAnte: [434, 165],
+      exPost: [289, 181],
+      other: [409, 181],
+    }),
   },
-  explain: {
+  // The canvas has no "AI" box: that choice is written next to "Altro".
+  'tool-type': {
     page: templatePages.algorithm,
-    boxes: [
-      [635, 246, 791, 300],
-      [635, 432, 791, 460],
-    ],
+    boxes: [],
+    cells: { other: v([757, 170, 796, 183]) },
+    marks: marks({ chatbot: [582, 177], predictive: [629, 177], other: [729, 177] }),
   },
   risk: {
     page: templatePages.algorithm,
-    boxes: [
-      [128, 246, 225, 283],
-      [104, 327, 225, 366],
-    ],
+    boxes: [[128, 246, 205, 283]],
+    marks: marks({ minimal: [64, 230], limited: [64, 245], high: [64, 261], unacceptable: [64, 276] }),
   },
-  // Metodi di analisi: consequences and feedback loop; responsibilities; training and activities to plan.
-  tests: {
-    page: templatePages.analysis,
-    boxes: [
-      [170, 430, 240, 452],
-      [170, 539, 240, 562],
-    ],
+  certification: {
+    page: templatePages.algorithm,
+    boxes: [],
+    cells: { other: v([104, 322, 225, 364]) },
+    marks: marks({ aiAct: [64, 327], iso: [64, 342], other: [64, 357], none: [64, 373] }),
   },
-  owner: {
+  model: { page: templatePages.algorithm, boxes: [[65, 424, 225, 485]] },
+  'training-goals': { page: templatePages.algorithm, boxes: [[65, 535, 225, 580]] },
+  'algorithm-bias': {
+    page: templatePages.algorithm,
+    boxes: [],
+    cells: cells(['ethnicity', 'gender', 'class', 'other'], column(333, 412, biasRows)),
+  },
+  weights: {
+    page: templatePages.algorithm,
+    boxes: [],
+    cells: cells(['ethnicity', 'gender', 'class', 'other'], column(529, 608, biasRows)),
+  },
+  'training-bias': { page: templatePages.algorithm, boxes: [v([238, 530, 405, 583])] },
+  reidentifiable: { page: templatePages.algorithm, boxes: [v([435, 535, 621, 583])] },
+  explain: { page: templatePages.algorithm, boxes: [[635, 246, 791, 300]] },
+  'algorithm-reuse': { page: templatePages.algorithm, boxes: [], cells: { verified: v([635, 378, 791, 393]) } },
+  explainability: { page: templatePages.algorithm, boxes: [[635, 432, 775, 460]] },
+  reassociation: { page: templatePages.algorithm, boxes: [v([635, 515, 791, 583])] },
+  // Metodi di analisi
+  understanding: {
     page: templatePages.analysis,
-    boxes: column(702, 760, [
-      [264, 318],
-      [320, 374],
-      [376, 446],
-      [449, 519],
-    ]),
+    boxes: [],
+    cells: {
+      logic: v([170, 369, 240, 385]),
+      consequences: [170, 430, 240, 452],
+      feedback: [170, 539, 240, 562],
+    },
   },
   training: {
     page: templatePages.analysis,
-    boxes: [
-      [264, 214, 567, 263],
-      [264, 310, 567, 362],
-      ...column(441, 547, [
+    boxes: [],
+    cells: {
+      activities: [264, 214, 567, 263],
+      duties: [264, 310, 567, 362],
+    },
+  },
+  'post-processing': {
+    page: templatePages.analysis,
+    boxes: [],
+    cells: cells(
+      ['weights', 'legality'],
+      column(441, 547, [
         [416, 466],
         [472, 546],
       ]),
-    ],
+    ),
   },
-  // Elementi culturali e sociali: notice on personal data; third-party data, precautions and open data.
-  communication: {
-    page: templatePages.social,
-    boxes: column(642, 771, [
-      [229, 294],
-      [297, 374],
-      [376, 468],
-      [470, 554],
-    ]),
+  owner: {
+    page: templatePages.analysis,
+    boxes: [],
+    cells: cells(
+      ['discrimination', 'privacy', 'copyright', 'other'],
+      column(702, 760, [
+        [264, 318],
+        [320, 374],
+        [376, 446],
+        [449, 519],
+      ]),
+    ),
   },
+  // Elementi culturali e sociali
   reuse: {
     page: templatePages.social,
-    boxes: [
-      [250, 212, 535, 262],
-      [75, 285, 535, 356],
-      [72, 425, 238, 560],
-    ],
+    boxes: [],
+    cells: {
+      which: [250, 212, 535, 262],
+      precautions: [75, 285, 535, 356],
+    },
+    marks: marks({ 'present:yes': [77, 219], 'present:no': [77, 236] }),
   },
-  // Requisiti funzionali: technical and social principles to implement; priorities.
+  'open-data': { page: templatePages.social, boxes: [[72, 425, 238, 560]] },
+  notices: {
+    page: templatePages.social,
+    boxes: [],
+    cells: {
+      gdpr: v([290, 453, 420, 467]),
+      plain: v([398, 520, 535, 534]),
+    },
+  },
+  communication: {
+    page: templatePages.social,
+    boxes: [],
+    cells: cells(
+      ['categories', 'purposes', 'bases', 'methods'],
+      column(642, 771, [
+        [229, 294],
+        [297, 374],
+        [376, 468],
+        [470, 554],
+      ]),
+    ),
+  },
+  // Requisiti funzionali
   requirements: {
     page: templatePages.requirements,
-    boxes: [
-      ...column(198, 282, [
+    boxes: [],
+    cells: cells(
+      ['ontologies', 'explainability', 'legal', 'changes', 'other'],
+      column(198, 282, [
         [209, 274],
         [276, 329],
         [331, 384],
         [386, 438],
         [441, 489],
       ]),
-      ...column(414, 534, [
+    ),
+  },
+  'social-requirements': {
+    page: templatePages.requirements,
+    boxes: [],
+    cells: cells(
+      ['instructions', 'coherence', 'privacy', 'other'],
+      column(414, 534, [
         [209, 274],
         [276, 367],
         [369, 447],
         [449, 489],
       ]),
-    ],
+    ),
   },
   priorities: {
     page: templatePages.requirements,
-    boxes: column(666, 786, [
-      [234, 273],
-      [276, 341],
-      [343, 421],
-      [423, 489],
-    ]),
+    boxes: [],
+    cells: cells(
+      ['privacy', 'benefits', 'nonDiscrimination', 'other'],
+      column(666, 786, [
+        [234, 273],
+        [276, 341],
+        [343, 421],
+        [423, 489],
+      ]),
+    ),
   },
 };
 
 // Questions of the application without a cell in the original canvas: their answers are shown in the final pages.
-export const withoutCell = ['inclusion', 'review'];
+export const withoutCell = ['review'];
