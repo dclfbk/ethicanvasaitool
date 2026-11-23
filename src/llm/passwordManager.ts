@@ -33,24 +33,38 @@
 
 export const passwordManagerAccount = 'Gemini API';
 
-interface PasswordCredentialLike extends Credential { password?: string; }
-type PasswordCredentialCtor = new (data: {id: string; password: string; name?: string}) => Credential;
-const ctor = (): PasswordCredentialCtor | undefined => (globalThis as {PasswordCredential?: PasswordCredentialCtor}).PasswordCredential;
+interface PasswordCredentialLike extends Credential {
+  password?: string;
+}
+type PasswordCredentialCtor = new (data: { id: string; password: string; name?: string }) => Credential;
+const ctor = (): PasswordCredentialCtor | undefined =>
+  (globalThis as { PasswordCredential?: PasswordCredentialCtor }).PasswordCredential;
 
 export const passwordManagerAvailable = () => !!ctor() && !!globalThis.navigator?.credentials;
 
 // Offers to save the key. It never throws: refusing or a missing password manager leaves the session key as it is.
 export async function offerToRemember(key: string): Promise<void> {
- const Credential = ctor();
- if (!Credential || !navigator.credentials) return;
- try { await navigator.credentials.store(new Credential({id: passwordManagerAccount, password: key, name: 'Chiave API Gemini'})); } catch { /* the user or the browser declined */ }
+  const Credential = ctor();
+  if (!Credential || !navigator.credentials) return;
+  try {
+    await navigator.credentials.store(
+      new Credential({ id: passwordManagerAccount, password: key, name: 'Chiave API Gemini' }),
+    );
+  } catch {
+    /* the user or the browser declined */
+  }
 }
 
 // Asks the browser for a saved key; the browser shows its own chooser. Returns undefined when nothing is chosen.
 export async function recallFromPasswordManager(): Promise<string | undefined> {
- if (!passwordManagerAvailable()) return undefined;
- try {
-  const c = await navigator.credentials.get({password: true, mediation: 'optional'} as CredentialRequestOptions) as PasswordCredentialLike | null;
-  return c?.password?.trim() || undefined;
- } catch { return undefined; }
+  if (!passwordManagerAvailable()) return undefined;
+  try {
+    const c = (await navigator.credentials.get({
+      password: true,
+      mediation: 'optional',
+    } as CredentialRequestOptions)) as PasswordCredentialLike | null;
+    return c?.password?.trim() || undefined;
+  } catch {
+    return undefined;
+  }
 }

@@ -31,35 +31,68 @@
 export type CloudProviderId = 'folder' | 'google' | 'microsoft';
 export type OAuthProviderId = Exclude<CloudProviderId, 'folder'>;
 export type CloudErrorKind =
- | 'not-configured' | 'not-connected' | 'session-expired' | 'popup-blocked' | 'cancelled' | 'admin-consent'
- | 'permission' | 'quota' | 'rate-limit' | 'too-large' | 'not-found' | 'network' | 'timeout' | 'server'
- | 'bad-request' | 'bad-response' | 'credential-store' | 'folder-access';
+  | 'not-configured'
+  | 'not-connected'
+  | 'session-expired'
+  | 'popup-blocked'
+  | 'cancelled'
+  | 'admin-consent'
+  | 'permission'
+  | 'quota'
+  | 'rate-limit'
+  | 'too-large'
+  | 'not-found'
+  | 'network'
+  | 'timeout'
+  | 'server'
+  | 'bad-request'
+  | 'bad-response'
+  | 'credential-store'
+  | 'folder-access';
 
 export class CloudError extends Error {
- constructor(readonly kind: CloudErrorKind, detail?: string) { super(detail ?? kind); this.name = 'CloudError'; }
+  constructor(
+    readonly kind: CloudErrorKind,
+    detail?: string,
+  ) {
+    super(detail ?? kind);
+    this.name = 'CloudError';
+  }
 }
 
-export interface CloudHttpRequest { method: 'GET' | 'POST' | 'PATCH' | 'PUT'; url: string; headers?: Record<string, string>; body?: string; auth?: boolean; }
-export interface CloudHttpResponse { status: number; body: string; location?: string; }
+export interface CloudHttpRequest {
+  method: 'GET' | 'POST' | 'PATCH' | 'PUT';
+  url: string;
+  headers?: Record<string, string>;
+  body?: string;
+  auth?: boolean;
+}
+export interface CloudHttpResponse {
+  status: number;
+  body: string;
+  location?: string;
+}
 
 // Holds the user's authorisation for one provider and attaches it to requests; the drive logic never sees the token.
 export interface CloudSession {
- readonly scope: 'session' | 'system';
- configured(): Promise<boolean>;
- connected(): Promise<boolean>;
- connect(): Promise<void>;
- disconnect(): Promise<void>;
- send(request: CloudHttpRequest): Promise<CloudHttpResponse>;
+  readonly scope: 'session' | 'system';
+  configured(): Promise<boolean>;
+  connected(): Promise<boolean>;
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
+  send(request: CloudHttpRequest): Promise<CloudHttpResponse>;
 }
 
-export interface RemoteArchive { modifiedAt: string; }
+export interface RemoteArchive {
+  modifiedAt: string;
+}
 export interface CloudDrive {
- readonly id: CloudProviderId;
- readonly session: CloudSession;
- account(): Promise<string>;
- info(): Promise<RemoteArchive | null>;
- download(): Promise<{text: string; info: RemoteArchive} | null>;
- upload(text: string): Promise<RemoteArchive>;
+  readonly id: CloudProviderId;
+  readonly session: CloudSession;
+  account(): Promise<string>;
+  info(): Promise<RemoteArchive | null>;
+  download(): Promise<{ text: string; info: RemoteArchive } | null>;
+  upload(text: string): Promise<RemoteArchive>;
 }
 
 export const archiveFileName = 'ethicanvas-archivio.json';
@@ -71,31 +104,60 @@ const googlePrefixes = ['https://www.googleapis.com/drive/v3/', 'https://www.goo
 const graphPrefix = 'https://graph.microsoft.com/v1.0/me';
 // Returns the normalised URL to send, or null when the request is not allowed.
 export function allowedCloudRequest(provider: CloudProviderId, request: CloudHttpRequest): string | null {
- if (provider === 'folder') return null;
- let url: URL;
- try { url = new URL(request.url); } catch { return null; }
- if (!['GET', 'POST', 'PATCH', 'PUT'].includes(request.method) || url.protocol !== 'https:' || url.username || url.password || url.port) return null;
- const href = url.href, rest = href.startsWith(graphPrefix) ? href.slice(graphPrefix.length) : null;
- const ok = request.auth === false
-  ? provider === 'microsoft' && request.method === 'GET' && url.hostname.endsWith('.sharepoint.com')
-  : provider === 'google' ? googlePrefixes.some(prefix => href.startsWith(prefix)) : rest !== null && (rest === '' || rest[0] === '/' || rest[0] === '?');
- return ok ? href : null;
+  if (provider === 'folder') return null;
+  let url: URL;
+  try {
+    url = new URL(request.url);
+  } catch {
+    return null;
+  }
+  if (
+    !['GET', 'POST', 'PATCH', 'PUT'].includes(request.method) ||
+    url.protocol !== 'https:' ||
+    url.username ||
+    url.password ||
+    url.port
+  )
+    return null;
+  const href = url.href,
+    rest = href.startsWith(graphPrefix) ? href.slice(graphPrefix.length) : null;
+  const ok =
+    request.auth === false
+      ? provider === 'microsoft' && request.method === 'GET' && url.hostname.endsWith('.sharepoint.com')
+      : provider === 'google'
+        ? googlePrefixes.some(prefix => href.startsWith(prefix))
+        : rest !== null && (rest === '' || rest[0] === '/' || rest[0] === '?');
+  return ok ? href : null;
 }
 
-interface ErrorBody { error?: {code?: string | number; status?: string; message?: string; errors?: {reason?: string}[]; innerError?: {code?: string}} | string; }
+interface ErrorBody {
+  error?:
+    | {
+        code?: string | number;
+        status?: string;
+        message?: string;
+        errors?: { reason?: string }[];
+        innerError?: { code?: string };
+      }
+    | string;
+}
 export function classifyCloudError(status: number, body: string): CloudErrorKind {
- let parsed: ErrorBody = {};
- try { parsed = JSON.parse(body); } catch { /* plain text body */ }
- const e = typeof parsed.error === 'object' ? parsed.error : {};
- const reasons = (e.errors ?? []).map(x => x.reason ?? '');
- const code = String(e.code ?? '').toLowerCase();
- if (status === 401) return 'session-expired';
- if (status === 507 || reasons.includes('storageQuotaExceeded') || code === 'quotalimitreached') return 'quota';
- if (status === 429 || reasons.some(r => /ratelimit/i.test(r))) return 'rate-limit';
- if (status === 413) return 'too-large';
- if (status === 403) return 'permission';
- if (status === 404) return 'not-found';
- if (status === 408 || status === 504) return 'timeout';
- if (status >= 500) return 'server';
- return 'bad-request';
+  let parsed: ErrorBody = {};
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    /* plain text body */
+  }
+  const e = typeof parsed.error === 'object' ? parsed.error : {};
+  const reasons = (e.errors ?? []).map(x => x.reason ?? '');
+  const code = String(e.code ?? '').toLowerCase();
+  if (status === 401) return 'session-expired';
+  if (status === 507 || reasons.includes('storageQuotaExceeded') || code === 'quotalimitreached') return 'quota';
+  if (status === 429 || reasons.some(r => /ratelimit/i.test(r))) return 'rate-limit';
+  if (status === 413) return 'too-large';
+  if (status === 403) return 'permission';
+  if (status === 404) return 'not-found';
+  if (status === 408 || status === 504) return 'timeout';
+  if (status >= 500) return 'server';
+  return 'bad-request';
 }

@@ -47,7 +47,13 @@ const storageKey = 'canvas-pa.accessibility.v1';
 
 const textScales: readonly TextScale[] = ['normal', 'large', 'xlarge'];
 const contrastModes: readonly ContrastMode[] = ['default', 'high-contrast', 'dark'];
-const colorVisionModes: readonly ColorVisionMode[] = ['none', 'protanopia', 'deuteranopia', 'tritanopia', 'achromatopsia'];
+const colorVisionModes: readonly ColorVisionMode[] = [
+  'none',
+  'protanopia',
+  'deuteranopia',
+  'tritanopia',
+  'achromatopsia',
+];
 
 export const defaultAccessibilitySettings: AccessibilitySettings = {
   textScale: 'normal',
@@ -130,7 +136,10 @@ function setAttr(el: HTMLElement, name: string, value: string | null): void {
  * Applies accessibility preferences as data-a11y-* attributes on the root element
  * so CSS rules take effect across the entire document, including modals.
  */
-export function applyAccessibilitySettings(settings: AccessibilitySettings, root: HTMLElement = document.documentElement): void {
+export function applyAccessibilitySettings(
+  settings: AccessibilitySettings,
+  root: HTMLElement = document.documentElement,
+): void {
   setAttr(root, 'data-a11y-text', settings.textScale === 'normal' ? null : settings.textScale);
   setAttr(root, 'data-a11y-contrast', settings.contrast === 'default' ? null : settings.contrast);
   setAttr(root, 'data-a11y-color', settings.colorVision === 'none' ? null : settings.colorVision);

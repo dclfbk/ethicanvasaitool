@@ -32,29 +32,54 @@ import type { LocalHttpResponse, LocalProtocol, LocalTransport } from './local';
 import { LlmError, type CredentialStore, type LlmErrorKind } from './provider';
 
 // Desktop: the Rust side keeps the server address and the optional key, and makes the requests.
-const rustErrors: LlmErrorKind[] = ['not-configured', 'network', 'timeout', 'cancelled', 'bad-request', 'credential-store'];
-const toLlmError = (e: unknown) => { const kind = String(e).split(':')[0] as LlmErrorKind; return new LlmError(rustErrors.includes(kind) ? kind : 'network'); };
-const call = async <T>(command: string, args: Record<string, unknown> = {}) => { try { return await invoke<T>(command, args); } catch (e) { throw toLlmError(e); } };
+const rustErrors: LlmErrorKind[] = [
+  'not-configured',
+  'network',
+  'timeout',
+  'cancelled',
+  'bad-request',
+  'credential-store',
+];
+const toLlmError = (e: unknown) => {
+  const kind = String(e).split(':')[0] as LlmErrorKind;
+  return new LlmError(rustErrors.includes(kind) ? kind : 'network');
+};
+const call = async <T>(command: string, args: Record<string, unknown> = {}) => {
+  try {
+    return await invoke<T>(command, args);
+  } catch (e) {
+    throw toLlmError(e);
+  }
+};
 
 export const localKeychainStore: CredentialStore = {
- scope: 'system',
- has: () => call<boolean>('local_llm_key_status'),
- set: key => call<void>('local_llm_key_set', {key}),
- clear: () => call<void>('local_llm_key_delete'),
+  scope: 'system',
+  has: () => call<boolean>('local_llm_key_status'),
+  set: key => call<void>('local_llm_key_set', { key }),
+  clear: () => call<void>('local_llm_key_delete'),
 };
 // Saving a different address deletes the stored key on the Rust side.
-export const configureLocalServer = (url: string, protocol: LocalProtocol) => call<string>('local_llm_configure', {url, protocol});
+export const configureLocalServer = (url: string, protocol: LocalProtocol) =>
+  call<string>('local_llm_configure', { url, protocol });
 
 export const tauriLocalTransport: LocalTransport = {
- send(request, signal) {
-  const requestId = crypto.randomUUID();
-  return new Promise<LocalHttpResponse>((resolve, reject) => {
-   const onAbort = () => { void invoke('local_llm_cancel', {requestId}); reject(new LlmError('cancelled')); };
-   if (signal.aborted) return onAbort();
-   signal.addEventListener('abort', onAbort, {once: true});
-   invoke<LocalHttpResponse>('local_llm_request', {requestId, method: request.method, path: request.path, body: request.body ?? null})
-    .then(resolve, e => reject(toLlmError(e)))
-    .finally(() => signal.removeEventListener('abort', onAbort));
-  });
- },
+  send(request, signal) {
+    const requestId = crypto.randomUUID();
+    return new Promise<LocalHttpResponse>((resolve, reject) => {
+      const onAbort = () => {
+        void invoke('local_llm_cancel', { requestId });
+        reject(new LlmError('cancelled'));
+      };
+      if (signal.aborted) return onAbort();
+      signal.addEventListener('abort', onAbort, { once: true });
+      invoke<LocalHttpResponse>('local_llm_request', {
+        requestId,
+        method: request.method,
+        path: request.path,
+        body: request.body ?? null,
+      })
+        .then(resolve, e => reject(toLlmError(e)))
+        .finally(() => signal.removeEventListener('abort', onAbort));
+    });
+  },
 };

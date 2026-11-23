@@ -27,11 +27,11 @@
  * source code to users who interact with the software over a network.
  */
 
-import {chromium} from '@playwright/test';
-import {execFileSync} from 'node:child_process';
-import {mkdtempSync, readFileSync, rmSync} from 'node:fs';
-import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import { chromium } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 // Renders src-tauri/icons/app-icon.svg and writes every application icon from it:
 // - desktop and mobile bundles (src-tauri/icons) through "tauri icon", from the tile with rounded corners;
@@ -41,17 +41,30 @@ const fullBleed = svg.replace(/(<rect id="tile"[^>]*?) rx="\d+"/, '$1 rx="0"');
 const dir = mkdtempSync(join(tmpdir(), 'ethicanvas-icons-'));
 let browser;
 try {
- browser = await chromium.launch({headless: true, executablePath: process.env.CHROMIUM_PATH || undefined, args: ['--no-sandbox']});
- const render = async (source, size, path) => {
-  const page = await browser.newPage({viewport: {width: size, height: size}});
-  await page.setContent(`<style>html,body{margin:0;background:transparent}svg{display:block;width:${size}px;height:${size}px}</style>${source}`);
-  await page.screenshot({path, omitBackground: true});
-  await page.close();
- };
- const source = join(dir, 'icon-1024.png');
- await render(svg, 1024, source);
- await render(fullBleed, 512, 'public/icons/icon-512.png');
- await render(fullBleed, 192, 'public/icons/icon-192.png');
- execFileSync(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['tauri', 'icon', source, '--output', 'src-tauri/icons'], {stdio: 'inherit'});
- console.log('icons written to src-tauri/icons and public/icons');
-} finally { await browser?.close(); rmSync(dir, {recursive: true, force: true}); }
+  browser = await chromium.launch({
+    headless: true,
+    executablePath: process.env.CHROMIUM_PATH || undefined,
+    args: ['--no-sandbox'],
+  });
+  const render = async (source, size, path) => {
+    const page = await browser.newPage({ viewport: { width: size, height: size } });
+    await page.setContent(
+      `<style>html,body{margin:0;background:transparent}svg{display:block;width:${size}px;height:${size}px}</style>${source}`,
+    );
+    await page.screenshot({ path, omitBackground: true });
+    await page.close();
+  };
+  const source = join(dir, 'icon-1024.png');
+  await render(svg, 1024, source);
+  await render(fullBleed, 512, 'public/icons/icon-512.png');
+  await render(fullBleed, 192, 'public/icons/icon-192.png');
+  execFileSync(
+    process.platform === 'win32' ? 'npx.cmd' : 'npx',
+    ['tauri', 'icon', source, '--output', 'src-tauri/icons'],
+    { stdio: 'inherit' },
+  );
+  console.log('icons written to src-tauri/icons and public/icons');
+} finally {
+  await browser?.close();
+  rmSync(dir, { recursive: true, force: true });
+}

@@ -178,7 +178,9 @@ export default function AccessibilityPanel({ settings, onChange, onReset, onClos
             />
             <span>
               <b>Indicatori e simboli oltre al colore</b>
-              <small>Sottolinea sempre i collegamenti e aggiunge bordi e distinzioni visive a stati, barre e avvisi.</small>
+              <small>
+                Sottolinea sempre i collegamenti e aggiunge bordi e distinzioni visive a stati, barre e avvisi.
+              </small>
             </span>
           </label>
         </fieldset>
@@ -231,7 +233,9 @@ export default function AccessibilityPanel({ settings, onChange, onReset, onClos
                   update(
                     'readableFont',
                     e.target.checked,
-                    e.target.checked ? 'Carattere ad alta leggibilità attivato.' : 'Carattere predefinito ripristinato.',
+                    e.target.checked
+                      ? 'Carattere ad alta leggibilità attivato.'
+                      : 'Carattere predefinito ripristinato.',
                   )
                 }
               />
@@ -256,7 +260,9 @@ export default function AccessibilityPanel({ settings, onChange, onReset, onClos
                   update(
                     'strongFocus',
                     e.target.checked,
-                    e.target.checked ? 'Evidenziazione forte del focus attivata.' : 'Evidenziazione standard del focus.',
+                    e.target.checked
+                      ? 'Evidenziazione forte del focus attivata.'
+                      : 'Evidenziazione standard del focus.',
                   )
                 }
               />
@@ -312,12 +318,7 @@ export default function AccessibilityPanel({ settings, onChange, onReset, onClos
                 : `${activeCount} impostazioni attive`}
           </span>
           <div className="button-row">
-            <button
-              type="button"
-              className="secondary"
-              disabled={activeCount === 0}
-              onClick={handleReset}
-            >
+            <button type="button" className="secondary" disabled={activeCount === 0} onClick={handleReset}>
               <RotateCcw size={15} aria-hidden="true" /> Ripristina predefiniti
             </button>
             <button type="button" className="primary" onClick={onClose}>

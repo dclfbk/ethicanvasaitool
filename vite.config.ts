@@ -39,22 +39,46 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 // Writes sw.js from src/serviceWorker.js once the build is complete, with the list of the built files and a
 // version derived from their content, so every release replaces the offline copy. The OAuth callback is left out.
 function pwa(): Plugin {
- let outDir = '';
- return {
-  name: 'ethicanvas-pwa', apply: 'build',
-  configResolved(config) { outDir = resolve(config.root, config.build.outDir); },
-  async closeBundle() {
-   const files = (await readdir(outDir, {recursive: true, withFileTypes: true})).filter(f => f.isFile()).map(f => relative(outDir, join(f.parentPath, f.name)).split(sep).join('/'))
-    .filter(f => f !== 'sw.js' && f !== 'oauth-callback.html').sort();
-   const hash = createHash('sha256');
-   for (const f of files) hash.update(f).update(await readFile(join(outDir, f)));
-   const template = await readFile(resolve(import.meta.dirname, 'src/serviceWorker.js'), 'utf8');
-   await writeFile(join(outDir, 'sw.js'), template.replace('__VERSION__', JSON.stringify(hash.digest('hex').slice(0, 16))).replace('__FILES__', JSON.stringify(['./', ...files])));
-  },
- };
+  let outDir = '';
+  return {
+    name: 'ethicanvas-pwa',
+    apply: 'build',
+    configResolved(config) {
+      outDir = resolve(config.root, config.build.outDir);
+    },
+    async closeBundle() {
+      const files = (await readdir(outDir, { recursive: true, withFileTypes: true }))
+        .filter(f => f.isFile())
+        .map(f => relative(outDir, join(f.parentPath, f.name)).split(sep).join('/'))
+        .filter(f => f !== 'sw.js' && f !== 'oauth-callback.html')
+        .sort();
+      const hash = createHash('sha256');
+      for (const f of files) hash.update(f).update(await readFile(join(outDir, f)));
+      const template = await readFile(resolve(import.meta.dirname, 'src/serviceWorker.js'), 'utf8');
+      await writeFile(
+        join(outDir, 'sw.js'),
+        template
+          .replace('__VERSION__', JSON.stringify(hash.digest('hex').slice(0, 16)))
+          .replace('__FILES__', JSON.stringify(['./', ...files])),
+      );
+    },
+  };
 }
 
 // The PDF.js worker ships as .mjs; it is emitted as .js so that every web server sends it with a JavaScript MIME type,
 // which module workers require.
-export default defineConfig({ plugins: [react(), pwa()], base: './', define: { __APP_VERSION__: JSON.stringify(pkg.version) }, server: { port: 1420, strictPort: true }, clearScreen: false,
- build: { rollupOptions: { output: { assetFileNames: asset => asset.names?.[0]?.endsWith('.mjs') ? 'assets/[name]-[hash].js' : 'assets/[name]-[hash][extname]' } } } });
+export default defineConfig({
+  plugins: [react(), pwa()],
+  base: './',
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+  server: { port: 1420, strictPort: true },
+  clearScreen: false,
+  build: {
+    rollupOptions: {
+      output: {
+        assetFileNames: asset =>
+          asset.names?.[0]?.endsWith('.mjs') ? 'assets/[name]-[hash].js' : 'assets/[name]-[hash][extname]',
+      },
+    },
+  },
+});

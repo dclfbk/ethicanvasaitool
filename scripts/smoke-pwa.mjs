@@ -27,52 +27,90 @@
  * source code to users who interact with the software over a network.
  */
 
-import {chromium} from '@playwright/test';
-import {createServer} from 'node:http';
-import {readFile} from 'node:fs/promises';
-import {join,extname} from 'node:path';
+import { chromium } from '@playwright/test';
+import { createServer } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { join, extname } from 'node:path';
 import assert from 'node:assert/strict';
 
 // End-to-end check of the installable web version: manifest and service worker are served, the app and
 // its archive open again without a connection, and the OAuth callback is never kept offline.
-const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.png':'image/png','.woff2':'font/woff2','.webmanifest':'application/manifest+json'};
-const server=createServer(async(req,res)=>{try{const path=join(process.cwd(),'dist',req.url==='/'?'index.html':decodeURIComponent(req.url.split('?')[0]));res.setHeader('Content-Type',mime[extname(path)]||'application/octet-stream');res.end(await readFile(path));}catch{res.statusCode=404;res.end();}});
-await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+const mime = {
+  '.html': 'text/html',
+  '.js': 'application/javascript',
+  '.css': 'text/css',
+  '.png': 'image/png',
+  '.woff2': 'font/woff2',
+  '.webmanifest': 'application/manifest+json',
+};
+const server = createServer(async (req, res) => {
+  try {
+    const path = join(
+      process.cwd(),
+      'dist',
+      req.url === '/' ? 'index.html' : decodeURIComponent(req.url.split('?')[0]),
+    );
+    res.setHeader('Content-Type', mime[extname(path)] || 'application/octet-stream');
+    res.end(await readFile(path));
+  } catch {
+    res.statusCode = 404;
+    res.end();
+  }
+});
+await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 
 let browser;
-try{
- browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined,args:['--no-sandbox']});
- const context=await browser.newContext({viewport:{width:1280,height:900}});
- const page=await context.newPage(),errors=[];
- page.on('pageerror',e=>errors.push(e.message));
- const base='http://127.0.0.1:'+server.address().port+'/';
- await page.goto(base);
- await page.getByRole('heading',{name:'I tuoi progetti AI.'}).waitFor();
- const manifest=await page.evaluate(async()=>(await fetch(document.querySelector('link[rel=manifest]').href)).json());
- assert.equal(manifest.display,'standalone');assert.equal(manifest.icons.length,2);
- await page.evaluate(()=>navigator.serviceWorker.ready);
- await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
+try {
+  browser = await chromium.launch({
+    headless: true,
+    executablePath: process.env.CHROMIUM_PATH || undefined,
+    args: ['--no-sandbox'],
+  });
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage(),
+    errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  const base = 'http://127.0.0.1:' + server.address().port + '/';
+  await page.goto(base);
+  await page.getByRole('heading', { name: 'I tuoi progetti AI.' }).waitFor();
+  const manifest = await page.evaluate(async () =>
+    (await fetch(document.querySelector('link[rel=manifest]').href)).json(),
+  );
+  assert.equal(manifest.display, 'standalone');
+  assert.equal(manifest.icons.length, 2);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
 
- await page.getByRole('button',{name:'Nuovo progetto',exact:true}).click();
- await page.getByLabel('Nome del progetto').fill('Progetto senza rete');
- await page.getByLabel('Descrivi la tua idea').fill('Prova offline.');
- await page.getByRole('button',{name:'Inizia il percorso'}).click();
- await page.getByRole('button',{name:'Archivio',exact:true}).click();
+  await page.getByRole('button', { name: 'Nuovo progetto', exact: true }).click();
+  await page.getByLabel('Nome del progetto').fill('Progetto senza rete');
+  await page.getByLabel('Descrivi la tua idea').fill('Prova offline.');
+  await page.getByRole('button', { name: 'Inizia il percorso' }).click();
+  await page.getByRole('button', { name: 'Archivio', exact: true }).click();
 
- // Offline: the page, its lazily loaded parts and the local archive are still available.
- await context.setOffline(true);
- await page.reload();
- await page.getByRole('heading',{name:'I tuoi progetti AI.'}).waitFor();
- await page.getByText('Progetto senza rete').first().waitFor();
- await page.getByRole('button',{name:'Guida',exact:true}).click();
- await page.locator('.guide-article').getByRole('link',{name:'Primi passi'}).click();
- const img=page.locator('.guide-article figure img').first();
- await img.waitFor();
- assert.ok(await img.evaluate(i=>i.complete&&i.naturalWidth>0),'guide images load offline');
- const cached=await page.evaluate(async()=>(await Promise.all((await caches.keys()).map(async k=>(await (await caches.open(k)).keys()).map(r=>r.url)))).flat());
- assert.ok(cached.some(u=>u.endsWith('/index.html')));assert.ok(!cached.some(u=>u.includes('oauth-callback')));
- await context.setOffline(false);
+  // Offline: the page, its lazily loaded parts and the local archive are still available.
+  await context.setOffline(true);
+  await page.reload();
+  await page.getByRole('heading', { name: 'I tuoi progetti AI.' }).waitFor();
+  await page.getByText('Progetto senza rete').first().waitFor();
+  await page.getByRole('button', { name: 'Guida', exact: true }).click();
+  await page.locator('.guide-article').getByRole('link', { name: 'Primi passi' }).click();
+  const img = page.locator('.guide-article figure img').first();
+  await img.waitFor();
+  assert.ok(await img.evaluate(i => i.complete && i.naturalWidth > 0), 'guide images load offline');
+  const cached = await page.evaluate(async () =>
+    (
+      await Promise.all((await caches.keys()).map(async k => (await (await caches.open(k)).keys()).map(r => r.url)))
+    ).flat(),
+  );
+  assert.ok(cached.some(u => u.endsWith('/index.html')));
+  assert.ok(!cached.some(u => u.includes('oauth-callback')));
+  await context.setOffline(false);
 
- assert.deepEqual(errors,[]);
- console.log('PASS pwa: manifest, service worker, offline reload with archive and guide images, OAuth callback not cached.');
-}finally{await browser?.close();server.close();}
+  assert.deepEqual(errors, []);
+  console.log(
+    'PASS pwa: manifest, service worker, offline reload with archive and guide images, OAuth callback not cached.',
+  );
+} finally {
+  await browser?.close();
+  server.close();
+}

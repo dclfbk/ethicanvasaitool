@@ -248,10 +248,16 @@ html[data-a11y-text='large'] .sidebar-note p,
 html[data-a11y-text='large'] .project-card > p {
   font-size: 13px;
 }
-html[data-a11y-text='large'] h1 { font-size: 52px; }
+html[data-a11y-text='large'] h1 {
+  font-size: 52px;
+}
 html[data-a11y-text='large'] h2,
-html[data-a11y-text='large'] .question-card h2 { font-size: 30px; }
-html[data-a11y-text='large'] h3 { font-size: 19px; }
+html[data-a11y-text='large'] .question-card h2 {
+  font-size: 30px;
+}
+html[data-a11y-text='large'] h3 {
+  font-size: 19px;
+}
 
 html[data-a11y-text='xlarge'] {
   font-size: 18px;
@@ -286,10 +292,16 @@ html[data-a11y-text='xlarge'] .sidebar-note p,
 html[data-a11y-text='xlarge'] .project-card > p {
   font-size: 14.5px;
 }
-html[data-a11y-text='xlarge'] h1 { font-size: 56px; }
+html[data-a11y-text='xlarge'] h1 {
+  font-size: 56px;
+}
 html[data-a11y-text='xlarge'] h2,
-html[data-a11y-text='xlarge'] .question-card h2 { font-size: 34px; }
-html[data-a11y-text='xlarge'] h3 { font-size: 21px; }
+html[data-a11y-text='xlarge'] .question-card h2 {
+  font-size: 34px;
+}
+html[data-a11y-text='xlarge'] h3 {
+  font-size: 21px;
+}
 
 /* 2. High contrast mode */
 html[data-a11y-contrast='high-contrast'] {
@@ -580,13 +592,7 @@ html[data-a11y-cues='on'] .progress {
 }
 
 html[data-a11y-cues='on'] .progress > span {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    var(--blue),
-    var(--blue) 6px,
-    var(--navy) 6px,
-    var(--navy) 12px
-  );
+  background-image: repeating-linear-gradient(-45deg, var(--blue), var(--blue) 6px, var(--navy) 6px, var(--navy) 12px);
 }
 
 /* 6. Wide spacing */

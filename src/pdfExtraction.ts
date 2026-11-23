@@ -34,22 +34,30 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 // Scanned pages have no text layer: the result is then empty, and no OCR is attempted.
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
-export type PdfText = {ok: true; text: string; truncated: boolean} | {ok: false; reason: 'encrypted' | 'damaged'};
+export type PdfText = { ok: true; text: string; truncated: boolean } | { ok: false; reason: 'encrypted' | 'damaged' };
 export async function pdfText(data: Uint8Array, maxChars: number, maxPages = 500): Promise<PdfText> {
- const task = pdfjs.getDocument({data, disableFontFace: true, useSystemFonts: false});
- let doc: pdfjs.PDFDocumentProxy;
- try { doc = await task.promise; }
- catch (e) { void task.destroy(); return {ok: false, reason: (e as {name?: string})?.name === 'PasswordException' ? 'encrypted' : 'damaged'}; }
- try {
-  const pages: string[] = [];
-  let length = 0;
-  for (let n = 1; n <= Math.min(doc.numPages, maxPages) && length <= maxChars; n++) {
-   const content = await (await doc.getPage(n)).getTextContent();
-   const text = content.items.map(item => 'str' in item ? item.str + (item.hasEOL ? '\n' : '') : '').join('');
-   pages.push(text); length += text.length + 2;
+  const task = pdfjs.getDocument({ data, disableFontFace: true, useSystemFonts: false });
+  let doc: pdfjs.PDFDocumentProxy;
+  try {
+    doc = await task.promise;
+  } catch (e) {
+    void task.destroy();
+    return { ok: false, reason: (e as { name?: string })?.name === 'PasswordException' ? 'encrypted' : 'damaged' };
   }
-  const text = pages.join('\n\n');
-  return {ok: true, text: text.slice(0, maxChars), truncated: text.length > maxChars || doc.numPages > maxPages};
- } catch { return {ok: false, reason: 'damaged'}; }
- finally { void task.destroy(); }
+  try {
+    const pages: string[] = [];
+    let length = 0;
+    for (let n = 1; n <= Math.min(doc.numPages, maxPages) && length <= maxChars; n++) {
+      const content = await (await doc.getPage(n)).getTextContent();
+      const text = content.items.map(item => ('str' in item ? item.str + (item.hasEOL ? '\n' : '') : '')).join('');
+      pages.push(text);
+      length += text.length + 2;
+    }
+    const text = pages.join('\n\n');
+    return { ok: true, text: text.slice(0, maxChars), truncated: text.length > maxChars || doc.numPages > maxPages };
+  } catch {
+    return { ok: false, reason: 'damaged' };
+  } finally {
+    void task.destroy();
+  }
 }

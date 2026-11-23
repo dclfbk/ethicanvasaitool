@@ -27,28 +27,48 @@
  * source code to users who interact with the software over a network.
  */
 
-import {decryptArchive,DecryptionError,encryptArchive,isEncryptedArchive,minPassphraseLength,type EncryptedArchive} from './cloud/archiveCrypto';
-import {fileSlug} from './report';
-import {download} from './storage';
+import {
+  decryptArchive,
+  DecryptionError,
+  encryptArchive,
+  isEncryptedArchive,
+  minPassphraseLength,
+  type EncryptedArchive,
+} from './cloud/archiveCrypto';
+import { fileSlug } from './report';
+import { download } from './storage';
 
 // File handling shared by the two sides of a contribution: JSON, optionally encrypted with a passphrase.
 export const publicAppUrl = 'https://dclfbk.github.io/ethicanvasaitool/';
-export const appUrl = () => location.protocol === 'http:' || location.protocol === 'https:' ? location.origin + location.pathname : publicAppUrl;
-export type Loaded<T> = {kind: 'ok'; value: T} | {kind: 'locked'; envelope: EncryptedArchive} | {kind: 'invalid'};
+export const appUrl = () =>
+  location.protocol === 'http:' || location.protocol === 'https:' ? location.origin + location.pathname : publicAppUrl;
+export type Loaded<T> = { kind: 'ok'; value: T } | { kind: 'locked'; envelope: EncryptedArchive } | { kind: 'invalid' };
 export async function readContributionFile<T>(file: File, read: (v: unknown) => T | null): Promise<Loaded<T>> {
- if (file.size > 5 * 1024 * 1024) return {kind: 'invalid'};
- let value: unknown;
- try { value = JSON.parse(await file.text()); } catch { return {kind: 'invalid'}; }
- if (isEncryptedArchive(value)) return {kind: 'locked', envelope: value};
- const v = read(value);
- return v ? {kind: 'ok', value: v} : {kind: 'invalid'};
+  if (file.size > 5 * 1024 * 1024) return { kind: 'invalid' };
+  let value: unknown;
+  try {
+    value = JSON.parse(await file.text());
+  } catch {
+    return { kind: 'invalid' };
+  }
+  if (isEncryptedArchive(value)) return { kind: 'locked', envelope: value };
+  const v = read(value);
+  return v ? { kind: 'ok', value: v } : { kind: 'invalid' };
 }
-export async function unlock<T>(envelope: EncryptedArchive, passphrase: string, read: (v: unknown) => T | null): Promise<T | 'wrong' | 'invalid'> {
- try { const v = read(JSON.parse(await decryptArchive(envelope, passphrase))); return v ?? 'invalid'; }
- catch (e) { return e instanceof DecryptionError ? 'wrong' : 'invalid'; }
+export async function unlock<T>(
+  envelope: EncryptedArchive,
+  passphrase: string,
+  read: (v: unknown) => T | null,
+): Promise<T | 'wrong' | 'invalid'> {
+  try {
+    const v = read(JSON.parse(await decryptArchive(envelope, passphrase)));
+    return v ?? 'invalid';
+  } catch (e) {
+    return e instanceof DecryptionError ? 'wrong' : 'invalid';
+  }
 }
 export async function saveContributionFile(name: string, value: object, passphrase: string | null) {
- const text = JSON.stringify(value, null, 1);
- download(fileSlug(name) + '.json', passphrase ? await encryptArchive(text, passphrase) : text, 'application/json');
+  const text = JSON.stringify(value, null, 1);
+  download(fileSlug(name) + '.json', passphrase ? await encryptArchive(text, passphrase) : text, 'application/json');
 }
-export {minPassphraseLength};
+export { minPassphraseLength };

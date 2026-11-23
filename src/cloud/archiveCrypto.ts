@@ -34,34 +34,95 @@ const iterations = 600_000;
 const format = 'canvas-pa-encrypted';
 const aad = new TextEncoder().encode(format + ':1');
 
-export interface EncryptedArchive { format: typeof format; version: 1; kdf: {name: 'PBKDF2'; hash: 'SHA-256'; iterations: number; salt: string}; cipher: {name: 'AES-GCM'; iv: string}; data: string; }
-export class DecryptionError extends Error { constructor() { super('wrong passphrase or damaged archive'); this.name = 'DecryptionError'; } }
+export interface EncryptedArchive {
+  format: typeof format;
+  version: 1;
+  kdf: { name: 'PBKDF2'; hash: 'SHA-256'; iterations: number; salt: string };
+  cipher: { name: 'AES-GCM'; iv: string };
+  data: string;
+}
+export class DecryptionError extends Error {
+  constructor() {
+    super('wrong passphrase or damaged archive');
+    this.name = 'DecryptionError';
+  }
+}
 
-function toBase64(bytes: Uint8Array) { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(s); }
-function fromBase64(text: string) { const s = atob(text), out = new Uint8Array(new ArrayBuffer(s.length)); for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i); return out; }
+function toBase64(bytes: Uint8Array) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function fromBase64(text: string) {
+  const s = atob(text),
+    out = new Uint8Array(new ArrayBuffer(s.length));
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out;
+}
 async function deriveKey(passphrase: string, salt: Uint8Array<ArrayBuffer>, rounds: number) {
- const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase.normalize('NFC')), 'PBKDF2', false, ['deriveKey']);
- return crypto.subtle.deriveKey({name: 'PBKDF2', hash: 'SHA-256', salt, iterations: rounds}, base, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
+  const base = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(passphrase.normalize('NFC')),
+    'PBKDF2',
+    false,
+    ['deriveKey'],
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: rounds },
+    base,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt'],
+  );
 }
 
 export function isEncryptedArchive(v: unknown): v is EncryptedArchive {
- const x = v as EncryptedArchive;
- return !!x && x.format === format && x.version === 1 && x.kdf?.name === 'PBKDF2' && x.kdf.hash === 'SHA-256' && Number.isInteger(x.kdf.iterations) && x.kdf.iterations >= 100_000 && x.kdf.iterations <= 10_000_000
-  && typeof x.kdf.salt === 'string' && x.cipher?.name === 'AES-GCM' && typeof x.cipher.iv === 'string' && typeof x.data === 'string';
+  const x = v as EncryptedArchive;
+  return (
+    !!x &&
+    x.format === format &&
+    x.version === 1 &&
+    x.kdf?.name === 'PBKDF2' &&
+    x.kdf.hash === 'SHA-256' &&
+    Number.isInteger(x.kdf.iterations) &&
+    x.kdf.iterations >= 100_000 &&
+    x.kdf.iterations <= 10_000_000 &&
+    typeof x.kdf.salt === 'string' &&
+    x.cipher?.name === 'AES-GCM' &&
+    typeof x.cipher.iv === 'string' &&
+    typeof x.data === 'string'
+  );
 }
 
 export async function encryptArchive(plain: string, passphrase: string, rounds = iterations): Promise<string> {
- if (passphrase.length < minPassphraseLength) throw new Error('passphrase-too-short');
- const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
- const key = await deriveKey(passphrase, salt, rounds);
- const data = new Uint8Array(await crypto.subtle.encrypt({name: 'AES-GCM', iv, additionalData: aad}, key, new TextEncoder().encode(plain)));
- const envelope: EncryptedArchive = {format, version: 1, kdf: {name: 'PBKDF2', hash: 'SHA-256', iterations: rounds, salt: toBase64(salt)}, cipher: {name: 'AES-GCM', iv: toBase64(iv)}, data: toBase64(data)};
- return JSON.stringify(envelope);
+  if (passphrase.length < minPassphraseLength) throw new Error('passphrase-too-short');
+  const salt = crypto.getRandomValues(new Uint8Array(16)),
+    iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(passphrase, salt, rounds);
+  const data = new Uint8Array(
+    await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad }, key, new TextEncoder().encode(plain)),
+  );
+  const envelope: EncryptedArchive = {
+    format,
+    version: 1,
+    kdf: { name: 'PBKDF2', hash: 'SHA-256', iterations: rounds, salt: toBase64(salt) },
+    cipher: { name: 'AES-GCM', iv: toBase64(iv) },
+    data: toBase64(data),
+  };
+  return JSON.stringify(envelope);
 }
 
 export async function decryptArchive(envelope: EncryptedArchive, passphrase: string): Promise<string> {
- try {
-  const key = await deriveKey(passphrase, fromBase64(envelope.kdf.salt), envelope.kdf.iterations);
-  return new TextDecoder().decode(await crypto.subtle.decrypt({name: 'AES-GCM', iv: fromBase64(envelope.cipher.iv), additionalData: aad}, key, fromBase64(envelope.data)));
- } catch { throw new DecryptionError(); }
+  try {
+    const key = await deriveKey(passphrase, fromBase64(envelope.kdf.salt), envelope.kdf.iterations);
+    return new TextDecoder().decode(
+      await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: fromBase64(envelope.cipher.iv), additionalData: aad },
+        key,
+        fromBase64(envelope.data),
+      ),
+    );
+  } catch {
+    throw new DecryptionError();
+  }
 }

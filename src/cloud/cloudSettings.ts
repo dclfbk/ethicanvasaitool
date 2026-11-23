@@ -30,21 +30,41 @@
 import type { CloudProviderId } from './provider';
 
 // Non-secret preferences only: tokens and passphrases are never stored here.
-export interface ProviderSync { savedAt?: string; remoteModifiedAt?: string; }
-export interface CloudSettings { provider: CloudProviderId; encrypt: boolean; sync: Partial<Record<CloudProviderId, ProviderSync>>; }
+export interface ProviderSync {
+  savedAt?: string;
+  remoteModifiedAt?: string;
+}
+export interface CloudSettings {
+  provider: CloudProviderId;
+  encrypt: boolean;
+  sync: Partial<Record<CloudProviderId, ProviderSync>>;
+}
 const storageKey = 'canvas-pa.cloud';
-export const defaultCloudSettings: CloudSettings = {provider: 'folder', encrypt: true, sync: {}};
-const iso = (v: unknown) => typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? v : undefined;
+export const defaultCloudSettings: CloudSettings = { provider: 'folder', encrypt: true, sync: {} };
+const iso = (v: unknown) => (typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? v : undefined);
 
 export function loadCloudSettings(): CloudSettings {
- try {
-  const v = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
-  if (!v || typeof v !== 'object') return defaultCloudSettings;
-  const sync: CloudSettings['sync'] = {};
-  for (const id of ['folder', 'google', 'microsoft'] as const) { const s = v.sync?.[id]; if (s && typeof s === 'object') sync[id] = {savedAt: iso(s.savedAt), remoteModifiedAt: iso(s.remoteModifiedAt)}; }
-  return {provider: ['folder', 'google', 'microsoft'].includes(v.provider) ? v.provider : 'folder', encrypt: v.encrypt !== false, sync};
- } catch { return defaultCloudSettings; }
+  try {
+    const v = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
+    if (!v || typeof v !== 'object') return defaultCloudSettings;
+    const sync: CloudSettings['sync'] = {};
+    for (const id of ['folder', 'google', 'microsoft'] as const) {
+      const s = v.sync?.[id];
+      if (s && typeof s === 'object') sync[id] = { savedAt: iso(s.savedAt), remoteModifiedAt: iso(s.remoteModifiedAt) };
+    }
+    return {
+      provider: ['folder', 'google', 'microsoft'].includes(v.provider) ? v.provider : 'folder',
+      encrypt: v.encrypt !== false,
+      sync,
+    };
+  } catch {
+    return defaultCloudSettings;
+  }
 }
 export function saveCloudSettings(s: CloudSettings) {
- try { localStorage.setItem(storageKey, JSON.stringify({provider: s.provider, encrypt: s.encrypt, sync: s.sync})); } catch { /* preferences are optional */ }
+  try {
+    localStorage.setItem(storageKey, JSON.stringify({ provider: s.provider, encrypt: s.encrypt, sync: s.sync }));
+  } catch {
+    /* preferences are optional */
+  }
 }

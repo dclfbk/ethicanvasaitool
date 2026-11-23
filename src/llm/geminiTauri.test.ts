@@ -27,51 +27,77 @@
  * source code to users who interact with the software over a network.
  */
 
-import {beforeEach,describe,expect,it,vi} from 'vitest';
-import {LlmError} from './provider';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { LlmError } from './provider';
 
 // The Tauri API is replaced: "gemini_stream" replays lines through the channel as the Rust side would.
-const calls:{cmd:string;args:Record<string,unknown>}[]=[];
-let script:(channel:{emit:(l:string)=>void})=>Promise<unknown>;
-vi.mock('@tauri-apps/api/core',()=>({
- Channel:class{constructor(public onmessage:(l:string)=>void){}},
- invoke:async(cmd:string,args:Record<string,unknown>)=>{
-  calls.push({cmd,args});
-  if(cmd!=='gemini_stream')return undefined;
-  const ch=args.onLine as {onmessage:(l:string)=>void};
-  return script({emit:l=>ch.onmessage(l)});
- },
+const calls: { cmd: string; args: Record<string, unknown> }[] = [];
+let script: (channel: { emit: (l: string) => void }) => Promise<unknown>;
+vi.mock('@tauri-apps/api/core', () => ({
+  Channel: class {
+    constructor(public onmessage: (l: string) => void) {}
+  },
+  invoke: async (cmd: string, args: Record<string, unknown>) => {
+    calls.push({ cmd, args });
+    if (cmd !== 'gemini_stream') return undefined;
+    const ch = args.onLine as { onmessage: (l: string) => void };
+    return script({ emit: l => ch.onmessage(l) });
+  },
 }));
-const {tauriGeminiTransport}=await import('./geminiTauri');
-const request={method:'POST' as const,path:'interactions',body:{stream:true}};
-beforeEach(()=>{calls.length=0;});
+const { tauriGeminiTransport } = await import('./geminiTauri');
+const request = { method: 'POST' as const, path: 'interactions', body: { stream: true } };
+beforeEach(() => {
+  calls.length = 0;
+});
 
-describe('Desktop Gemini streaming',()=>{
- it('passes the events of each line to the reader and resolves after the end marker',async()=>{
-  script=async ch=>{ch.emit('event: step.delta');ch.emit('data: {"index":0,"delta":{"type":"text","text":"è"}}');ch.emit('');ch.emit('data: [DONE]');ch.emit('');ch.emit('\n');return {status:200,body:null};};
-  const events:unknown[]=[];
-  const r=await tauriGeminiTransport.stream!(request,new AbortController().signal,e=>events.push(e));
-  expect(r.status).toBe(200);
-  expect(events).toEqual([{index:0,delta:{type:'text',text:'è'}}]);
-  expect(calls[0]).toMatchObject({cmd:'gemini_stream',args:{body:{stream:true}}});
- });
- it('returns a non-2xx answer with its body for the usual error mapping',async()=>{
-  script=async()=>({status:503,body:{error:{code:'service_unavailable'}}});
-  const r=await tauriGeminiTransport.stream!(request,new AbortController().signal,()=>{});
-  expect(r).toEqual({status:503,body:{error:{code:'service_unavailable'}}});
- });
- it('stops the request when an event is an error',async()=>{
-  script=async ch=>{ch.emit('data: {"event_type":"error"}');ch.emit('');ch.emit('\n');return {status:200,body:null};};
-  const failure=new LlmError('server');
-  await expect(tauriGeminiTransport.stream!(request,new AbortController().signal,()=>{throw failure;})).rejects.toBe(failure);
-  expect(calls.some(c=>c.cmd==='gemini_cancel')).toBe(true);
- });
- it('cancels on abort and maps Rust errors',async()=>{
-  const c=new AbortController();
-  script=()=>new Promise(()=>{});
-  const p=tauriGeminiTransport.stream!(request,c.signal,()=>{});c.abort();
-  await expect(p).rejects.toMatchObject({kind:'cancelled'});
-  script=async()=>{throw 'timeout';};
-  await expect(tauriGeminiTransport.stream!(request,new AbortController().signal,()=>{})).rejects.toMatchObject({kind:'timeout'});
- });
+describe('Desktop Gemini streaming', () => {
+  it('passes the events of each line to the reader and resolves after the end marker', async () => {
+    script = async ch => {
+      ch.emit('event: step.delta');
+      ch.emit('data: {"index":0,"delta":{"type":"text","text":"è"}}');
+      ch.emit('');
+      ch.emit('data: [DONE]');
+      ch.emit('');
+      ch.emit('\n');
+      return { status: 200, body: null };
+    };
+    const events: unknown[] = [];
+    const r = await tauriGeminiTransport.stream!(request, new AbortController().signal, e => events.push(e));
+    expect(r.status).toBe(200);
+    expect(events).toEqual([{ index: 0, delta: { type: 'text', text: 'è' } }]);
+    expect(calls[0]).toMatchObject({ cmd: 'gemini_stream', args: { body: { stream: true } } });
+  });
+  it('returns a non-2xx answer with its body for the usual error mapping', async () => {
+    script = async () => ({ status: 503, body: { error: { code: 'service_unavailable' } } });
+    const r = await tauriGeminiTransport.stream!(request, new AbortController().signal, () => {});
+    expect(r).toEqual({ status: 503, body: { error: { code: 'service_unavailable' } } });
+  });
+  it('stops the request when an event is an error', async () => {
+    script = async ch => {
+      ch.emit('data: {"event_type":"error"}');
+      ch.emit('');
+      ch.emit('\n');
+      return { status: 200, body: null };
+    };
+    const failure = new LlmError('server');
+    await expect(
+      tauriGeminiTransport.stream!(request, new AbortController().signal, () => {
+        throw failure;
+      }),
+    ).rejects.toBe(failure);
+    expect(calls.some(c => c.cmd === 'gemini_cancel')).toBe(true);
+  });
+  it('cancels on abort and maps Rust errors', async () => {
+    const c = new AbortController();
+    script = () => new Promise(() => {});
+    const p = tauriGeminiTransport.stream!(request, c.signal, () => {});
+    c.abort();
+    await expect(p).rejects.toMatchObject({ kind: 'cancelled' });
+    script = async () => {
+      throw 'timeout';
+    };
+    await expect(tauriGeminiTransport.stream!(request, new AbortController().signal, () => {})).rejects.toMatchObject({
+      kind: 'timeout',
+    });
+  });
 });

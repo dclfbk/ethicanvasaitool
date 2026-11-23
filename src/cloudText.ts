@@ -30,22 +30,26 @@
 import type { CloudErrorKind } from './cloud/provider';
 
 export const cloudErrorMessages: Record<CloudErrorKind, string> = {
- 'not-configured':'Questo servizio non è configurato in questa installazione. Chiedi all’ente che la distribuisce di registrare l’applicazione.',
- 'not-connected':'Collega prima il tuo account.',
- 'session-expired':'L’accesso è scaduto o è stato revocato. Collega di nuovo l’account.',
- 'popup-blocked':'Il browser ha bloccato la finestra di accesso. Consenti i popup per questo sito e riprova.',
- 'cancelled':'Accesso annullato.',
- 'admin-consent':'Il tuo ente richiede l’approvazione di un amministratore per questa applicazione. Rivolgiti all’amministratore di Microsoft 365.',
- 'permission':'L’account non ha concesso i permessi necessari o l’accesso è limitato dalle regole dell’ente.',
- 'quota':'Lo spazio sul drive è esaurito.',
- 'rate-limit':'Troppe richieste in poco tempo. Attendi qualche secondo e riprova.',
- 'too-large':'L’archivio è troppo grande per il servizio. Riduci gli allegati.',
- 'not-found':'Il file non è più disponibile sul drive.',
- 'network':'Impossibile raggiungere il servizio. Controlla la connessione.',
- 'timeout':'Il servizio non ha risposto in tempo. Riprova.',
- 'server':'Il servizio è temporaneamente non disponibile. Riprova tra poco.',
- 'bad-request':'Richiesta non accettata dal servizio.',
- 'bad-response':'La risposta del servizio non è utilizzabile. Riprova.',
- 'folder-access':'Non è stato possibile leggere o scrivere nella cartella. Verifica che esista ancora e che tu abbia i permessi, oppure scegline un’altra.',
- 'credential-store':'Il portachiavi del sistema non è disponibile. Verifica che sia attivo (su Linux: GNOME Keyring o KWallet).',
+  'not-configured':
+    'Questo servizio non è configurato in questa installazione. Chiedi all’ente che la distribuisce di registrare l’applicazione.',
+  'not-connected': 'Collega prima il tuo account.',
+  'session-expired': 'L’accesso è scaduto o è stato revocato. Collega di nuovo l’account.',
+  'popup-blocked': 'Il browser ha bloccato la finestra di accesso. Consenti i popup per questo sito e riprova.',
+  cancelled: 'Accesso annullato.',
+  'admin-consent':
+    'Il tuo ente richiede l’approvazione di un amministratore per questa applicazione. Rivolgiti all’amministratore di Microsoft 365.',
+  permission: 'L’account non ha concesso i permessi necessari o l’accesso è limitato dalle regole dell’ente.',
+  quota: 'Lo spazio sul drive è esaurito.',
+  'rate-limit': 'Troppe richieste in poco tempo. Attendi qualche secondo e riprova.',
+  'too-large': 'L’archivio è troppo grande per il servizio. Riduci gli allegati.',
+  'not-found': 'Il file non è più disponibile sul drive.',
+  network: 'Impossibile raggiungere il servizio. Controlla la connessione.',
+  timeout: 'Il servizio non ha risposto in tempo. Riprova.',
+  server: 'Il servizio è temporaneamente non disponibile. Riprova tra poco.',
+  'bad-request': 'Richiesta non accettata dal servizio.',
+  'bad-response': 'La risposta del servizio non è utilizzabile. Riprova.',
+  'folder-access':
+    'Non è stato possibile leggere o scrivere nella cartella. Verifica che esista ancora e che tu abbia i permessi, oppure scegline un’altra.',
+  'credential-store':
+    'Il portachiavi del sistema non è disponibile. Verifica che sia attivo (su Linux: GNOME Keyring o KWallet).',
 };

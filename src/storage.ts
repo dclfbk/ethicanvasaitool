@@ -30,12 +30,52 @@
 import { openDB } from 'idb';
 import { isTauri } from '@tauri-apps/api/core';
 import { migrateProject, portableProject, type Project } from './model';
-const webDb=()=>openDB('canvas-pa',1,{upgrade(db){db.createObjectStore('projects',{keyPath:'id'});}});
+const webDb = () =>
+  openDB('canvas-pa', 1, {
+    upgrade(db) {
+      db.createObjectStore('projects', { keyPath: 'id' });
+    },
+  });
 let nativeDb: Promise<import('@tauri-apps/plugin-sql').default> | undefined;
-async function sql(){ if(!nativeDb)nativeDb=(async()=>{const {default:Database}=await import('@tauri-apps/plugin-sql');const db=await Database.load('sqlite:canvas-pa.db');await db.execute('CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, payload TEXT NOT NULL)');return db;})();return nativeDb; }
+async function sql() {
+  if (!nativeDb)
+    nativeDb = (async () => {
+      const { default: Database } = await import('@tauri-apps/plugin-sql');
+      const db = await Database.load('sqlite:canvas-pa.db');
+      await db.execute('CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, payload TEXT NOT NULL)');
+      return db;
+    })();
+  return nativeDb;
+}
 export const storage = {
- async list():Promise<Project[]>{if(isTauri()){const rows=await(await sql()).select<{payload:string}[]>('SELECT payload FROM projects');return rows.map(r=>migrateProject(JSON.parse(r.payload)));}return((await webDb()).getAll('projects') as Promise<Project[]>).then(ps=>ps.map(migrateProject));},
- async put(project:Project){const p=portableProject(project);if(isTauri()){await(await sql()).execute('INSERT INTO projects (id,payload) VALUES ($1,$2) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload',[p.id,JSON.stringify(p)]);}else await(await webDb()).put('projects',p);},
- async remove(id:string){if(isTauri())await(await sql()).execute('DELETE FROM projects WHERE id=$1',[id]);else await(await webDb()).delete('projects',id);}
+  async list(): Promise<Project[]> {
+    if (isTauri()) {
+      const rows = await (await sql()).select<{ payload: string }[]>('SELECT payload FROM projects');
+      return rows.map(r => migrateProject(JSON.parse(r.payload)));
+    }
+    return ((await webDb()).getAll('projects') as Promise<Project[]>).then(ps => ps.map(migrateProject));
+  },
+  async put(project: Project) {
+    const p = portableProject(project);
+    if (isTauri()) {
+      await (
+        await sql()
+      ).execute(
+        'INSERT INTO projects (id,payload) VALUES ($1,$2) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload',
+        [p.id, JSON.stringify(p)],
+      );
+    } else await (await webDb()).put('projects', p);
+  },
+  async remove(id: string) {
+    if (isTauri()) await (await sql()).execute('DELETE FROM projects WHERE id=$1', [id]);
+    else await (await webDb()).delete('projects', id);
+  },
 };
-export function download(name:string,data:string|Uint8Array<ArrayBuffer>,mime='application/json'){const url=URL.createObjectURL(new Blob([data],{type:mime}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+export function download(name: string, data: string | Uint8Array<ArrayBuffer>, mime = 'application/json') {
+  const url = URL.createObjectURL(new Blob([data], { type: mime }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
