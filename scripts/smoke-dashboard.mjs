@@ -58,7 +58,13 @@ const server = createServer(async (req, res) => {
   }
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const ago = d => new Date(Date.now() - d * 86_400_000).toISOString(),
+// Whole days back at local noon, so the count does not change near midnight or across daylight saving time.
+const ago = d => {
+    const t = new Date();
+    t.setHours(12, 0, 0, 0);
+    t.setDate(t.getDate() - d);
+    return t.toISOString();
+  },
   day = d => new Date(Date.now() + d * 86_400_000).toISOString().slice(0, 10);
 const answer = (value, state = 'answered', extra = {}) => ({
   value,

@@ -127,9 +127,11 @@ const UpdateDialog = lazy(() => import('./UpdatePanel').then(m => ({ default: m.
 const UpdateSettingsPanel = lazy(() => import('./UpdatePanel').then(m => ({ default: m.UpdateSettingsPanel })));
 import { canExtract, extractText, type ExtractionError } from './textExtraction';
 import { maxExcerptChars } from './assistant';
-import fundingLogos from './assets/logos/canvas-funding.png';
-import patLogo from './assets/logos/pat.png';
-import fbkLogo from './assets/logos/fbk.png';
+import euLogo from './assets/logos/ue-nextgenerationeu.svg';
+import republicLogo from './assets/logos/repubblica-italiana.svg';
+import dtdLogo from './assets/logos/dipartimento-trasformazione-digitale.svg';
+import patLogo from './assets/logos/pat.svg';
+import fbkLogo from './assets/logos/fbk.svg';
 import { download, storage } from './storage';
 
 const date = (s: string) =>
@@ -930,10 +932,11 @@ export default function App() {
                 <img className="pat-logo" src={patLogo} alt="Provincia autonoma di Trento" />
                 <span className="logo-with">in collaborazione con</span>
                 <img src={fbkLogo} alt="Fondazione Bruno Kessler" />
-                <img
-                  src={fundingLogos}
-                  alt="Finanziato dall’Unione europea NextGenerationEU, Repubblica Italiana, Dipartimento per la trasformazione digitale"
-                />
+                <span className="funding-logos">
+                  <img src={euLogo} alt="Finanziato dall’Unione europea NextGenerationEU" />
+                  <img className="republic-logo" src={republicLogo} alt="Repubblica Italiana" />
+                  <img src={dtdLogo} alt="Dipartimento per la trasformazione digitale" />
+                </span>
               </div>
               <span className="cc-line">
                 Canvas AI Ethics © 2024 by Provincia Autonoma di Trento e Fondazione Bruno Kessler is licensed under CC

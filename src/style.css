@@ -1902,6 +1902,19 @@ form label {
 .logo-strip img.pat-logo {
   height: 50px;
 }
+.funding-logos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 22px;
+}
+/* PNRR rules: the EU emblem is never smaller than the other logos. */
+.logo-strip .funding-logos img {
+  height: 38px;
+}
+.logo-strip .funding-logos img.republic-logo {
+  height: 44px;
+}
 .assistant {
   margin-top: 14px;
 }
