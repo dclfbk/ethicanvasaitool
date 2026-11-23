@@ -29,7 +29,7 @@
 
 import { isTauri } from '@tauri-apps/api/core';
 
-export const appVersion = typeof __APP_VERSION__ === 'string' && __APP_VERSION__ ? __APP_VERSION__ : '0.5.0';
+export const appVersion = typeof __APP_VERSION__ === 'string' && __APP_VERSION__ ? __APP_VERSION__ : '0.5.1';
 
 // Signed in-app updates are offered only in the desktop app; the web build can still check GitHub on demand.
 export const updatesSupported = () => isTauri();

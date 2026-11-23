@@ -1,0 +1,25 @@
+   name:                   "" # name of the adaptation procedure
+   description:            "" # 
+   tags:                   "" #
+   version:                "" #
+   framework:              "" #
+     reference_model:      "" # 
+   implementation:         "" #
+     runtime:              "" #
+     source:               "" #
+     parameters:
+       learning_rate:      ""
+       epochs:             ""
+       batch_size:         ""
+     requirements:         "" #
+     resources:            #
+       gpu:                #
+       vram:
+   evaluation:             # 
+    - type:                "" #
+      definition:          "" #
+      implementation:      "" #
+        runtime:           "" #
+        source:            "" #
+        requirements:      "" #     
+        resources:         "" #

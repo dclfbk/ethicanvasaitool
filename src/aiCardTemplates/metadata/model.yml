@@ -1,0 +1,59 @@
+models:
+   - name:                    "" # name of the model
+     description:             "" # description of the model
+     tags:                    "" # label the model to be easily findable and accessible
+     version:                 "" # the version of the dataset
+     framework:               "" # the primary framework the model is trained on (fasttext, pytorch, ....)
+     artifacts:               # the path/url the model is being output (implementation/models)
+       - reference_file:
+         parameters:
+           learning_rate:     ""
+           epochs:            ""
+         dataset:             "" # uri to the particular dataset used for training the model
+         metrics:
+           - name:
+             value:
+              
+           
+     training:
+       output_dir:            "" # the path/url the model is being output (implementation/models)
+       bucket_name:           "" # the name of the bucket where the model is being stored
+       data:                   
+        reference:              # (local/remote) (array of references?)
+       implementation:         
+         runtime:             "" # the execution environment (python)
+         source:              "" # reference to the implementation of the training procedure inside implementation/src/
+         requirements:           # particular dependencies the model training depends on
+         resources:              # particular resources the model training depends on
+         resources:              #
+           gpu:                  #
+           vram:
+       parameters: 
+         - name:                "" # name of the parameter
+           desc:                "" # description of the parameter
+           value:               "" # value of the parameter
+     evaluation:
+       - type:                "" # supported compliance library for the evaluations to be applied to the model  Evidently, Custom script ....
+         definition:          ""   # inline / url (local/remote)
+         implementation:       
+           runtime:           "" # the execution environment (python)
+           source:            "" # reference to the implementation of the compliance procedure inside implementation/src/
+           requirements:      "" # particular dependencies the compliance execution depends on
+           resources:         "" # particular resources the compliance depends on 
+         metrics:
+          - name:             ""    # name of the metric       
+            min_val:          "" # min value of the metric
+            max_val:          "" # max value of the metric
+     inference:
+       parameters:
+        - name:               ""
+          value:              ""
+       serving:
+         implementation:
+           runtime:           "" # the execution environment (python)
+           source:            "" # reference to the implementation of the inference procedure inside implementation/src/
+           requirements:         # particular dependencies the inference execution depends on
+           resources:            # particular resources the inference depends on
+     monitoring:
+       paramteters:
+       # study and refer to mlrun monitoring docs

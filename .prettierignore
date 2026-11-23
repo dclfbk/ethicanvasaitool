@@ -6,3 +6,4 @@ public/
 test-results/
 package-lock.json
 *.md
+src/aiCardTemplates/

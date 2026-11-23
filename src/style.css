@@ -1457,7 +1457,8 @@ form label {
   }
   .workspace-label,
   .sidebar-note,
-  .sidebar-foot {
+  .sidebar-foot,
+  .sidebar .app-version {
     display: none;
   }
   .sidebar nav {
@@ -3017,4 +3018,16 @@ textarea.answer-details {
 }
 html[data-a11y-contrast='dark'] .field-hint {
   color: #d4a6ff;
+}
+
+.app-version {
+  display: block;
+  margin-top: 10px;
+  font-size: 10px;
+  color: #6e7080;
+  text-decoration: none;
+}
+.app-version:hover,
+.app-version:focus-visible {
+  text-decoration: underline;
 }

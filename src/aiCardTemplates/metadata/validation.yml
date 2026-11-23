@@ -1,0 +1,13 @@
+ - name:                      "drift_detection" # name of the validation technique
+   description:               "" # description of the validation technique
+   tags:                      "" # label the validation technique to be easily findable and accessible
+   version:                   "" # the version of the validation technique
+   parameters:
+     reference_model_performance_dataset:       ""
+     reference_training_dataset:       ""
+   implementation:
+    runtime:                  "evidently" # define the name of the library/framework               
+    source:                   "../implementation/src/functions/drift_detection.py"
+    requirements:
+    resources:
+

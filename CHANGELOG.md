@@ -5,6 +5,18 @@ All notable changes to EthiCanvasAI are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-11-23
+
+### Added
+- The application version is always visible: at the bottom of the sidebar, linked to its release notes, and in the page footer.
+
+### Changed
+- Vector logos with transparent background (`src/assets/logos/*.svg`): EU NextGenerationEU converted from the official European Commission EPS, emblem of the Italian Republic and PAT coat of arms from Wikimedia Commons (public domain), Department for digital transformation mark from innovazione.gov.it with its name in Titillium Web, FBK from its brand book. `npm run logos` renders the PNG files used by the PDF exports. The EU emblem is never smaller than the other logos.
+- The AI Product Card export fills the official FBK templates (`src/aiCardTemplates`, from smartcommunitylab/ai_product_card_templates) instead of cards written from scratch.
+
+### Fixed
+- The dashboard smoke test no longer depends on the time of day.
+
 ## [0.5.0] - 2026-11-23
 
 ### Added

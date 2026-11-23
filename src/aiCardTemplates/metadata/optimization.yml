@@ -1,0 +1,30 @@
+ - name:                      "" # name of the optimization technique
+   description:               "" # description of the optimization technique
+   tags:                      "" # label the optimization technique to be easily findable and accessible
+   version:                   "" # the version of the optimization technique
+   framework: 
+      reference_model:        ""      
+      objective:
+        - definition:
+          value:
+   quantization:
+     bits:                    "" # the quantization"
+   adapter:
+      type:                   "" # the type of the adapter
+      description:            "" # description of the adapter
+      parameters:
+        - name:               "" # name of the parameter
+          value:              "" # value of the parameter
+   implementation:
+    runtime:                  "" # define the                 
+    source: 
+    requirements:
+    resources:
+
+  evaluation:                  
+    - type:                   "" # type of check we need to make in order to effectively apply the optimization
+      definition:             "" # describe the check
+      implementation: 
+        runtime:              "" # define the runtime 
+        source:               "" # define the implementation file for the evaluation of the optimization
+        resources:            "" # define the necessary resources for the evaluation procedure

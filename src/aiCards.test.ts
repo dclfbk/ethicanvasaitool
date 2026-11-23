@@ -28,7 +28,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { aiProductCards, aiProductCardsZip, missing, slug } from './aiCards';
+import { aiProductCards, aiProductCardsZip, fillYaml, missing, renderTemplate, slug } from './aiCards';
 import { createProject, type Answer } from './model';
 
 const answer = (extra: Partial<Answer>): Answer => ({
@@ -98,6 +98,20 @@ describe('AI Product Cards', () => {
     expect(file('metadata/data.yml')).not.toMatch(/\n[^\n]*"attenzione"\n/);
     expect(slug('Àrea «città»!')).toBe('area-citta');
     expect(slug('')).toBe('ai-product');
+  });
+  it('fills the official FBK templates without leaving placeholders', () => {
+    expect(file('cards/data_card.md')).toContain('# Dataset Card for Chatbot «anagrafe»: servizi');
+    expect(file('cards/model_card.md')).toContain('## Bias, Risks, and Limitations');
+    expect(file('cards/model_card.md')).toContain('**Model type:** Chatbot');
+    for (const f of files) expect(f.content, f.path).not.toContain('{{');
+    expect(renderTemplate('A {{ x | default("[More Information Needed]", true)}} B', {})).toBe(
+      'A [More Information Needed] B',
+    );
+    expect(renderTemplate('{{ x | default("d", true) }}', { x: ' v ' })).toBe('v');
+  });
+  it('sets YAML template values and keeps their comments', () => {
+    expect(file('metadata/data.yml')).toMatch(/name:\s+"chatbot-anagrafe-servizi-data" # name of the dataset/);
+    expect(fillYaml('  name: "" # c\n  other: ""', { name: 'a "b"' })).toBe('  name: "a \\"b\\"" # c\n  other: ""');
   });
   it('packs everything in one folder of a ZIP archive', () => {
     const z = aiProductCardsZip(p, new Date('2026-11-23T10:00:00Z'));

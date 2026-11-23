@@ -1,0 +1,26 @@
+- name:                  "" # name of the dataset
+  description:           "" # description of the dataset
+  type:                  "" # macro category of data it contains (text, image, video, audio, tabular, ...)
+  format:                "" # the format in which the data is saved csv, json, xml, ...
+  tags:                  "" # label the domain dataset so that to be easily findable and accessible
+  version:               "" # the version of the dataset
+  instances:
+      - description:
+        uri:               # reference the dataset implementation example. inline (local) / url (remote) 
+  
+  validation:
+    - type:              "" # specific constraints the dataset may need to fulfill (Frictionless, GreatExpt, Evidently, ....)
+      definition:        "" # reference to the definition of the contraint (local/remote)
+      implementation:    "" # reference to the implementation of the contraint inside the folder src/
+        runtime:         "" # the execution environment (python)
+        source:          "" # reference to the implementation of the constraint inside the folder src/
+        requirements:    "" # particular dependencies the constraint specification may need (optional)
+        resources:       "" # particular resources to be used for constraint implementation (optional)
+    - type:              ""
+      definition:
+      implementation:    # example of implementation
+        runtime:         "" # the execution environment (python, ...)
+        source:          "" # reference to the implementation file inside the folder src/... 
+        requirements:    "" # particular dependencies the dataset schema specification may need (optional)
+        resources:       "" # particular reosurces to be used for schema implementation(optional)
+      

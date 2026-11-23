@@ -646,6 +646,15 @@ export default function App() {
             Il tuo workspace<small>Personale · senza account</small>
           </div>
         </div>
+        <a
+          className="app-version"
+          href={'https://github.com/dclfbk/ethicanvasaitool/releases/tag/v' + appVersion}
+          target="_blank"
+          rel="noreferrer"
+          title="Note di rilascio di questa versione"
+        >
+          EthiCanvasAI v{appVersion}
+        </a>
       </aside>
       <div className="main-shell">
         <header className="topbar">
@@ -940,7 +949,7 @@ export default function App() {
               </div>
               <span className="cc-line">
                 Canvas AI Ethics © 2024 by Provincia Autonoma di Trento e Fondazione Bruno Kessler is licensed under CC
-                BY-SA 4.0 · EthiCanvasAI © 2026 FBK, GNU AGPL v3
+                BY-SA 4.0 · EthiCanvasAI v{appVersion} © 2026 FBK, GNU AGPL v3
               </span>
             </footer>
           </main>
